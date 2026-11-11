@@ -20,10 +20,73 @@
     <div id="data-container">데이터를 불러오는 중...</div>
   </div>
 
-  <!-- 타점 데이터 불러오기 -->
+  <!-- 1. 타점 데이터 불러오기 -->
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwSFBmJICFzFdP8ROY3YdidE5QadyfhhhoQ_kmI9xPB6WnTv2bjhQzKwiJ6grlvGiBQWQ/exec"; 
     fetch(GAS_URL)
       .then(response => response.json())
       .then(data => {
-        document.getElementById('data-
+        document.getElementById('data-container').innerHTML = `
+          <div class="symbol">${data.symbol}</div>
+          <div class="signal">${data.signal}</div>
+          <div class="price">현재가: $${data.price}</div>
+          <div class="time">업데이트: ${data.time}</div>
+        `;
+      })
+      .catch(error => {
+        document.getElementById('data-container').innerHTML = "데이터를 불러오는 데 실패했습니다.";
+      });
+  </script>
+
+  <!-- 2. 파이어베이스 푸시 알림 및 토큰 자동 수집 설정 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyADLXkO8UqJ048mG2HQCFJNmoL-xAcXY5c",
+      authDomain: "mysignalpush.firebaseapp.com",
+      projectId: "mysignalpush",
+      storageBucket: "mysignalpush.firebasestorage.app",
+      messagingSenderId: "224309937152",
+      appId: "1:224309937152:web:0e79104fb7aea5b86dc4e5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    // ★ 토큰 수집용 웹 앱 URL이 입력되었습니다 ★
+    const TOKEN_COLLECTOR_URL = "https://script.google.com/macros/s/AKfycbyjHP1DGPoYL9njJb_ok6WnpKTUaLUObZjFwqLGa8JJR8mS5roAqb6F0h_MAobuVSTz-g/exec";
+
+    function registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./firebase-messaging-sw.js').then((registration) => {
+          
+          getToken(messaging, { 
+            vapidKey: "BEFQ2PtyXgvk_Bs3t5pNx_A-a4hYtAC3Zk2X6Nguvb-eF3NfC5uBa5SJVQ3ooAWbzhlL2a7k9vK8pAmaStGSPOE", 
+            serviceWorkerRegistration: registration 
+          }).then((currentToken) => {
+            if (currentToken) {
+              // 토큰이 발급되면 내 스프레드시트로 자동 전송!
+              fetch(TOKEN_COLLECTOR_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: currentToken })
+              }).then(() => {
+                console.log("토큰이 구독자 명부에 자동 등록되었습니다.");
+              });
+            }
+          });
+
+        });
+      }
+    }
+
+    if (Notification.permission === 'granted') {
+      registerServiceWorker();
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          registerServiceWorker();
+        }
