@@ -39,10 +39,10 @@
       });
   </script>
 
-  <!-- 파이어베이스 푸시 알림 설정 -->
+  <!-- 파이어베이스 푸시 알림 설정 (서비스 워커 등록 포함) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+    import { getMessaging } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyADLXkO8UqJ048mG2HQCFJNmoL-xAcXY5c",
@@ -56,10 +56,16 @@
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
 
-    // 알림 권한 묻기
+    // 1. 알림 권한 묻기
     Notification.requestPermission().then((permission) => {
       if (permission === 'granted') {
-        console.log('알림 권한 허용됨!');
+        // 2. 백그라운드 파일(서비스 워커) 정확한 위치에 등록하기
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('./firebase-messaging-sw.js')
+            .then((registration) => {
+              console.log('백그라운드 알림 준비 완료!');
+            });
+        }
       }
     });
   </script>
