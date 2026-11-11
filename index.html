@@ -20,8 +20,8 @@
     <div id="data-container">데이터를 불러오는 중...</div>
   </div>
 
+  <!-- 타점 데이터 불러오기 -->
   <script>
-    // ★ 바로 아래 큰따옴표 안에 복사해둔 구글 웹 앱 URL을 붙여넣으세요! ★
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwSFBmJICFzFdP8ROY3YdidE5QadyfhhhoQ_kmI9xPB6WnTv2bjhQzKwiJ6grlvGiBQWQ/exec"; 
 
     fetch(GAS_URL)
@@ -37,6 +37,31 @@
       .catch(error => {
         document.getElementById('data-container').innerHTML = "데이터를 불러오는 데 실패했습니다.";
       });
+  </script>
+
+  <!-- 파이어베이스 푸시 알림 설정 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyADLXkO8UqJ048mG2HQCFJNmoL-xAcXY5c",
+      authDomain: "mysignalpush.firebaseapp.com",
+      projectId: "mysignalpush",
+      storageBucket: "mysignalpush.firebasestorage.app",
+      messagingSenderId: "224309937152",
+      appId: "1:224309937152:web:0e79104fb7aea5b86dc4e5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    // 알림 권한 묻기
+    Notification.requestPermission().then((permission) => {
+      if (permission === 'granted') {
+        console.log('알림 권한 허용됨!');
+      }
+    });
   </script>
 </body>
 </html>
