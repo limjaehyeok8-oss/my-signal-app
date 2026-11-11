@@ -23,56 +23,7 @@
   <!-- 타점 데이터 불러오기 -->
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwSFBmJICFzFdP8ROY3YdidE5QadyfhhhoQ_kmI9xPB6WnTv2bjhQzKwiJ6grlvGiBQWQ/exec"; 
-
     fetch(GAS_URL)
       .then(response => response.json())
       .then(data => {
-        document.getElementById('data-container').innerHTML = `
-          <div class="symbol">${data.symbol}</div>
-          <div class="signal">${data.signal}</div>
-          <div class="price">현재가: $${data.price}</div>
-          <div class="time">업데이트: ${data.time}</div>
-        `;
-      })
-      .catch(error => {
-        document.getElementById('data-container').innerHTML = "데이터를 불러오는 데 실패했습니다.";
-      });
-  </script>
-
- <!-- 파이어베이스 푸시 알림 설정 (스마트 권한 요청) -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getMessaging } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyADLXkO8UqJ048mG2HQCFJNmoL-xAcXY5c",
-    authDomain: "mysignalpush.firebaseapp.com",
-    projectId: "mysignalpush",
-    storageBucket: "mysignalpush.firebasestorage.app",
-    messagingSenderId: "224309937152",
-    appId: "1:224309937152:web:0e79104fb7aea5b86dc4e5"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
-
-  // 백그라운드 파일 연결 함수
-  function registerServiceWorker() {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./firebase-messaging-sw.js');
-    }
-  }
-
-  // 진짜 앱처럼 팝업 조건 걸기
-  if (Notification.permission === 'granted') {
-    // 이미 허락했으면 팝업 띄우지 않고 조용히 백그라운드만 연결
-    registerServiceWorker();
-  } else if (Notification.permission !== 'denied') {
-    // 아직 권한이 없을 때(처음 접속)만 팝업 띄우기
-    Notification.requestPermission().then((permission) => {
-      if (permission === 'granted') {
-        registerServiceWorker();
-      }
-    });
-  }
-</script>
+        document.getElementById('data-
