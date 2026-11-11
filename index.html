@@ -39,35 +39,40 @@
       });
   </script>
 
-  <!-- 파이어베이스 푸시 알림 설정 (서비스 워커 등록 포함) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getMessaging } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+ <!-- 파이어베이스 푸시 알림 설정 (스마트 권한 요청) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getMessaging } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyADLXkO8UqJ048mG2HQCFJNmoL-xAcXY5c",
-      authDomain: "mysignalpush.firebaseapp.com",
-      projectId: "mysignalpush",
-      storageBucket: "mysignalpush.firebasestorage.app",
-      messagingSenderId: "224309937152",
-      appId: "1:224309937152:web:0e79104fb7aea5b86dc4e5"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyADLXkO8UqJ048mG2HQCFJNmoL-xAcXY5c",
+    authDomain: "mysignalpush.firebaseapp.com",
+    projectId: "mysignalpush",
+    storageBucket: "mysignalpush.firebasestorage.app",
+    messagingSenderId: "224309937152",
+    appId: "1:224309937152:web:0e79104fb7aea5b86dc4e5"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
 
-    // 1. 알림 권한 묻기
+  // 백그라운드 파일 연결 함수
+  function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./firebase-messaging-sw.js');
+    }
+  }
+
+  // 진짜 앱처럼 팝업 조건 걸기
+  if (Notification.permission === 'granted') {
+    // 이미 허락했으면 팝업 띄우지 않고 조용히 백그라운드만 연결
+    registerServiceWorker();
+  } else if (Notification.permission !== 'denied') {
+    // 아직 권한이 없을 때(처음 접속)만 팝업 띄우기
     Notification.requestPermission().then((permission) => {
       if (permission === 'granted') {
-        // 2. 백그라운드 파일(서비스 워커) 정확한 위치에 등록하기
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('./firebase-messaging-sw.js')
-            .then((registration) => {
-              console.log('백그라운드 알림 준비 완료!');
-            });
-        }
+        registerServiceWorker();
       }
     });
-  </script>
-</body>
-</html>
+  }
+</script>
