@@ -5,9 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>타점 알리미</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    body { font-family: 'Malgun Gothic', sans-serif; text-align: center; background-color: #f4f6f9; padding-top: 50px; }
+    .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: inline-block; min-width: 250px; }
+    .symbol { font-size: 28px; font-weight: bold; color: #1a73e8; }
+    .signal { font-size: 24px; font-weight: bold; color: #d93025; margin: 15px 0; }
+    .price { font-size: 18px; color: #5f6368; }
+    .time { font-size: 12px; color: #9aa0a6; margin-top: 20px; }
+  </style>
 </head>
 <body>
-  <h1>나만의 타점 앱</h1>
-  <p>이곳에 주식 타점과 차트가 표시됩니다.</p>
+  <h2>실시간 타점 모니터</h2>
+  <div class="card">
+    <div id="data-container">데이터를 불러오는 중...</div>
+  </div>
+
+  <script>
+    // ★ 바로 아래 큰따옴표 안에 복사해둔 구글 웹 앱 URL을 붙여넣으세요! ★
+    const GAS_URL = "여기에_URL을_붙여넣으세요"; 
+
+    fetch(GAS_URL)
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('data-container').innerHTML = `
+          <div class="symbol">${data.symbol}</div>
+          <div class="signal">${data.signal}</div>
+          <div class="price">현재가: $${data.price}</div>
+          <div class="time">업데이트: ${data.time}</div>
+        `;
+      })
+      .catch(error => {
+        document.getElementById('data-container').innerHTML = "데이터를 불러오는 데 실패했습니다.";
+      });
+  </script>
 </body>
 </html>
