@@ -942,15 +942,21 @@
     const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
     const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
     async function loadHoldings() {
+      const box = $("list");
       const cached = lsGet("sigHold");                       // 지난번 화면을 먼저 바로 보여주고, 서버 응답이 오면 갱신
-      if (cached && !$("list").childElementCount) paintHoldings(cached.r, cached.sr, true);
-      const [r, sr] = await Promise.all([
-        api({ action: "listHoldings", token: myToken }),
-        api({ action: "getStrategies", token: myToken }).catch(() => null)
-      ]);
-      if (r && r.ok) lsSet("sigHold", { r, sr });
-      try { paintHoldings(r, sr, false); }
-      catch (e) { const bx = $("list"); bx.textContent = ""; bx.appendChild(mkEl("div", "alertHint", "내 종목을 그리지 못했어요: " + e.message)); }
+      if (cached && !box.childElementCount) { try { paintHoldings(cached.r, cached.sr, true); } catch (e) {} }
+      if (!box.childElementCount) box.appendChild(mkEl("div", "alertHint", "내 종목 불러오는 중…"));
+      try {
+        const [r, sr] = await Promise.all([
+          api({ action: "listHoldings", token: myToken }),
+          api({ action: "getStrategies", token: myToken }).catch(() => null)
+        ]);
+        if (r && r.ok) lsSet("sigHold", { r, sr });
+        paintHoldings(r, sr, false);
+      } catch (e) {
+        box.textContent = "";
+        box.appendChild(mkEl("div", "alertHint", "내 종목을 불러오지 못했어요: " + (e && e.message ? e.message : e) + " (기기 " + String(myToken || "").slice(0, 4) + ")"));
+      }
     }
     function paintHoldings(r, sr, fromCache) {
       const box = $("list");
@@ -959,7 +965,7 @@
       let stMap = {};
       if (sr && sr.ok) stMap = sr.map || {};
       let hsMap = {}, hsSeq = ++holdSeq;
-      if (!r.holdings.length) { box.appendChild(mkEl("div", "alertHint", "등록된 보유 종목이 없어요. 위에서 종목을 검색해 추가해 보세요.")); return; }
+      if (!r.holdings.length) { box.appendChild(mkEl("div", "alertHint", "등록된 보유 종목이 없어요. 위에서 종목을 검색해 추가해 보세요. (기기 " + String(myToken || "").slice(0, 4) + ")")); return; }
       const card = mkEl("div", "frCard");                       // 친구들 종목과 같은 모양
       card.appendChild(mkEl("div", "frName", "나"));
       r.holdings.forEach((h) => {
