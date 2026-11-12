@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>주식 알리미</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="theme-color" content="#0f1419">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -280,6 +282,26 @@
     .pfCta .pfT { font-size: 16px; font-weight: 800; color: #6aa6ff; }
     .pfCta .pfS { font-size: 13px; color: var(--sub); }
     .pfCta:disabled { opacity: .6; }
+
+    /* 커뮤 v2: 목록은 깔끔하게, 글쓰기는 아래에서 올라오는 창 */
+    #commView .cmTabs { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0 10px; margin: 0 0 4px; }
+    #commView #cmCats { flex-wrap: wrap; overflow: visible; }
+    #cmFab { position: fixed; right: 18px; bottom: 24px; z-index: 20; background: #3182f6; color: #fff; border: none; border-radius: 999px;
+             padding: 14px 20px; font-weight: 800; font-size: 15px; box-shadow: 0 6px 18px rgba(49,130,246,.45); }
+    .cmSheet { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6); display: none; align-items: flex-end; }
+    .cmSheetBox { width: 100%; max-width: 640px; margin: 0 auto; background: var(--card); border-radius: 24px 24px 0 0; padding: 14px 16px 24px; max-height: 94vh; overflow-y: auto; }
+    .cmSheetTop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .cmSheetTop b { font-size: 17px; }
+    #cmSheetX { background: none; border: none; font-size: 20px; color: var(--sub); padding: 4px 8px; }
+    #cmPost { background: #3182f6; color: #fff; border: none; border-radius: 12px; padding: 9px 16px; font-weight: 800; font-size: 15px; }
+    #commView #cmText { min-height: 150px; }
+    .cmTools { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+    .cmTools #cmPic { background: var(--card2); border: none; border-radius: 12px; padding: 11px 14px; font-size: 14px; white-space: nowrap; }
+    .cmTools input { flex: 1; min-width: 0; background: var(--card2); border: none; border-radius: 12px; padding: 11px 14px; font-size: 14px; }
+    #commView .cmCard { padding-bottom: 8px; }
+    #commView .cmFoot { border-top: none; padding-top: 0; }
+    #commView .cmHead .cmCat { margin: 0 0 0 auto; }
+    #commView .cmHead .cmDel { margin-left: 6px; }
   </style>
 </head>
 <body>
@@ -355,19 +377,27 @@
   <div id="commView" style="display:none">
     <h3>💬 커뮤</h3>
     <div class="pkChips cmTabs" id="cmTabs"></div>
-    <div class="cmBox">
-      <div class="pkChips" id="cmCats" style="margin:0 0 10px"></div>
-      <textarea id="cmText" rows="2" maxlength="500" placeholder="무슨 생각을 하고 있어요?"></textarea>
-      <div id="cmPrev" style="display:none;position:relative;margin-top:10px"><img id="cmPrevImg" style="max-width:100%;max-height:220px;border-radius:14px;display:block"><button id="cmPrevX" style="position:absolute;top:6px;right:6px;border-radius:50%;width:28px;height:28px;padding:0;background:rgba(0,0,0,.6);color:#fff;border:none">✕</button></div>
-      <input id="cmFile" type="file" accept="image/*" style="display:none">
-      <div class="cmBar">
-        <button id="cmPic" title="사진" style="background:var(--card2);border:none;border-radius:12px;padding:11px 13px;font-size:16px">📷</button>
-        <input id="cmTicker" placeholder="종목 (선택)" style="text-transform:uppercase">
-        <button id="cmPost">올리기</button>
-      </div>
-      <div id="cmMsg" class="cmMsg"></div>
-    </div>
     <div id="cmList"></div>
+    <button id="cmFab">✏️ 글쓰기</button>
+
+    <div id="cmSheet" class="cmSheet">
+      <div class="cmSheetBox">
+        <div class="cmSheetTop">
+          <button id="cmSheetX" aria-label="닫기">✕</button>
+          <b>글쓰기</b>
+          <button id="cmPost">올리기</button>
+        </div>
+        <div class="pkChips" id="cmCats" style="margin:0 0 10px"></div>
+        <textarea id="cmText" maxlength="500" placeholder="무슨 생각을 하고 있어요?"></textarea>
+        <div id="cmPrev" style="display:none;position:relative;margin-top:10px"><img id="cmPrevImg" style="max-width:100%;max-height:220px;border-radius:14px;display:block"><button id="cmPrevX" style="position:absolute;top:6px;right:6px;border-radius:50%;width:28px;height:28px;padding:0;background:rgba(0,0,0,.6);color:#fff;border:none">✕</button></div>
+        <input id="cmFile" type="file" accept="image/*" style="display:none">
+        <div class="cmTools">
+          <button id="cmPic" title="사진">📷 사진</button>
+          <input id="cmTicker" placeholder="$ 종목 태그 (예: NVDA)" style="text-transform:uppercase">
+        </div>
+        <div id="cmMsg" class="cmMsg"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== 탭: 추천 ===== -->
@@ -426,8 +456,6 @@
     </div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyADLXkO8UqJ048mG2HQCFJNmoL-xAcXY5c",
@@ -440,10 +468,19 @@
     const VAPID_KEY = "BEFQ2PtyXgvk_Bs3t5pNx_A-a4hYtAC3Zk2X6Nguvb-eF3NfC5uBa5SJVQ3ooAWbzhlL2a7k9vK8pAmaStGSPOE";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyjHP1DGPoYL9njJb_ok6WnpKTUaLUObZjFwqLGa8JJR8mS5roAqb6F0h_MAobuVSTz-g/exec";
 
-    firebase.initializeApp(firebaseConfig);
-    // 푸시를 지원하지 않는 브라우저에서도 다른 기능은 동작하도록 보호
+    // 파이어베이스(푸시)는 화면을 막지 않게 뒤에서 불러옴 → 종목 목록은 먼저 뜸
     let messaging = null;
-    try { messaging = firebase.messaging(); } catch (e) { console.warn("푸시 미지원: " + e.message); }
+    const fbReady = (async () => {
+      try {
+        const load = (src) => new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+        await Promise.all([
+          load("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"),
+          load("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js")
+        ]);
+        firebase.initializeApp(firebaseConfig);
+        try { messaging = firebase.messaging(); } catch (e) { console.warn("푸시 미지원: " + e.message); }
+      } catch (e) { console.warn("푸시 모듈을 불러오지 못했어요: " + e.message); }
+    })();
 
     const $ = (id) => document.getElementById(id);
     const statusEl = $("status");
@@ -473,6 +510,7 @@
     }
 
     async function getMyToken() {
+      await fbReady;
       if (!messaging) throw new Error("이 브라우저는 푸시 알림을 지원하지 않아요 (아이폰은 홈 화면에 추가 후 열어주세요)");
       const reg = await navigator.serviceWorker.register("firebase-messaging-sw.js");
       await navigator.serviceWorker.ready;
@@ -1197,12 +1235,12 @@
 
     if (typeof Notification !== "undefined" && Notification.permission === "granted") init();
 
-    if (messaging) {
+    fbReady.then(() => { if (messaging) {
       messaging.onMessage(async (payload) => {
         const reg = await navigator.serviceWorker.ready;
         reg.showNotification(payload.notification.title, { body: payload.notification.body });
       });
-    }
+    } });
 
     // ================= 공포탐욕지수 =================
     // 구간: 0~24 극단적 공포 / 25~44 공포 / 45~55 중립 / 56~75 탐욕 / 76~100 극단적 탐욕
@@ -1409,6 +1447,7 @@
         if (!r || !r.ok) { box.appendChild(mkEl("div", "alertHint", (r && r.msg) || "아직 불러올 수 없어요")); return; }
         let ps = r.posts.slice();
         if (cmTab === "pop") ps = ps.filter((p) => p.cc > 0).sort((a, b) => b.cc - a.cc);
+        if (!ps.length) box.appendChild(mkEl("div", "alertHint", "아직 글이 없어요. 첫 글을 남겨보세요 ✏️"));
         ps.forEach((p) => box.appendChild(postCard(p)));
       } catch (e) { box.textContent = ""; box.appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); }
     }
@@ -1420,9 +1459,9 @@
       who.appendChild(mkEl("div", "cmName", p.name));
       who.appendChild(mkEl("div", "cmTime", p.time));
       head.appendChild(who);
+      if (p.cat && p.cat !== "free" && CM_LABEL[p.cat]) head.appendChild(mkEl("span", "cmCat", CM_LABEL[p.cat]));
       if (p.mine) { const d = mkEl("button", "cmDel", "삭제"); d.onclick = async () => { if (!confirm("이 글을 지울까요?")) return; c.remove(); await api({ action: "deletePost", token: myToken, id: p.id }); }; head.appendChild(d); }
       c.appendChild(head);
-      if (p.cat && p.cat !== "free" && CM_LABEL[p.cat]) { const cp = mkEl("span", "cmCat", CM_LABEL[p.cat]); cp.style.marginTop = "10px"; c.appendChild(cp); }
       if (p.text) c.appendChild(mkEl("div", "cmText", p.text));
       if (p.image) {
         const im = document.createElement("img"); im.className = "cmImg"; im.loading = "lazy";
@@ -1489,6 +1528,11 @@
         img.src = url;
       });
     }
+    const openSheet = () => { $("cmSheet").style.display = "flex"; setTimeout(() => $("cmText").focus(), 50); };
+    const closeSheet = () => { $("cmSheet").style.display = "none"; };
+    $("cmFab").onclick = () => { if (!myToken) { alert("먼저 '내 종목' 탭에서 알림 받기로 등록하세요"); return; } openSheet(); };
+    $("cmSheetX").onclick = closeSheet;
+    $("cmSheet").addEventListener("click", (e) => { if (e.target === $("cmSheet")) closeSheet(); });
     $("cmPic").onclick = () => $("cmFile").click();
     $("cmFile").onchange = async () => {
       const f = $("cmFile").files[0]; if (!f) return;
@@ -1501,11 +1545,11 @@
       if (!myToken) { $("cmMsg").textContent = "먼저 알림 받기로 등록하세요"; return; }
       const text = $("cmText").value.trim(), ticker = $("cmTicker").value.trim().toUpperCase(), image = cmImage;
       if (!text && !image) { $("cmMsg").textContent = "내용을 적거나 사진을 골라주세요"; return; }
-      $("cmText").value = ""; $("cmTicker").value = ""; $("cmMsg").textContent = ""; cmImage = ""; $("cmPrev").style.display = "none";
+      $("cmText").value = ""; $("cmTicker").value = ""; $("cmMsg").textContent = ""; cmImage = ""; $("cmPrev").style.display = "none"; closeSheet();
       const card = postCard({ id: "", time: "방금", name: "나", ticker, text, image, cat: cmPickCat, mine: false, cc: 0 });
       card.style.opacity = "0.6";
       $("cmList").insertBefore(card, $("cmList").firstChild);
-      const restore = (msg) => { card.remove(); $("cmText").value = text; $("cmTicker").value = ticker; if (image) { cmImage = image; $("cmPrevImg").src = image; $("cmPrev").style.display = "block"; } $("cmMsg").textContent = msg; };
+      const restore = (msg) => { openSheet(); card.remove(); $("cmText").value = text; $("cmTicker").value = ticker; if (image) { cmImage = image; $("cmPrevImg").src = image; $("cmPrev").style.display = "block"; } $("cmMsg").textContent = msg; };
       try {
         const x = await api({ action: "addPost", token: myToken, text, ticker, image, cat: cmPickCat });
         if (x.ok) loadPosts(); else restore(x.msg || "올리지 못했어요");
