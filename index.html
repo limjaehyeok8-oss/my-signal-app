@@ -1461,6 +1461,7 @@
         ps.forEach((p) => box.appendChild(postCard(p)));
       } catch (e) { box.textContent = ""; box.appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); }
     }
+    const cmImgMemo = {};
     function postCard(p) {
       const c = mkEl("div", "cmCard");
       const head = mkEl("div", "cmHead");
@@ -1473,6 +1474,13 @@
       if (p.mine) { const d = mkEl("button", "cmDel", "삭제"); d.onclick = async () => { if (!confirm("이 글을 지울까요?")) return; c.remove(); await api({ action: "deletePost", token: myToken, id: p.id }); }; head.appendChild(d); }
       c.appendChild(head);
       if (p.text) c.appendChild(mkEl("div", "cmText", p.text));
+      if (p.hasImg && !p.image) {                              // 사진은 글이 뜬 뒤에 따로 불러옴
+        const ph = document.createElement("img"); ph.className = "cmImg"; ph.style.minHeight = "180px"; c.appendChild(ph);
+        (cmImgMemo[p.id] || (cmImgMemo[p.id] = api({ action: "getPostImage", token: myToken, id: p.id }).then((x) => (x && x.ok && x.image) || ""))).then((src) => {
+          if (!src) { ph.remove(); return; }
+          ph.style.minHeight = ""; ph.src = src; ph.onclick = () => window.open(src, "_blank");
+        }).catch(() => { delete cmImgMemo[p.id]; ph.remove(); });
+      }
       if (p.image) {
         const im = document.createElement("img"); im.className = "cmImg"; im.loading = "lazy";
         im.src = p.image.indexOf("data:") === 0 ? p.image : "https://lh3.googleusercontent.com/d/" + p.image + "=w1000";
