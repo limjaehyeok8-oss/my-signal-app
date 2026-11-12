@@ -237,6 +237,37 @@
     .pkChips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
     .pkChips button { font-size: 12px; padding: 6px 12px; border-radius: 999px; }
     .pkChips button.on { border-color: var(--accent); color: var(--accent); }
+
+    /* ===== 커뮤 (토스 느낌) ===== */
+    #commView { --toss: #3182f6; }
+    #commView h3 { font-size: 22px; font-weight: 800; margin: 18px 0 14px; }
+    #commView .cmBox { background: var(--card); border-radius: 20px; padding: 16px; margin-bottom: 14px; }
+    #commView textarea { width: 100%; box-sizing: border-box; background: transparent; color: var(--txt); border: none; outline: none;
+                         font-size: 17px; line-height: 1.5; resize: none; padding: 0; font-family: inherit; }
+    #commView textarea::placeholder { color: #6b7886; }
+    #commView .cmBar { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+    #commView .cmBar input { flex: 1; min-width: 0; background: var(--card2); border: none; border-radius: 12px; padding: 11px 14px; font-size: 14px; }
+    #commView .cmBar #cmPost { background: var(--toss); color: #fff; border: none; border-radius: 12px; padding: 11px 18px; font-size: 15px; font-weight: 700; }
+    #commView .cmCard { background: var(--card); border-radius: 20px; padding: 18px 16px 12px; margin-bottom: 12px; }
+    #commView .cmHead { display: flex; align-items: center; gap: 10px; }
+    #commView .cmAv { width: 36px; height: 36px; border-radius: 50%; background: #2a3a55; color: #8fb4ff; font-weight: 800;
+                      display: flex; align-items: center; justify-content: center; font-size: 15px; flex: none; }
+    #commView .cmName { font-weight: 700; font-size: 15px; }
+    #commView .cmTime { font-size: 12px; color: var(--sub); }
+    #commView .cmDel { margin-left: auto; background: none; border: none; color: var(--sub); font-size: 13px; padding: 4px 6px; }
+    #commView .cmTick { display: inline-block; margin: 0 0 12px; background: rgba(49,130,246,.16); color: #6aa6ff; font-weight: 700;
+                        font-size: 13px; padding: 4px 10px; border-radius: 999px; cursor: pointer; }
+    #commView .cmText { font-size: 17px; line-height: 1.55; margin: 10px 0 12px; white-space: pre-wrap; word-break: break-word; }
+    #commView .cmFoot { border-top: 1px solid var(--line); margin: 0 -4px; padding-top: 10px; }
+    #commView .cmFoot button { background: none; border: none; color: var(--sub); font-size: 14px; padding: 4px; }
+    #commView .cmCmt { background: var(--card2); border-radius: 14px; padding: 10px 12px; margin-top: 8px; font-size: 15px; line-height: 1.45; }
+    #commView .cmCmt .n { font-weight: 700; margin-right: 6px; }
+    #commView .cmCmt .t { color: var(--sub); font-size: 12px; margin-left: 6px; }
+    #commView .cmCmt .d { background: none; border: none; color: var(--sub); font-size: 12px; padding: 0 0 0 6px; }
+    #commView .cmIn { display: flex; gap: 8px; margin-top: 10px; }
+    #commView .cmIn input { flex: 1; min-width: 0; background: var(--card2); border: none; border-radius: 12px; padding: 11px 14px; }
+    #commView .cmIn button { background: var(--toss); color: #fff; border: none; border-radius: 12px; font-weight: 700; padding: 0 16px; }
+    #commView .cmMsg { color: var(--sub); font-size: 13px; margin-top: 6px; }
   </style>
 </head>
 <body>
@@ -311,14 +342,15 @@
 
   <!-- ===== 탭: 커뮤 ===== -->
   <div id="commView" style="display:none">
-    <h3 style="margin:14px 0 4px">💬 커뮤</h3>
-    <div class="alertHint">등록한 사람들이 같이 보는 게시판이에요. 글에는 닉네임이 보여요.</div>
-    <textarea id="cmText" rows="3" maxlength="500" placeholder="글을 적어보세요 (500자까지)" style="width:100%;margin-top:8px"></textarea>
-    <div class="row">
-      <input id="cmTicker" placeholder="종목 (선택, 예: NVDA)" style="text-transform:uppercase">
-      <button id="cmPost">올리기</button>
+    <h3>💬 커뮤</h3>
+    <div class="cmBox">
+      <textarea id="cmText" rows="2" maxlength="500" placeholder="무슨 생각을 하고 있어요?"></textarea>
+      <div class="cmBar">
+        <input id="cmTicker" placeholder="종목 (선택)" style="text-transform:uppercase">
+        <button id="cmPost">올리기</button>
+      </div>
+      <div id="cmMsg" class="cmMsg"></div>
     </div>
-    <div id="cmMsg" class="btApplyMsg"></div>
     <div id="cmList"></div>
   </div>
 
@@ -1246,19 +1278,23 @@
       } catch (e) { box.textContent = ""; box.appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); }
     }
     function postCard(p) {
-      const c = mkEl("div", "pkCard");
-      const top = mkEl("div", "pkTop");
-      top.appendChild(mkEl("b", null, p.name));
-      top.appendChild(mkEl("span", "alertHint", p.time));
-      if (p.ticker) { const t = mkEl("span", "sym", p.ticker); t.onclick = () => { showPage("home"); symbolEl.value = p.ticker; analyze(p.ticker); window.scrollTo({ top: 0, behavior: "smooth" }); }; top.appendChild(t); }
-      if (p.mine) { const d = mkEl("button", "linkBtn", "삭제"); d.style.marginLeft = "auto"; d.onclick = async () => { if (!confirm("이 글을 지울까요?")) return; await api({ action: "deletePost", token: myToken, id: p.id }); loadPosts(); }; top.appendChild(d); }
-      c.appendChild(top);
-      const body = mkEl("div", null, p.text); body.style.whiteSpace = "pre-wrap"; body.style.margin = "6px 0";
-      c.appendChild(body);
-      const tg = mkEl("button", "linkBtn", "💬 댓글 " + p.cc);
+      const c = mkEl("div", "cmCard");
+      const head = mkEl("div", "cmHead");
+      head.appendChild(mkEl("div", "cmAv", (p.name || "?").replace("익명 ", "").charAt(0)));
+      const who = mkEl("div");
+      who.appendChild(mkEl("div", "cmName", p.name));
+      who.appendChild(mkEl("div", "cmTime", p.time));
+      head.appendChild(who);
+      if (p.mine) { const d = mkEl("button", "cmDel", "삭제"); d.onclick = async () => { if (!confirm("이 글을 지울까요?")) return; await api({ action: "deletePost", token: myToken, id: p.id }); loadPosts(); }; head.appendChild(d); }
+      c.appendChild(head);
+      c.appendChild(mkEl("div", "cmText", p.text));
+      if (p.ticker) { const t = mkEl("span", "cmTick", "$" + p.ticker); t.onclick = () => { showPage("home"); symbolEl.value = p.ticker; analyze(p.ticker); window.scrollTo({ top: 0, behavior: "smooth" }); }; c.appendChild(t); }
+      const foot = mkEl("div", "cmFoot");
+      const tg = mkEl("button", null, "댓글 " + p.cc);
       const cbox = mkEl("div"); cbox.style.display = "none";
       tg.onclick = () => { if (cbox.style.display === "none") { cbox.style.display = "block"; loadComments(p.id, cbox); } else cbox.style.display = "none"; };
-      c.appendChild(tg); c.appendChild(cbox);
+      foot.appendChild(tg); foot.appendChild(cbox);
+      c.appendChild(foot);
       return c;
     }
     async function loadComments(postId, box) {
@@ -1266,19 +1302,21 @@
       try {
         const r = await api({ action: "getComments", token: myToken, postId });
         (r.comments || []).forEach((m) => {
-          const row = mkEl("div", "alertHint"); row.style.margin = "6px 0";
-          row.appendChild(mkEl("b", null, m.name + " "));
-          row.appendChild(document.createTextNode(m.text + "  "));
-          row.appendChild(mkEl("span", null, m.time));
-          if (m.mine) { const d = mkEl("button", "linkBtn", " 삭제"); d.onclick = async () => { await api({ action: "deleteComment", token: myToken, id: m.id }); loadComments(postId, box); }; row.appendChild(d); }
+          const row = mkEl("div", "cmCmt");
+          row.appendChild(mkEl("span", "n", m.name));
+          row.appendChild(document.createTextNode(m.text));
+          row.appendChild(mkEl("span", "t", m.time));
+          if (m.mine) { const d = mkEl("button", "d", "삭제"); d.onclick = async () => { await api({ action: "deleteComment", token: myToken, id: m.id }); loadComments(postId, box); }; row.appendChild(d); }
           box.appendChild(row);
         });
-        const inp = document.createElement("input"); inp.placeholder = "댓글 달기"; inp.maxLength = 300; inp.style.width = "calc(100% - 70px)";
-        const go = mkEl("button", null, "등록"); go.style.marginLeft = "6px";
-        const msg = mkEl("div", "btApplyMsg");
+        const wrap = mkEl("div", "cmIn");
+        const inp = document.createElement("input"); inp.placeholder = "댓글을 남겨보세요"; inp.maxLength = 300;
+        const go = mkEl("button", null, "등록");
+        const msg = mkEl("div", "cmMsg");
         go.onclick = async () => { const x = await api({ action: "addComment", token: myToken, postId, text: inp.value }); if (x.ok) loadComments(postId, box); else msg.textContent = x.msg || ""; };
-        box.appendChild(inp); box.appendChild(go); box.appendChild(msg);
-      } catch (e) { box.appendChild(mkEl("div", "alertHint", "댓글을 불러오지 못했어요")); }
+        wrap.appendChild(inp); wrap.appendChild(go);
+        box.appendChild(wrap); box.appendChild(msg);
+      } catch (e) { box.appendChild(mkEl("div", "cmMsg", "댓글을 불러오지 못했어요")); }
     }
     $("cmPost").onclick = async () => {
       if (!myToken) { $("cmMsg").textContent = "먼저 알림 받기로 등록하세요"; return; }
