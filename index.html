@@ -135,6 +135,10 @@
     #reportView .chip { background: var(--card2); color: var(--txt); }
     #reportView th, #reportView td { border-bottom-color: var(--line); }
     #reportView .note, #reportView .none, #reportMsg { color: var(--sub); }
+    .pfTags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .pfTag { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--card2); color: var(--sub); }
+    .pfTag.warn { background: rgba(255,170,60,.15); color: #ffb44d; }
+    .pfTag.stop { background: rgba(255,90,106,.18); color: #ff7a88; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -443,6 +447,15 @@
           // 봇 상태 (매수/매도 신호 진행중)
           if (row.state) card.appendChild(mk("div", "pfBadge " + (row.state.type === "buy" ? "buy" : "sell"), row.state.short));
           else card.appendChild(mk("div", "pfBadge none", "신호 이력 없음"));
+
+          // 종목 성격 / 횡보 / 손절 참고선 태그
+          if (row.ctx) {
+            const tags = mk("div", "pfTags");
+            tags.appendChild(mk("span", "pfTag", row.ctx.cls + " · 일변동 " + row.ctx.atrPct.toFixed(1) + "%"));
+            if (row.ctx.sideways) tags.appendChild(mk("span", "pfTag warn", "⚠️ 횡보장"));
+            if (row.pnl != null && row.pnl <= -row.ctx.stopPct) tags.appendChild(mk("span", "pfTag stop", "🛑 손절 참고선(-" + row.ctx.stopPct + "%) 도달"));
+            card.appendChild(tags);
+          }
 
           const stats = mk("div", "pfStats");
           const stat = (label, text, cls) => {
