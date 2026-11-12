@@ -565,7 +565,11 @@
       const me = $("frMe"), hold = $("frHold");
       try {
         const r = await api({ action: "getFriendInfo", token: myToken });
-        if (!r || !r.ok) { me.textContent = ""; hold.textContent = ""; return; }
+        if (!r || !r.ok) {
+          me.textContent = ""; hold.textContent = "";
+          me.appendChild(mkEl("div", "alertHint", "친구 기능을 불러오지 못했어요. 서버(Apps Script)에 Friends 파일을 추가하고 새 버전으로 배포했는지 확인해 주세요." + (r && r.msg ? " (" + r.msg + ")" : "")));
+          return;
+        }
         me.textContent = "";
 
         // 방 비밀번호를 쓰는 경우: 처음 한 번만 입력
@@ -608,7 +612,10 @@
             hold.appendChild(card);
           });
         }
-      } catch (e) { /* 서버가 아직 친구 기능을 모르면 조용히 숨김 */ }
+      } catch (e) {
+        me.textContent = ""; hold.textContent = "";
+        me.appendChild(mkEl("div", "alertHint", "친구 기능을 불러오지 못했어요: " + e.message));
+      }
     }
     $("frBox").addEventListener("toggle", () => { if ($("frBox").open) loadFriends(); });
 
