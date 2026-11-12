@@ -672,6 +672,10 @@
       if (pickFilter === "clover") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("저점매수") !== -1));
       if (pickFilter === "buy") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("매수 신호") !== -1));
       if (pickFilter === "strong") items = items.filter((x) => x.sc >= 3);
+      if (!pickGroup) {                                          // 전체 분야: 필터를 건 뒤 분야마다 5개씩
+        const c5 = {};
+        items = items.filter((x) => { c5[x.g] = (c5[x.g] || 0) + 1; return c5[x.g] <= 5; });
+      }
       if (!items.length) { list.appendChild(mkEl("div", "alertHint", pickData.length ? "이 조건에 맞는 종목이 없어요" : "")); return; }
       items.forEach((x) => {
         const c = mkEl("div", "pkCard");
