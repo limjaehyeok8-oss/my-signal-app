@@ -436,13 +436,24 @@
     let myToken = null;
     let paused = false;
 
+    // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
+    const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60 };
+    const apiMemo = {};
     async function api(body) {
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(body)
-      });
-      return res.json();
+      const ttl = API_TTL[body.action];
+      const post = () => fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) }).then((r) => r.json());
+      if (!ttl) {                                           // 쓰기/분석 등: 기억 비우고 그대로 호출
+        if (!/^(analyze|backtest|portfolio|search)/.test(body.action || "")) Object.keys(apiMemo).forEach((k) => delete apiMemo[k]);
+        return post();
+      }
+      if (body.force) { Object.keys(apiMemo).forEach((k) => delete apiMemo[k]); return post(); }
+      const key = JSON.stringify(body), now = Date.now(), m = apiMemo[key];
+      if (m && now - m.t < ttl * 1000) return m.p;
+      const p = post();
+      apiMemo[key] = { t: now, p };
+      p.then((r) => { if (!r || !r.ok) delete apiMemo[key]; }, () => { delete apiMemo[key]; });
+      return p;
     }
 
     async function getMyToken() {
@@ -916,12 +927,15 @@
       } catch (e) { document.querySelectorAll("#list [data-sym]").forEach((el) => { el.textContent = ""; }); }
     }
     async function loadHoldings() {
-      const r = await api({ action: "listHoldings", token: myToken });
+      const [r, sr] = await Promise.all([
+        api({ action: "listHoldings", token: myToken }),
+        api({ action: "getStrategies", token: myToken }).catch(() => null)
+      ]);
       const box = $("list");
       box.textContent = "";
       if (!r.ok) return log(r.msg);
       let stMap = {};
-      try { const sr = await api({ action: "getStrategies", token: myToken }); if (sr.ok) stMap = sr.map || {}; } catch (e) {}
+      if (sr && sr.ok) stMap = sr.map || {};
       let hsMap = {}, hsSeq = ++holdSeq;
       if (!r.holdings.length) { box.appendChild(mkEl("div", "alertHint", "등록된 보유 종목이 없어요. 위에서 종목을 검색해 추가해 보세요.")); return; }
       r.holdings.forEach((h) => {
@@ -1084,6 +1098,8 @@
         loadHoldings();
         loadAlerts();
         loadFriends();
+        api({ action: "getPicks", token: myToken }).catch(() => {});      // 추천·커뮤는 미리 받아둬서 탭을 열면 바로 뜸
+        api({ action: "getPosts", token: myToken }).catch(() => {});
       } catch (e) { log("오류: " + e.message); }
     }
 
