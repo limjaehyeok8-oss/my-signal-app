@@ -300,10 +300,12 @@
         <div id="alertList"><div class="alertHint">현재는 알림이 없어요</div></div>
         <button id="alertRefresh" style="font-size:12px;padding:8px 10px;margin-top:8px">새로고침</button>
       </details>
-      <h3>종목 검색 · 분석</h3>
-      <div class="row">
-        <input id="symbol" placeholder="이름 또는 티커 (예: sandisk, SOXL)" autocomplete="off" autocapitalize="off">
-        <button id="analyze">분석</button>
+      <h3>종목 검색 · 분석 · 등록</h3>
+      <div class="row" id="srRow">
+        <input id="symbol" placeholder="이름 또는 티커" autocomplete="off" autocapitalize="off" style="flex:1;min-width:0">
+        <input id="avg" placeholder="평단가" type="number" step="any" inputmode="decimal" style="width:76px;flex:none">
+        <button id="analyze" style="padding:10px 12px;flex:none">분석</button>
+        <button id="add" style="padding:10px 12px;flex:none">추가</button>
       </div>
       <div id="results"></div>
 
@@ -311,12 +313,6 @@
         <img id="chartImg" alt="차트">
         <pre id="analysisText"></pre>
         <div id="anaStrat" class="btRec" style="display:none"></div>
-      </div>
-
-      <h3>보유 종목 등록</h3>
-      <div class="row">
-        <input id="avg" placeholder="평단가" type="number" step="any" inputmode="decimal">
-        <button id="add">위 종목 추가</button>
       </div>
 
       <button id="pfBtn" class="pfCta"><span class="pfT">📋 내 포트폴리오 확인하기</span><span class="pfS">눌러서 수익률 표와 종목별 차트를 확인하세요</span></button>
