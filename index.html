@@ -315,11 +315,8 @@
       <button data-f="all">전체</button>
       <button data-f="today" class="on">오늘</button>
       <button data-f="d3">최근 3일</button>
-      <button data-f="clover">☘️ 저점매수</button>
-      <button data-f="buy">🟢 매수 신호</button>
-      <button data-f="strong">점수 3+</button>
     </div>
-    <div class="pkChips" id="pickGroups"></div>
+    <select id="pickGroupSel" style="margin:4px 0 6px;width:100%"></select>
     <div id="pickUpd" class="alertHint"></div>
     <div id="pickList"></div>
     <button id="pickRefresh" style="font-size:12px;padding:8px 10px;margin-top:8px">새로고침</button>
@@ -660,28 +657,34 @@
     // ===== 추천 탭: 오늘 신호 뜬 종목 =====
     let pickGroupList = [], pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "";
     function renderGroups() {
-      const box = $("pickGroups"); box.textContent = "";
+      const sel = $("pickGroupSel"); sel.textContent = "";
       const cnt = {};
-      pickData.forEach((x) => { if (x.g) cnt[x.g] = (cnt[x.g] || 0) + 1; });
+      pickData.forEach((x) => { if (x.g && (x.tag || []).length) cnt[x.g] = (cnt[x.g] || 0) + 1; });
       pickGroupOrder = {}; pickGroupList.forEach((g) => { pickGroupOrder[g] = 1; });
-      const mk = (label, val) => { const b = mkEl("button", val === pickGroup ? "on" : "", label); b.onclick = () => { pickGroup = val; renderGroups(); renderPicks(); }; box.appendChild(b); };
-      mk("전체 분야", "");
-      (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => { if (cnt[g]) mk(g + " " + cnt[g], g); });
+      const add = (label, val) => { const o = document.createElement("option"); o.value = val; o.textContent = label; sel.appendChild(o); };
+      add("전체 분야", "");
+      (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => { if (cnt[g]) add(g + " (" + cnt[g] + ")", g); });
+      if (pickGroup && !cnt[pickGroup]) pickGroup = "";
+      sel.value = pickGroup;
+      sel.onchange = () => { pickGroup = sel.value; renderPicks(); };
     }
     function pickCard(x) {
       const c = mkEl("div", "pkCard");
       const top = mkEl("div", "pkTop");
       const sym = mkEl("span", "sym", x.s);
-      sym.onclick = () => { showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      sym.onclick = (e) => { e.stopPropagation(); showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
       top.appendChild(sym);
       top.appendChild(mkEl("span", null, fmt(x.p)));
       top.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
-      top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc + " · " + x.cls));
+      top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc));
       c.appendChild(top);
-      c.appendChild(mkEl("div", "pkTag", (x.tag || []).join("  ")));
-      const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n"));
+      c.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ")));
+      const why = mkEl("div", "pkWhy", (x.cls ? x.cls + "\n" : "") + (x.why || []).map((w) => "• " + w).join("\n"));
       why.style.whiteSpace = "pre-wrap";
+      why.style.display = "none";
       c.appendChild(why);
+      c.style.cursor = "pointer";
+      c.onclick = () => { why.style.display = why.style.display === "none" ? "block" : "none"; };
       return c;
     }
     function renderPicks() {
@@ -724,14 +727,16 @@
       try {
         const r = await api({ action: "getPicks", token: myToken, force: force === true });
         if (!r || !r.ok) { pickData = []; renderPicks(); $("pickList").appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); return; }
-        $("pickUpd").textContent = r.updated ? "업데이트 " + r.updated + " · 훑은 종목 " + r.scanned + "개 · 신호 " + (r.items || []).length + "개" : "";
+        let updTxt = "";
+        if (r.updated) { let t = String(r.updated); if (/GMT|T\d\d:/.test(t)) { const dt = new Date(t); if (!isNaN(dt)) { const z = (n) => String(n).padStart(2, "0"); t = z(dt.getMonth() + 1) + "/" + z(dt.getDate()) + " " + z(dt.getHours()) + ":" + z(dt.getMinutes()); } } updTxt = t + " 기준 · 카드를 누르면 이유가 보여요"; }
+        $("pickUpd").textContent = updTxt;
         pickData = r.items || [];
         if (r.groups) pickGroupList = r.groups;
         renderGroups();
         renderPicks();
         if (!pickData.length) $("pickList").appendChild(mkEl("div", "alertHint", r.updated ? "" : "아직 계산된 결과가 없어요"));
         if (r.refreshing) {
-          $("pickUpd").textContent += " · 🔄 최신으로 계산 중 (잠시 뒤 자동 갱신)";
+          $("pickUpd").textContent += " · 🔄 계산 중";
           if (pickPoll < 4) { pickPoll++; clearTimeout(pickTimer); pickTimer = setTimeout(loadPicks, 90000); }
         } else pickPoll = 0;
       } catch (e) { pickData = []; renderPicks(); $("pickList").appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); }
