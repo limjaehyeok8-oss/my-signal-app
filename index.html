@@ -651,48 +651,48 @@
     $("frBox").addEventListener("toggle", () => { if ($("frBox").open) loadFriends(); });
 
     // ===== 추천 탭: 오늘 신호 뜬 종목 =====
-    let pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "";
+    let pickGroupList = [], pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "";
     function renderGroups() {
       const box = $("pickGroups"); box.textContent = "";
       const cnt = {};
       pickData.forEach((x) => { if (x.g) cnt[x.g] = (cnt[x.g] || 0) + 1; });
-      pickGroupOrder = cnt;
+      pickGroupOrder = {}; pickGroupList.forEach((g) => { pickGroupOrder[g] = 1; });
       const mk = (label, val) => { const b = mkEl("button", val === pickGroup ? "on" : "", label); b.onclick = () => { pickGroup = val; renderGroups(); renderPicks(); }; box.appendChild(b); };
       mk("전체 분야", "");
-      Object.keys(cnt).forEach((g) => mk(g + " " + cnt[g], g));
+      (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => mk(g + " " + (cnt[g] || 0), g));
+    }
+    function pickCard(x) {
+      const c = mkEl("div", "pkCard");
+      const top = mkEl("div", "pkTop");
+      const sym = mkEl("span", "sym", x.s);
+      sym.onclick = () => { showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      top.appendChild(sym);
+      top.appendChild(mkEl("span", null, fmt(x.p)));
+      top.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
+      top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc + " · " + x.cls));
+      c.appendChild(top);
+      c.appendChild(mkEl("div", "pkTag", (x.tag || []).join("  ")));
+      const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n"));
+      why.style.whiteSpace = "pre-wrap";
+      c.appendChild(why);
+      return c;
     }
     function renderPicks() {
       const list = $("pickList");
       list.textContent = "";
       let items = pickData.slice();
-      if (pickGroup) items = items.filter((x) => x.g === pickGroup);
-      else { const ord = Object.keys(pickGroupOrder); items.sort((a, b) => ord.indexOf(a.g) - ord.indexOf(b.g) || b.sc - a.sc); }
       if (pickFilter === "d3") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("일 전") !== -1 || t.indexOf("오늘") !== -1));
       if (pickFilter === "today") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("오늘") !== -1));
       if (pickFilter === "clover") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("저점매수") !== -1));
       if (pickFilter === "buy") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("매수 신호") !== -1));
       if (pickFilter === "strong") items = items.filter((x) => x.sc >= 3);
-      if (!pickGroup) {                                          // 전체 분야: 필터를 건 뒤 분야마다 5개씩
-        const c5 = {};
-        items = items.filter((x) => { c5[x.g] = (c5[x.g] || 0) + 1; return c5[x.g] <= 5; });
-      }
-      if (!items.length) { list.appendChild(mkEl("div", "alertHint", pickData.length ? "이 조건에 맞는 종목이 없어요" : "")); return; }
-      items.forEach((x) => {
-        const c = mkEl("div", "pkCard");
-        const top = mkEl("div", "pkTop");
-        const sym = mkEl("span", "sym", x.s);
-        sym.onclick = () => { showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
-        top.appendChild(sym);
-        top.appendChild(mkEl("span", null, fmt(x.p)));
-        top.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
-        top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc + " · " + x.cls));
-        c.appendChild(top);
-        c.appendChild(mkEl("div", "pkTag", (x.tag || []).join("  ")));
-        if (x.g) c.appendChild(mkEl("div", "alertHint", x.g));
-        const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n"));
-        why.style.whiteSpace = "pre-wrap";
-        c.appendChild(why);
-        list.appendChild(c);
+      if (!pickData.length) return;
+      const groups = pickGroup ? [pickGroup] : (pickGroupList.length ? pickGroupList.slice() : Array.from(new Set(items.map((x) => x.g))));
+      groups.forEach((g) => {
+        const gi = items.filter((x) => x.g === g).sort((a, b) => b.sc - a.sc || b.ch - a.ch);
+        list.appendChild(mkEl("div", "alertHint", g + " · " + Math.min(gi.length, 5) + "개"));
+        gi.slice(0, pickGroup ? 15 : 5).forEach((x) => list.appendChild(pickCard(x)));
+        if (gi.length < 5) list.appendChild(mkEl("div", "alertHint", gi.length ? "5개가 안 채워졌어요 (신호가 뜬 종목이 " + gi.length + "개뿐)" : "신호가 뜬 종목이 없어요"));
       });
     }
     let pickPoll = 0, pickTimer = null;
@@ -703,6 +703,7 @@
         if (!r || !r.ok) { pickData = []; renderPicks(); $("pickList").appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); return; }
         $("pickUpd").textContent = r.updated ? "업데이트 " + r.updated + " · 훑은 종목 " + r.scanned + "개 · 신호 " + (r.items || []).length + "개" : "";
         pickData = r.items || [];
+        if (r.groups) pickGroupList = r.groups;
         renderGroups();
         renderPicks();
         if (!pickData.length) $("pickList").appendChild(mkEl("div", "alertHint", r.updated ? "최근 3일 안에 신호가 뜬 종목이 없어요" : "아직 계산된 결과가 없어요"));
