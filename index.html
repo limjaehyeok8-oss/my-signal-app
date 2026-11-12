@@ -666,7 +666,7 @@
       pickGroupOrder = {}; pickGroupList.forEach((g) => { pickGroupOrder[g] = 1; });
       const mk = (label, val) => { const b = mkEl("button", val === pickGroup ? "on" : "", label); b.onclick = () => { pickGroup = val; renderGroups(); renderPicks(); }; box.appendChild(b); };
       mk("전체 분야", "");
-      (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => mk(g + " " + (cnt[g] || 0), g));
+      (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => { if (cnt[g]) mk(g + " " + cnt[g], g); });
     }
     function pickCard(x) {
       const c = mkEl("div", "pkCard");
@@ -705,9 +705,7 @@
         const lim = pickGroup ? 15 : 5;
         list.appendChild(mkEl("div", "alertHint", g + " · " + Math.min(gi.length, lim) + "개"));
         gi.slice(0, lim).forEach((x) => list.appendChild(pickCard(x)));
-        if (gi.length < 5) list.appendChild(mkEl("div", "alertHint", "5개가 안 채워졌어요 (" + gi.length + "개뿐)"));
       });
-      if (!shown && pickData.length) list.appendChild(mkEl("div", "alertHint", "이 조건에 맞는 종목이 없어요"));
 
       // ===== 아래 칸: 장기 저점 후보 (☘️가 하락장에서 여러 번 뜬 종목) =====
       const lt2 = pickGroup ? lts.filter((x) => x.g === pickGroup) : lts;
