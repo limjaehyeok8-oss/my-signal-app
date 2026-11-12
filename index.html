@@ -215,7 +215,7 @@
       <details id="alertBox" class="alertBox">
         <summary>🔔 최근 받은 알림 <span id="alertCnt"></span></summary>
         <div class="alertHint">알림을 실수로 지워도 여기서 다시 볼 수 있어요.</div>
-        <div id="alertList"></div>
+        <div id="alertList"><div class="alertHint">현재는 알림이 없어요</div></div>
         <button id="alertRefresh" style="font-size:12px;padding:8px 10px;margin-top:8px">새로고침</button>
       </details>
       <h3>종목 검색 · 분석</h3>
@@ -500,12 +500,13 @@
     async function loadAlerts() {
       const list = $("alertList");
       if (!myToken) return;
+      const none = () => { list.textContent = ""; $("alertCnt").textContent = ""; list.appendChild(mkEl("div", "alertHint", "현재는 알림이 없어요")); };
       try {
         const r = await api({ action: "getAlerts", token: myToken, limit: 20 });
+        // 서버가 아직 이 기능을 모르거나(알 수 없는 action) 실패해도, 오류 대신 '알림 없음'으로 보여줌
+        if (!r || !r.ok || !r.alerts || !r.alerts.length) { none(); return; }
         list.textContent = "";
-        if (!r.ok) { list.textContent = r.msg || "불러오지 못했어요"; return; }
-        $("alertCnt").textContent = r.alerts.length ? "(" + r.alerts.length + ")" : "";
-        if (!r.alerts.length) { list.appendChild(mkEl("div", "alertHint", "아직 받은 알림 기록이 없어요. (이 기능을 켠 이후에 온 알림부터 저장돼요)")); return; }
+        $("alertCnt").textContent = "(" + r.alerts.length + ")";
         r.alerts.forEach((a) => {
           const d = mkEl("div", "alItem");
           d.appendChild(mkEl("div", "alT", a.t));
@@ -513,7 +514,7 @@
           d.appendChild(mkEl("div", "alB", a.body));
           list.appendChild(d);
         });
-      } catch (e) { list.textContent = "오류: " + e.message; }
+      } catch (e) { none(); }
     }
     $("alertRefresh").onclick = loadAlerts;
     $("alertBox").addEventListener("toggle", () => { if ($("alertBox").open) loadAlerts(); });
