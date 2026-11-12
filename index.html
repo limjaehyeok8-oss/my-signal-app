@@ -666,7 +666,7 @@
       mk("전체 분야", "");
       (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => { if (cnt[g]) mk(g + " " + cnt[g], g); });
     }
-    function pickCard(x) {
+    function pickCard(x, showGroup) {
       const c = mkEl("div", "pkCard");
       const top = mkEl("div", "pkTop");
       const sym = mkEl("span", "sym", x.s);
@@ -677,6 +677,7 @@
       top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc + (x.cls ? " · " + x.cls : "")));
       c.appendChild(top);
       c.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ")));
+      if (showGroup && x.g) c.appendChild(mkEl("div", "alertHint", x.g));
       const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n"));
       why.style.whiteSpace = "pre-wrap";
       why.style.display = "none";
@@ -697,16 +698,15 @@
       if (pickFilter === "clover") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("저점매수") !== -1));
       if (pickFilter === "buy") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("매수 신호") !== -1));
       if (pickFilter === "strong") items = items.filter((x) => x.sc >= 3);
-      const groups = pickGroup ? [pickGroup] : (pickGroupList.length ? pickGroupList.slice() : Array.from(new Set(items.map((x) => x.g))));
-      let shown = 0;
-      groups.forEach((g) => {
-        const gi = items.filter((x) => x.g === g).sort((a, b) => b.sc - a.sc || b.ch - a.ch);
-        if (!gi.length) return;                                  // 종목이 없는 분야는 아예 안 보임
-        shown++;
-        const lim = pickGroup ? 15 : 5;
-        list.appendChild(mkEl("div", "alertHint", g + " · " + Math.min(gi.length, lim) + "개"));
-        gi.slice(0, lim).forEach((x) => list.appendChild(pickCard(x)));
-      });
+      if (pickGroup) {
+        const gi = items.filter((x) => x.g === pickGroup).sort((a, b) => b.sc - a.sc || b.ch - a.ch);
+        gi.slice(0, 15).forEach((x) => list.appendChild(pickCard(x)));
+      } else {                                                  // 전체 분야: 분야별 5개씩 고른 뒤 점수 높은 순으로 한 줄 정렬
+        const c5 = {};
+        items.sort((a, b) => b.sc - a.sc || b.ch - a.ch);
+        items.filter((x) => { c5[x.g] = (c5[x.g] || 0) + 1; return c5[x.g] <= 5; })
+          .forEach((x) => list.appendChild(pickCard(x, true)));
+      }
 
       // ===== 아래 칸: 장기 저점 후보 (☘️가 하락장에서 여러 번 뜬 종목) =====
       const lt2 = pickGroup ? lts.filter((x) => x.g === pickGroup) : lts;
