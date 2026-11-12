@@ -2,47 +2,22 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>타점 알리미</title>
-  <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>타점 알림</title>
   <style>
-    body { font-family: 'Malgun Gothic', sans-serif; text-align: center; background-color: #f4f6f9; padding-top: 50px; }
-    .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: inline-block; min-width: 250px; }
-    .symbol { font-size: 28px; font-weight: bold; color: #1a73e8; }
-    .signal { font-size: 24px; font-weight: bold; color: #d93025; margin: 15px 0; }
-    .price { font-size: 18px; color: #5f6368; }
-    .time { font-size: 12px; color: #9aa0a6; margin-top: 20px; }
+    body { font-family: sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
+    button { padding: 12px 20px; font-size: 16px; }
+    #status { margin-top: 16px; color: #555; white-space: pre-wrap; }
   </style>
 </head>
 <body>
-  <h2>실시간 타점 모니터</h2>
-  <div class="card">
-    <div id="data-container">데이터를 불러오는 중...</div>
-  </div>
+  <h2>📈 주식 타점 알림</h2>
+  <button id="subscribe">알림 받기</button>
+  <p id="status"></p>
 
-  <!-- 1. 타점 데이터 불러오기 -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
   <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwSFBmJICFzFdP8ROY3YdidE5QadyfhhhoQ_kmI9xPB6WnTv2bjhQzKwiJ6grlvGiBQWQ/exec"; 
-    fetch(GAS_URL)
-      .then(response => response.json())
-      .then(data => {
-        document.getElementById('data-container').innerHTML = `
-          <div class="symbol">${data.symbol}</div>
-          <div class="signal">${data.signal}</div>
-          <div class="price">현재가: $${data.price}</div>
-          <div class="time">업데이트: ${data.time}</div>
-        `;
-      })
-      .catch(error => {
-        document.getElementById('data-container').innerHTML = "데이터를 불러오는 데 실패했습니다.";
-      });
-  </script>
-
-  <!-- 2. 파이어베이스 푸시 알림 및 토큰 자동 수집 설정 -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
-
     const firebaseConfig = {
       apiKey: "AIzaSyADLXkO8UqJ048mG2HQCFJNmoL-xAcXY5c",
       authDomain: "mysignalpush.firebaseapp.com",
@@ -51,42 +26,41 @@
       messagingSenderId: "224309937152",
       appId: "1:224309937152:web:0e79104fb7aea5b86dc4e5"
     };
+    const VAPID_KEY = "BEFQ2PtyXgvk_Bs3t5pNx_A-a4hYtAC3Zk2X6Nguvb-eF3NfC5uBa5SJVQ3ooAWbzhlL2a7k9vK8pAmaStGSPOE";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyjHP1DGPoYL9njJb_ok6WnpKTUaLUObZjFwqLGa8JJR8mS5roAqb6F0h_MAobuVSTz-g/exec";
 
-    const app = initializeApp(firebaseConfig);
-    const messaging = getMessaging(app);
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
+    const statusEl = document.getElementById("status");
+    const log = (m) => statusEl.textContent = m;
 
-    // ★ 토큰 수집용 웹 앱 URL이 입력되었습니다 ★
-    const TOKEN_COLLECTOR_URL = "https://script.google.com/macros/s/AKfycbyjHP1DGPoYL9njJb_ok6WnpKTUaLUObZjFwqLGa8JJR8mS5roAqb6F0h_MAobuVSTz-g/exec";
+    document.getElementById("subscribe").onclick = async () => {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") return log("알림 권한이 거부됐어요. 브라우저 설정에서 허용해 주세요.");
 
-    function registerServiceWorker() {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./firebase-messaging-sw.js').then((registration) => {
-          
-          getToken(messaging, { 
-            vapidKey: "BEFQ2PtyXgvk_Bs3t5pNx_A-a4hYtAC3Zk2X6Nguvb-eF3NfC5uBa5SJVQ3ooAWbzhlL2a7k9vK8pAmaStGSPOE", 
-            serviceWorkerRegistration: registration 
-          }).then((currentToken) => {
-            if (currentToken) {
-              // 토큰이 발급되면 내 스프레드시트로 자동 전송!
-              fetch(TOKEN_COLLECTOR_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token: currentToken })
-              }).then(() => {
-                console.log("토큰이 구독자 명부에 자동 등록되었습니다.");
-              });
-            }
-          });
+        const reg = await navigator.serviceWorker.register("firebase-messaging-sw.js");
+        await navigator.serviceWorker.ready;
 
+        const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+        if (!token) return log("토큰 발급 실패");
+
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "register", token })
         });
+        const result = await res.json();
+        log("등록 결과: " + result.msg);
+      } catch (e) {
+        log("오류: " + e.message);
       }
-    }
+    };
 
-    if (Notification.permission === 'granted') {
-      registerServiceWorker();
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') {
-          registerServiceWorker();
-        }
+    messaging.onMessage(async (payload) => {
+      const reg = await navigator.serviceWorker.ready;
+      reg.showNotification(payload.notification.title, { body: payload.notification.body });
+    });
+  </script>
+</body>
+</html>
