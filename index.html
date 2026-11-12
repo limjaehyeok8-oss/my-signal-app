@@ -169,6 +169,9 @@
     table.btt th:first-child, table.btt td:first-child { text-align: left; }
     .btChart { width: 100%; height: auto; display: block; margin-top: 8px; background: var(--card2); border-radius: 8px; }
     .btLegend { font-size: 11px; color: var(--sub); margin-top: 4px; line-height: 1.6; }
+    .btRange { display: flex; gap: 6px; margin-top: 8px; }
+    .btRangeBtn { flex: 1; padding: 6px 0; font-size: 12px; border-radius: 8px; background: var(--card2); color: var(--sub); border: 1px solid var(--line); }
+    .btRangeBtn.on { background: var(--accent2); color: #fff; border-color: var(--accent2); }
   </style>
 </head>
 <body>
@@ -794,62 +797,98 @@
     const mkEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 
-    // 가격 흐름 + 거래 구간 차트 (SVG)
+    // 가격 흐름 + 보유 기간(색 띠) 차트 (SVG, 로그 눈금, 기간 확대 버튼)
     function drawBtChart(box, series, trades) {
       const NS = "http://www.w3.org/2000/svg";
-      const W = 360, H = 190, L = 6, R = 40, T = 10, B = 20;
+      const W = 360, H = 230, L = 6, R = 42, T = 14, B = 20;
       const c = series.closes, n = c.length;
       if (n < 2) return;
-      let lo = Math.min(...c), hi = Math.max(...c);
-      const pad = (hi - lo) * 0.06 || 1; lo -= pad; hi += pad;
-      const X = (i) => L + (W - L - R) * i / (n - 1);
-      const Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
-      const svg = document.createElementNS(NS, "svg");
-      svg.setAttribute("viewBox", "0 0 " + W + " " + H);
-      svg.setAttribute("class", "btChart");
-      const add = (tag, attrs, text) => {
-        const e = document.createElementNS(NS, tag);
-        for (const k in attrs) e.setAttribute(k, attrs[k]);
-        if (text != null) e.textContent = text;
-        svg.appendChild(e); return e;
-      };
-      // 가로 눈금
-      for (let g = 0; g <= 3; g++) {
-        const v = lo + (hi - lo) * g / 3, y = Y(v);
-        add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#2c3745", "stroke-width": 0.5 });
-        add("text", { x: W - R + 3, y: y + 3, fill: "#93a1b1", "font-size": 9 }, v.toFixed(v >= 100 ? 0 : 1));
-      }
-      // 연도 눈금
-      let lastYear = null, lastLabelX = -99;
-      series.ts.forEach((t, i) => {
-        const yr = new Date(t * 1000).getUTCFullYear();
-        if (yr !== lastYear) {
-          lastYear = yr;
-          if (i > 0) add("line", { x1: X(i), x2: X(i), y1: T, y2: H - B, stroke: "#2c3745", "stroke-width": 0.5 });
-          if (X(i) - lastLabelX >= 28) {
-            lastLabelX = X(i);
-            add("text", { x: X(i) + 2, y: H - 6, fill: "#93a1b1", "font-size": 9 }, String(yr).slice(2) + "년");
+
+      const bar = mkEl("div", "btRange");
+      const holder = mkEl("div");
+      const legend = mkEl("div", "btLegend", "색 띠 = 보유한 기간 (빨강: 이익으로 끝남 · 파랑: 손실로 끝남) · 띠가 없는 곳은 현금 · ▲ 매수 ▼ 매도 · 세로축은 로그 눈금");
+      const opts = [["3개월", 63], ["6개월", 126], ["1년", 252], ["3년", 756], ["전체", n]];
+      const btns = [];
+      box.appendChild(bar); box.appendChild(holder); box.appendChild(legend);
+
+      function draw(win) {
+        holder.textContent = "";
+        const from = Math.max(0, n - win), cnt = n - from;
+        const sl = c.slice(from);
+        let lo = Math.min(...sl), hi = Math.max(...sl);
+        const llo = Math.log(lo * 0.97), lhi = Math.log(hi * 1.03);
+        const X = (i) => L + (W - L - R) * (i - from) / Math.max(1, n - 1 - from);
+        const Y = (v) => T + (H - T - B) * (1 - (Math.log(v) - llo) / (lhi - llo));
+        const svg = document.createElementNS(NS, "svg");
+        svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+        svg.setAttribute("class", "btChart");
+        const add = (tag, attrs, text) => {
+          const e = document.createElementNS(NS, tag);
+          for (const k in attrs) e.setAttribute(k, attrs[k]);
+          if (text != null) e.textContent = text;
+          svg.appendChild(e); return e;
+        };
+        // 가로 눈금 (로그)
+        for (let g = 0; g <= 3; g++) {
+          const v = Math.exp(llo + (lhi - llo) * g / 3), y = Y(v);
+          add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#2c3745", "stroke-width": 0.5 });
+          add("text", { x: W - R + 3, y: y + 3, fill: "#93a1b1", "font-size": 9 }, v.toFixed(v >= 100 ? 0 : 1));
+        }
+        // 세로 눈금 (연/월)
+        let lastKey = null, lastX = -99;
+        series.ts.forEach((t, i) => {
+          if (i < from) return;
+          const d = new Date(t * 1000);
+          const key = win > 400 ? d.getUTCFullYear() : d.getUTCFullYear() * 100 + d.getUTCMonth();
+          if (key !== lastKey) {
+            lastKey = key;
+            if (i > from) add("line", { x1: X(i), x2: X(i), y1: T, y2: H - B, stroke: "#2c3745", "stroke-width": 0.5 });
+            if (X(i) - lastX >= 30) {
+              lastX = X(i);
+              const label = win > 400 ? String(d.getUTCFullYear()).slice(2) + "년" : (d.getUTCMonth() + 1) + "월";
+              add("text", { x: X(i) + 2, y: H - 6, fill: "#93a1b1", "font-size": 9 }, label);
+            }
           }
-        }
+        });
+        // 보유 기간 색 띠
+        trades.forEach((t) => {
+          const i0 = Math.max(t.i, from), i1 = Math.min(t.o, n - 1);
+          if (i1 < from || i0 > n - 1 || t.o < from) return;
+          const col = t.ret > 0 ? "255,90,106" : "91,168,255";
+          const x0 = X(i0), x1 = Math.max(X(i1), x0 + 1.5);
+          add("rect", { x: x0, y: T, width: x1 - x0, height: H - T - B, fill: "rgba(" + col + ",0.22)" });
+          if (x1 - x0 > 26) {
+            add("text", { x: (x0 + x1) / 2, y: T + 10, fill: t.ret > 0 ? "#ff8a96" : "#8cc0ff", "font-size": 9,
+                          "text-anchor": "middle", "font-weight": "bold" }, (t.ret >= 0 ? "+" : "") + t.ret.toFixed(0) + "%");
+          }
+        });
+        // 가격선
+        const pts = [];
+        for (let i = from; i < n; i++) pts.push(X(i).toFixed(1) + "," + Y(c[i]).toFixed(1));
+        add("polyline", { points: pts.join(" "), fill: "none", stroke: "#cfd8e3", "stroke-width": 1.2 });
+        // 매수/매도 점
+        const small = win <= 252;
+        trades.forEach((t) => {
+          if (t.i >= from) {
+            const x = X(t.i), y = Y(c[t.i]);
+            add("path", { d: "M" + x + "," + (y + 1) + " l-3.5,6 h7 z", fill: "#3ddc97" });
+          }
+          if (!t.open && t.o >= from) {
+            const x = X(Math.min(t.o, n - 1)), y = Y(c[Math.min(t.o, n - 1)]);
+            add("path", { d: "M" + x + "," + (y - 1) + " l-3.5,-6 h7 z", fill: "#ffb44d" });
+          }
+        });
+        holder.appendChild(svg);
+      }
+
+      opts.forEach(([label, win]) => {
+        const b = mkEl("button", "btRangeBtn", label);
+        b.onclick = () => { btns.forEach((x) => x.classList.remove("on")); b.classList.add("on"); draw(win); };
+        bar.appendChild(b); btns.push(b);
       });
-      // 가격선
-      add("polyline", { points: c.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" "),
-                        fill: "none", stroke: "#6b7886", "stroke-width": 1 });
-      // 거래 구간 (이익=빨강, 손실=파랑) + 진입/청산 표시
-      trades.forEach((t) => {
-        const col = t.ret > 0 ? "#ff5a6a" : "#5ba8ff";
-        const seg = [];
-        for (let i = t.i; i <= t.o && i < n; i++) seg.push(X(i).toFixed(1) + "," + Y(c[i]).toFixed(1));
-        if (seg.length > 1) add("polyline", { points: seg.join(" "), fill: "none", stroke: col, "stroke-width": 2 });
-        const ix = X(t.i), iy = Y(c[Math.min(t.i, n - 1)]);
-        add("path", { d: "M" + ix + "," + (iy - 2) + " l-4,-7 h8 z", fill: "#3ddc97" });
-        if (!t.open) {
-          const ox = X(Math.min(t.o, n - 1)), oy = Y(c[Math.min(t.o, n - 1)]);
-          add("path", { d: "M" + ox + "," + (oy + 2) + " l-4,7 h8 z", fill: "#ffb44d" });
-        }
-      });
-      box.appendChild(svg);
-      box.appendChild(mkEl("div", "btLegend", "▲ 진입  ▼ 청산  · 빨강 구간 = 이익 거래, 파랑 구간 = 손실 거래"));
+      const def = n > 252 ? 2 : 4;
+      btns[def].classList.add("on");
+      draw(opts[def][1]);
     }
 
     function renderBt(r) {
