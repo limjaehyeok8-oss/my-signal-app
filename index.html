@@ -37,8 +37,8 @@
     <div class="row">
       <input id="symbol" placeholder="이름 또는 티커 (예: sandisk, SOXL)" autocomplete="off" autocapitalize="off">
       <button id="analyze">분석</button>
-    </div>
-    <div id="results"></div>
+    const res = await fetch(ANALYSIS_URL + "?action=analyze&ticker=" + encodeURIComponent(symbol));
+    const r = await res.json();
 
     <div id="analysis">
       <img id="chartImg" alt="차트">
