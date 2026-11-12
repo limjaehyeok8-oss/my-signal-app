@@ -172,6 +172,13 @@
     .btRange { display: flex; gap: 6px; margin-top: 8px; }
     .btRangeBtn { flex: 1; padding: 6px 0; font-size: 12px; border-radius: 8px; background: var(--card2); color: var(--sub); border: 1px solid var(--line); }
     .btRangeBtn.on { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+    .glos { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+    .glos summary { padding: 12px 14px; cursor: pointer; font-weight: bold; font-size: 14px; color: var(--accent2); }
+    .glos .gBody { padding: 0 14px 14px; font-size: 13px; line-height: 1.7; color: var(--sub); }
+    .glos h4 { margin: 14px 0 4px; font-size: 13px; color: var(--txt); }
+    .glos dl { margin: 0; }
+    .glos dt { color: var(--txt); font-weight: bold; margin-top: 6px; }
+    .glos dd { margin: 0 0 2px 0; }
   </style>
 </head>
 <body>
@@ -224,6 +231,7 @@
         <div id="pfCharts"></div>
       </div>
     </div>
+    <div id="homeGlos"></div>
   </div>
 
   <!-- ===== 탭: 백테스트 ===== -->
@@ -234,6 +242,7 @@
       <button id="btRun" class="btGo">실행</button>
     </div>
     <p class="btNote">내 신호 로직을 과거 데이터에 그대로 돌려서 전략별 성과를 비교해요. 종가 체결을 가정했고 수수료·세금·슬리피지는 빼서, 실제보다 좋게 나올 수 있어요. 과거 성과는 미래를 보장하지 않아요.</p>
+    <div id="btGlos"></div>
     <div id="btMsg"></div>
     <div id="btOut"></div>
   </div>
@@ -964,6 +973,60 @@
       });
     }
 
+
+    // ================= 용어·이모지 설명 =================
+    const GLOSSARY = [
+      ["📌 이모지 뜻 (알림·분석 화면)", [
+        ["🟢 추가 매수 타점", "평균 캔들(하이킨아시)이 하락→상승으로 바뀌고, 주가가 20일 평균선 위에 있을 때 뜨는 매수 신호예요."],
+        ["🔴 일반 매도 타점", "평균 캔들이 상승→하락으로 바뀌고, 주가가 20일 평균선 아래로 내려왔을 때 뜨는 매도 신호예요."],
+        ["☘️ 저점매수", "많이 떨어져서 과매도 상태였다가 처음으로 반등 쪽으로 돌아설 때 뜨는 신호예요."],
+        ["(강) / (약·주의)", "저점매수의 신뢰도예요. 강 = 전일 고가 돌파, MACD 상승, 종목별 과매도 기준 충족, 낙폭 가속 없음을 모두 만족. 약 = 하나라도 못 채운 것이고 괄호에 이유가 적혀요."],
+        ["🌋 초고점 매도", "주봉이 과열(RSI 70 이상·볼린저 상단)된 뒤 일봉이 꺾일 때 뜨는 매도 신호예요."],
+        ["🚨 장기손절가 이탈", "차트에서 구한 장기 지지 가격(주봉 상승 전환 봉의 저점)이 깨졌다는 경고예요."],
+        ["🛑 손절 참고선", "내 평단 대비 손실이 종목 성격별 기준(안정 -8%, 보통 -12%, 고변동 -20%)에 닿았다는 뜻이에요. 자동 매도는 아니에요."],
+        ["⚠️ 횡보장", "방향 없이 오르내리는 구간이라 신호가 자주 틀려요. 신호 뒤에 붙으면 신뢰가 낮다는 표시예요."],
+        ["🌅 프리장 / 🆕", "미국 정규장 시작 전 가격이에요. 🆕는 전날 종가 기준엔 없었는데 프리장 가격으로 새로 생긴 신호예요. 정규장에서 바뀔 수 있어요."],
+        ["🔔 장 마감 신호", "정규장이 끝난 직후, 오늘 종가 기준으로 뜬 신호 알림이에요."],
+        ["🤖 봇 상태", "마지막으로 뜬 매수/매도 신호가 아직 진행중인지 알려줘요. 예: 🔴 매도 진행중 14일째."],
+        ["🧭 종목 성격", "하루 평균 변동폭으로 안정형·보통형·고변동형으로 나눈 거예요. 성격에 따라 기준이 달라져요."],
+        ["💰 평단 대비", "내 평단가와 현재가를 비교한 수익률이에요."]
+      ]],
+      ["🧠 기본 용어", [
+        ["하이킨아시", "일반 캔들보다 흔들림을 줄여서 추세를 보기 쉽게 만든 평균 캔들이에요. 양봉이면 상승 흐름, 음봉이면 하락 흐름으로 봐요."],
+        ["20일선", "최근 20일 종가의 평균이에요. 주가가 이 선 위면 단기 상승 흐름, 아래면 하락 흐름으로 봐요."],
+        ["과매도 (RSI·볼린저)", "짧은 기간에 너무 많이 빠져서 반등할 가능성이 커진 상태예요. RSI가 낮고 볼린저 하단을 건드리면 그렇게 봐요."],
+        ["횡보장", "ADX(추세 강도)가 낮거나, 20일선이 평평하거나, 주가가 20일선을 자주 오르내리면 횡보로 판정해요. 이 중 2개 이상일 때예요."],
+        ["종목 성격", "안정형 = 하루 평균 변동 2% 미만, 보통형 = 2~4%, 고변동형 = 4% 이상 또는 레버리지 ETF."],
+        ["추매구간", "현재가 아래에서 가장 가까운 지지 가격(20일선이나 단기 지지선)이에요. 사라는 신호가 아니라 참고용이에요."]
+      ]],
+      ["🧪 백테스트 용어", [
+        ["백테스트", "내 신호 규칙을 과거 가격에 그대로 돌려서, 그때 따랐다면 어땠을지 계산하는 거예요."],
+        ["거래", "산 뒤 판 것을 1번으로 세요."],
+        ["승률", "이익으로 끝난 거래의 비율이에요."],
+        ["총수익", "모든 거래를 이어서 했을 때 불어난 총 수익률이에요."],
+        ["최대 낙폭 (MDD)", "자산이 가장 높았을 때부터 가장 낮았을 때까지 얼마나 빠졌는지예요. -50%면 반토막이 난 적이 있다는 뜻이에요."],
+        ["평균 이익 / 평균 손실", "이긴 거래의 평균 수익, 진 거래의 평균 손실이에요. 이익이 손실보다 크면 승률이 낮아도 버틸 수 있어요."],
+        ["그냥 들고 있었다면", "처음에 사서 끝까지 보유했을 때의 성과예요. 전략이 이것보다 낫지 않으면 전략의 의미가 약해요."],
+        ["횡보장 거르기", "횡보장일 때 뜬 매수 신호를 사지 않는 전략이에요."],
+        ["반등 목표/손절로 팔기", "저점매수는 짧은 반등을 노리는 거라, 일반 매도 신호 대신 따로 정한 규칙으로 팔아요. 20일선에 닿으면 익절, 신호 당일 저점을 종가로 깨면 손절, 10거래일이 지나면 정리예요."],
+        ["차트의 색 띠", "산 상태로 보유한 기간이에요. 빨강은 이익으로, 파랑은 손실로 끝났다는 뜻이고, 띠가 없는 곳은 현금이에요. ▲는 매수, ▼는 매도예요."]
+      ]]
+    ];
+    function buildGlossary(container) {
+      container.textContent = "";
+      const det = mkEl("details", "glos");
+      det.appendChild(mkEl("summary", null, "📖 용어 · 이모지 설명"));
+      const body = mkEl("div", "gBody");
+      GLOSSARY.forEach(([title, items]) => {
+        body.appendChild(mkEl("h4", null, title));
+        const dl = document.createElement("dl");
+        items.forEach(([t, d]) => { dl.appendChild(mkEl("dt", null, t)); dl.appendChild(mkEl("dd", null, d)); });
+        body.appendChild(dl);
+      });
+      det.appendChild(body);
+      container.appendChild(det);
+    }
+
     let btSeq = 0;
     $("btRun").onclick = async () => {
       const sym = ($("btSymbol").value || "").trim().toUpperCase();
@@ -985,6 +1048,8 @@
         $("btRun").disabled = false;
       }
     };
+    buildGlossary($("btGlos"));
+    buildGlossary($("homeGlos"));
     if (location.hash === "#bt") showBt();
 
     // 주소 끝에 #fg가 붙어 있으면 바로 공포탐욕지수 탭으로 열기
