@@ -147,6 +147,26 @@
     #analysisText .anMore summary::-webkit-details-marker { display: none; }
     #analysisText .anMore[open] summary { margin-bottom: 4px; }
     #analysisText .anMore .anBlock { font-size: 13px; color: var(--sub); }
+    #btView select { padding: 10px; font-size: 15px; background: var(--card); color: var(--txt); border: 1px solid var(--line); border-radius: 10px; }
+    #btView .btGo { background: linear-gradient(90deg, #3ddc97, #5b8cff); color: #07210f; border: none; font-weight: bold; }
+    .btNote { font-size: 12px; color: var(--sub); line-height: 1.6; }
+    #btMsg { margin: 12px 0; color: var(--sub); font-size: 14px; }
+    .btHead { font-size: 14px; line-height: 1.7; margin: 8px 0; }
+    .btHead b { font-size: 15px; }
+    table.bt { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    table.bt th, table.bt td { font-size: 12px; padding: 8px 3px; border-bottom: 1px solid var(--line); text-align: right; }
+    table.bt th:first-child, table.bt td:first-child { text-align: left; }
+    table.bt tr.best td { background: rgba(61,220,151,.08); }
+    .btCard { border: 1px solid var(--line); border-radius: 12px; background: var(--card); margin-top: 10px; }
+    .btCard summary { padding: 12px 14px; cursor: pointer; font-weight: bold; font-size: 14px; }
+    .btCard .inner { padding: 0 14px 12px; font-size: 13px; color: var(--sub); line-height: 1.6; }
+    .btStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
+    .btStats div { background: var(--card2); border-radius: 8px; padding: 6px 4px; text-align: center; }
+    .btStats small { display: block; font-size: 11px; color: var(--sub); }
+    .btStats b { font-size: 13px; color: var(--txt); }
+    table.btt { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    table.btt th, table.btt td { font-size: 11px; padding: 5px 2px; border-bottom: 1px solid var(--line); text-align: right; }
+    table.btt th:first-child, table.btt td:first-child { text-align: left; }
   </style>
 </head>
 <body>
@@ -154,7 +174,8 @@
 
   <div class="mainTabs">
     <button id="tabHome" class="on">📈 내 종목</button>
-    <button id="tabFg">😨 공포탐욕지수</button>
+    <button id="tabFg">😨 공포탐욕</button>
+    <button id="tabBt">🧪 백테스트</button>
   </div>
 
   <!-- ===== 탭 1: 내 종목 ===== -->
@@ -198,6 +219,18 @@
         <div id="pfCharts"></div>
       </div>
     </div>
+  </div>
+
+  <!-- ===== 탭: 백테스트 ===== -->
+  <div id="btView" style="display:none">
+    <div class="row">
+      <input id="btSymbol" placeholder="티커 (예: SOXL, NVDA)" autocomplete="off" autocapitalize="characters" style="flex:1;min-width:0">
+      <select id="btYears"><option value="3">3년</option><option value="5" selected>5년</option><option value="10">10년</option></select>
+      <button id="btRun" class="btGo">실행</button>
+    </div>
+    <p class="btNote">내 신호 로직을 과거 데이터에 그대로 돌려서 전략별 성과를 비교해요. 종가 체결을 가정했고 수수료·세금·슬리피지는 빼서, 실제보다 좋게 나올 수 있어요. 과거 성과는 미래를 보장하지 않아요.</p>
+    <div id="btMsg"></div>
+    <div id="btOut"></div>
   </div>
 
   <!-- ===== 탭 2: 공포탐욕지수 ===== -->
@@ -280,6 +313,7 @@
       $("fgView").style.display = isFg ? "block" : "none";
       $("tabHome").className = isFg ? "" : "on";
       $("tabFg").className = isFg ? "on" : "";
+      $("btView").style.display = "none"; $("tabBt").className = "";
       history.replaceState(null, "", isFg ? "#fg" : location.pathname + location.search);
       if (isFg && !fgLoaded) { fgLoaded = true; fgLoad(); }
     }
@@ -733,6 +767,119 @@
         fgLoaded = false; // 다시 탭을 누르면 재시도
       }
     }
+
+
+    // ================= 백테스트 탭 =================
+    function showBt() {
+      $("homeView").style.display = "none";
+      $("fgView").style.display = "none";
+      const rv = document.getElementById("reportView"); if (rv) rv.style.display = "none";
+      document.querySelectorAll(".mainTabs button").forEach((b) => b.className = "");
+      $("tabBt").className = "on";
+      $("btView").style.display = "block";
+      history.replaceState(null, "", "#bt");
+      if (!$("btSymbol").value) $("btSymbol").value = ($("symbol").value || "").trim().toUpperCase();
+    }
+    $("tabBt").onclick = showBt;
+    // 다른 탭(리포트 포함)을 누르면 백테스트 화면 숨기기
+    document.querySelector(".mainTabs").addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (b && b.id !== "tabBt") { $("btView").style.display = "none"; $("tabBt").className = ""; }
+    });
+
+    const pct = (v, d = 1) => v == null ? "-" : (v >= 0 ? "+" : "") + v.toFixed(d) + "%";
+    const cls2 = (v) => v == null ? "" : (v >= 0 ? "up" : "down");
+    const mkEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+    function renderBt(r) {
+      const out = $("btOut");
+      out.textContent = "";
+      const head = mkEl("div", "btHead");
+      head.appendChild(mkEl("b", null, r.ticker + " · " + r.years + "년"));
+      head.appendChild(document.createElement("br"));
+      head.appendChild(document.createTextNode(r.from + " ~ " + r.to));
+      head.appendChild(document.createElement("br"));
+      head.appendChild(document.createTextNode("그냥 들고 있었다면(매수 후 보유): " + pct(r.bh.total, 0) + " · 최대 낙폭 " + pct(r.bh.mdd, 0)));
+      out.appendChild(head);
+
+      const best = r.strategies.reduce((a, b) => (b.total > a.total ? b : a), r.strategies[0]);
+      const table = mkEl("table", "bt");
+      const hr = document.createElement("tr");
+      ["전략", "거래", "승률", "총수익", "최대낙폭"].forEach((t) => hr.appendChild(mkEl("th", null, t)));
+      table.appendChild(hr);
+      r.strategies.forEach((s) => {
+        const tr = document.createElement("tr");
+        if (s.key === best.key && s.n > 0) tr.className = "best";
+        tr.appendChild(mkEl("td", null, s.short));
+        tr.appendChild(mkEl("td", null, s.n + "회"));
+        tr.appendChild(mkEl("td", null, s.win == null ? "-" : s.win.toFixed(0) + "%"));
+        tr.appendChild(mkEl("td", cls2(s.total), s.n ? pct(s.total, 0) : "-"));
+        tr.appendChild(mkEl("td", null, s.n ? pct(s.mdd, 0) : "-"));
+        table.appendChild(tr);
+      });
+      out.appendChild(table);
+      out.appendChild(mkEl("div", "btNote", "초록 줄이 총수익이 가장 높은 전략이에요. 거래가 5회 미만이면 우연일 수 있어서 참고만 하세요."));
+
+      r.strategies.forEach((s) => {
+        const det = mkEl("details", "btCard");
+        det.appendChild(mkEl("summary", null, s.name + " · " + s.n + "회"));
+        const inner = mkEl("div", "inner");
+        inner.appendChild(mkEl("div", null, s.desc));
+        const st = mkEl("div", "btStats");
+        const stat = (l, t, c) => { const d = document.createElement("div"); d.appendChild(mkEl("small", null, l)); d.appendChild(mkEl("b", c || "", t)); st.appendChild(d); };
+        stat("평균 수익", pct(s.avg), cls2(s.avg));
+        stat("평균 이익", pct(s.avgWin), "up");
+        stat("평균 손실", pct(s.avgLoss), "down");
+        stat("평균 보유", s.avgDays == null ? "-" : s.avgDays.toFixed(0) + "일");
+        stat("총수익", s.n ? pct(s.total, 0) : "-", cls2(s.total));
+        stat("최대 낙폭", s.n ? pct(s.mdd, 0) : "-");
+        inner.appendChild(st);
+        if (s.trades.length) {
+          const t = mkEl("table", "btt");
+          const h = document.createElement("tr");
+          ["진입", "청산", "수익", "일", "사유"].forEach((x) => h.appendChild(mkEl("th", null, x)));
+          t.appendChild(h);
+          s.trades.slice().reverse().forEach((x) => {
+            const tr = document.createElement("tr");
+            tr.appendChild(mkEl("td", null, x.inDate.slice(2)));
+            tr.appendChild(mkEl("td", null, x.outDate.slice(2)));
+            tr.appendChild(mkEl("td", cls2(x.ret), pct(x.ret)));
+            tr.appendChild(mkEl("td", null, String(x.days)));
+            tr.appendChild(mkEl("td", null, x.why));
+            t.appendChild(tr);
+          });
+          inner.appendChild(t);
+          inner.appendChild(mkEl("div", null, "최근 " + s.trades.length + "건만 보여줘요."));
+        } else {
+          inner.appendChild(mkEl("div", null, "이 기간에는 거래가 없었어요."));
+        }
+        det.appendChild(inner);
+        out.appendChild(det);
+      });
+    }
+
+    let btSeq = 0;
+    $("btRun").onclick = async () => {
+      const sym = ($("btSymbol").value || "").trim().toUpperCase();
+      if (!sym) { $("btMsg").textContent = "티커를 입력하세요"; return; }
+      if (!myToken) { $("btMsg").textContent = "먼저 '내 종목' 탭에서 '알림 받기'를 눌러 등록하세요"; return; }
+      const seq = ++btSeq;
+      $("btOut").textContent = "";
+      $("btMsg").textContent = sym + " 백테스트 계산 중... (10~30초 걸려요)";
+      $("btRun").disabled = true;
+      try {
+        const r = await api({ action: "backtest", token: myToken, ticker: sym, years: Number($("btYears").value) });
+        if (seq !== btSeq) return;
+        if (!r.ok) { $("btMsg").textContent = r.msg || "백테스트에 실패했어요"; return; }
+        $("btMsg").textContent = "";
+        renderBt(r);
+      } catch (e) {
+        if (seq === btSeq) $("btMsg").textContent = "오류: " + e.message;
+      } finally {
+        $("btRun").disabled = false;
+      }
+    };
+    if (location.hash === "#bt") showBt();
 
     // 주소 끝에 #fg가 붙어 있으면 바로 공포탐욕지수 탭으로 열기
     if (location.hash === "#fg") showPage("fg");
