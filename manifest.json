@@ -1,15 +1,14 @@
 {
-  "name": "타점 알림 앱",
-  "short_name": "타점알리미",
-  "start_url": "./index.html",
+  "name": "내 투자 도우미",
+  "short_name": "투자도우미",
+  "description": "보유 종목 신호 알림과 공포탐욕지수",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "theme_color": "#222222",
   "icons": [
-    {
-      "src": "icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    }
+    { "src": "icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }
