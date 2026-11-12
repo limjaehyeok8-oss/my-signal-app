@@ -317,7 +317,7 @@
       <button data-f="d3">최근 3일</button>
       <button data-f="clover">☘️ 저점매수</button>
       <button data-f="buy">🟢 매수 신호</button>
-      <button data-f="os">🔁 과매도 반복</button>
+      <button data-f="os">☘️ 반복(저점 후보)</button>
       <button data-f="strong">점수 3+</button>
     </div>
     <div class="pkChips" id="pickGroups"></div>
@@ -693,7 +693,7 @@
       if (pickFilter === "today") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("오늘") !== -1));
       if (pickFilter === "clover") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("저점매수") !== -1));
       if (pickFilter === "buy") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("매수 신호") !== -1));
-      if (pickFilter === "os") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("과매도") !== -1));
+      if (pickFilter === "os") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("번째") !== -1));
       if (pickFilter === "strong") items = items.filter((x) => x.sc >= 3);
       if (!pickData.length) return;
       const groups = pickGroup ? [pickGroup] : (pickGroupList.length ? pickGroupList.slice() : Array.from(new Set(items.map((x) => x.g))));
