@@ -1559,7 +1559,10 @@
       const restore = (msg) => { openSheet(); card.remove(); $("cmText").value = text; $("cmTicker").value = ticker; if (image) { cmImage = image; $("cmPrevImg").src = image; $("cmPrev").style.display = "block"; } $("cmMsg").textContent = msg; };
       try {
         const x = await api({ action: "addPost", token: myToken, text, ticker, image, cat: cmPickCat });
-        if (x.ok) loadPosts(); else restore(x.msg || "올리지 못했어요");
+        if (x.ok) {
+          if (x.id) { const real = postCard({ id: x.id, time: "방금", name: card.querySelector(".cmName") ? "나" : "나", ticker, text, image, cat: cmPickCat, mine: true, cc: 0 }); card.replaceWith(real); }
+          else loadPosts();
+        } else restore(x.msg || "올리지 못했어요");
       } catch (e) { restore("올리지 못했어요"); }
     };
 
