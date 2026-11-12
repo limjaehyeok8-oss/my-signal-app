@@ -227,6 +227,7 @@
 
       <div class="row" style="justify-content:space-between">
         <h3 style="margin:12px 0 0">내 보유 종목</h3>
+        <div style="margin:6px 0"><button id="stResetAll" style="font-size:12px;padding:8px 10px">🔄 모든 종목 알림 전략 초기화</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
         <button id="pfBtn">📋 포트폴리오</button>
       </div>
       <table>
@@ -441,6 +442,22 @@
       };
       box.appendChild(rec); box.appendChild(recOut); box.appendChild(msg);
     }
+
+    $("stResetAll").onclick = async () => {
+      const m = $("stResetMsg");
+      if (!myToken) { m.textContent = "먼저 '알림 받기'로 등록하세요"; return; }
+      if (!confirm("모든 종목의 알림 전략을 '기본(모든 신호 알림)'으로 되돌릴까요?")) return;
+      m.textContent = "초기화 중...";
+      try {
+        const sr = await api({ action: "getStrategies", token: myToken });
+        const syms = Object.keys((sr && sr.map) || {}).filter((k) => sr.map[k] && sr.map[k] !== "default");
+        if (!syms.length) { m.textContent = "이미 모두 기본이에요"; return; }
+        let n = 0;
+        for (const sym of syms) { const x = await api({ action: "setStrategy", token: myToken, symbol: sym, strategy: "default" }); if (x.ok) n++; }
+        m.textContent = n + "개 종목을 기본으로 되돌렸어요";
+        loadHoldings();
+      } catch (e) { m.textContent = "오류: " + e.message; }
+    };
 
     let analyzeSeq = 0;
     async function analyze(symbol) {
