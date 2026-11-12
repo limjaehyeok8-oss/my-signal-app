@@ -650,11 +650,12 @@
     $("frBox").addEventListener("toggle", () => { if ($("frBox").open) loadFriends(); });
 
     // ===== 추천 탭: 오늘 신호 뜬 종목 =====
-    let pickData = [], pickFilter = "today", pickGroup = "";
+    let pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "";
     function renderGroups() {
       const box = $("pickGroups"); box.textContent = "";
       const cnt = {};
       pickData.forEach((x) => { if (x.g) cnt[x.g] = (cnt[x.g] || 0) + 1; });
+      pickGroupOrder = cnt;
       const mk = (label, val) => { const b = mkEl("button", val === pickGroup ? "on" : "", label); b.onclick = () => { pickGroup = val; renderGroups(); renderPicks(); }; box.appendChild(b); };
       mk("전체 분야", "");
       Object.keys(cnt).forEach((g) => mk(g + " " + cnt[g], g));
@@ -664,6 +665,7 @@
       list.textContent = "";
       let items = pickData.slice();
       if (pickGroup) items = items.filter((x) => x.g === pickGroup);
+      else { const ord = Object.keys(pickGroupOrder); items.sort((a, b) => ord.indexOf(a.g) - ord.indexOf(b.g) || b.sc - a.sc); }
       if (pickFilter === "today") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("오늘") !== -1));
       if (pickFilter === "clover") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("저점매수") !== -1));
       if (pickFilter === "buy") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("매수 신호") !== -1));
