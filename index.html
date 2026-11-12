@@ -167,6 +167,8 @@
     table.btt { width: 100%; border-collapse: collapse; margin-top: 6px; }
     table.btt th, table.btt td { font-size: 11px; padding: 5px 2px; border-bottom: 1px solid var(--line); text-align: right; }
     table.btt th:first-child, table.btt td:first-child { text-align: left; }
+    .btChart { width: 100%; height: auto; display: block; margin-top: 8px; background: var(--card2); border-radius: 8px; }
+    .btLegend { font-size: 11px; color: var(--sub); margin-top: 4px; line-height: 1.6; }
   </style>
 </head>
 <body>
@@ -791,6 +793,65 @@
     const cls2 = (v) => v == null ? "" : (v >= 0 ? "up" : "down");
     const mkEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
+
+    // 가격 흐름 + 거래 구간 차트 (SVG)
+    function drawBtChart(box, series, trades) {
+      const NS = "http://www.w3.org/2000/svg";
+      const W = 360, H = 190, L = 6, R = 40, T = 10, B = 20;
+      const c = series.closes, n = c.length;
+      if (n < 2) return;
+      let lo = Math.min(...c), hi = Math.max(...c);
+      const pad = (hi - lo) * 0.06 || 1; lo -= pad; hi += pad;
+      const X = (i) => L + (W - L - R) * i / (n - 1);
+      const Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+      const svg = document.createElementNS(NS, "svg");
+      svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+      svg.setAttribute("class", "btChart");
+      const add = (tag, attrs, text) => {
+        const e = document.createElementNS(NS, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        if (text != null) e.textContent = text;
+        svg.appendChild(e); return e;
+      };
+      // 가로 눈금
+      for (let g = 0; g <= 3; g++) {
+        const v = lo + (hi - lo) * g / 3, y = Y(v);
+        add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#2c3745", "stroke-width": 0.5 });
+        add("text", { x: W - R + 3, y: y + 3, fill: "#93a1b1", "font-size": 9 }, v.toFixed(v >= 100 ? 0 : 1));
+      }
+      // 연도 눈금
+      let lastYear = null, lastLabelX = -99;
+      series.ts.forEach((t, i) => {
+        const yr = new Date(t * 1000).getUTCFullYear();
+        if (yr !== lastYear) {
+          lastYear = yr;
+          if (i > 0) add("line", { x1: X(i), x2: X(i), y1: T, y2: H - B, stroke: "#2c3745", "stroke-width": 0.5 });
+          if (X(i) - lastLabelX >= 28) {
+            lastLabelX = X(i);
+            add("text", { x: X(i) + 2, y: H - 6, fill: "#93a1b1", "font-size": 9 }, String(yr).slice(2) + "년");
+          }
+        }
+      });
+      // 가격선
+      add("polyline", { points: c.map((v, i) => X(i).toFixed(1) + "," + Y(v).toFixed(1)).join(" "),
+                        fill: "none", stroke: "#6b7886", "stroke-width": 1 });
+      // 거래 구간 (이익=빨강, 손실=파랑) + 진입/청산 표시
+      trades.forEach((t) => {
+        const col = t.ret > 0 ? "#ff5a6a" : "#5ba8ff";
+        const seg = [];
+        for (let i = t.i; i <= t.o && i < n; i++) seg.push(X(i).toFixed(1) + "," + Y(c[i]).toFixed(1));
+        if (seg.length > 1) add("polyline", { points: seg.join(" "), fill: "none", stroke: col, "stroke-width": 2 });
+        const ix = X(t.i), iy = Y(c[Math.min(t.i, n - 1)]);
+        add("path", { d: "M" + ix + "," + (iy - 2) + " l-4,-7 h8 z", fill: "#3ddc97" });
+        if (!t.open) {
+          const ox = X(Math.min(t.o, n - 1)), oy = Y(c[Math.min(t.o, n - 1)]);
+          add("path", { d: "M" + ox + "," + (oy + 2) + " l-4,7 h8 z", fill: "#ffb44d" });
+        }
+      });
+      box.appendChild(svg);
+      box.appendChild(mkEl("div", "btLegend", "▲ 진입  ▼ 청산  · 빨강 구간 = 이익 거래, 파랑 구간 = 손실 거래"));
+    }
+
     function renderBt(r) {
       const out = $("btOut");
       out.textContent = "";
@@ -834,12 +895,18 @@
         stat("총수익", s.n ? pct(s.total, 0) : "-", cls2(s.total));
         stat("최대 낙폭", s.n ? pct(s.mdd, 0) : "-");
         inner.appendChild(st);
+        const chartBox = mkEl("div");
+        inner.appendChild(chartBox);
+        let drawn = false;
+        det.addEventListener("toggle", () => {
+          if (det.open && !drawn) { drawn = true; drawBtChart(chartBox, r.series, s.trades); }
+        });
         if (s.trades.length) {
           const t = mkEl("table", "btt");
           const h = document.createElement("tr");
           ["진입", "청산", "수익", "일", "사유"].forEach((x) => h.appendChild(mkEl("th", null, x)));
           t.appendChild(h);
-          s.trades.slice().reverse().forEach((x) => {
+          s.trades.slice(-12).reverse().forEach((x) => {
             const tr = document.createElement("tr");
             tr.appendChild(mkEl("td", null, x.inDate.slice(2)));
             tr.appendChild(mkEl("td", null, x.outDate.slice(2)));
@@ -849,7 +916,7 @@
             t.appendChild(tr);
           });
           inner.appendChild(t);
-          inner.appendChild(mkEl("div", null, "최근 " + s.trades.length + "건만 보여줘요."));
+          inner.appendChild(mkEl("div", null, "표에는 최근 " + Math.min(12, s.trades.length) + "건만 보여줘요. (전체 " + s.trades.length + "건은 차트에 표시)"));
         } else {
           inner.appendChild(mkEl("div", null, "이 기간에는 거래가 없었어요."));
         }
