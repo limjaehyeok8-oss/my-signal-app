@@ -679,7 +679,10 @@
       c.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ")));
       const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n"));
       why.style.whiteSpace = "pre-wrap";
+      why.style.display = "none";
       c.appendChild(why);
+      c.style.cursor = "pointer";
+      c.onclick = () => { why.style.display = why.style.display === "none" ? "block" : "none"; };
       return c;
     }
     function renderPicks() {
@@ -723,7 +726,7 @@
         const r = await api({ action: "getPicks", token: myToken, force: force === true });
         if (!r || !r.ok) { pickData = []; renderPicks(); $("pickList").appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); return; }
         let updTxt = "";
-        if (r.updated) { let t = String(r.updated); if (/GMT|T\d\d:/.test(t)) { const dt = new Date(t); if (!isNaN(dt)) { const z = (n) => String(n).padStart(2, "0"); t = z(dt.getMonth() + 1) + "/" + z(dt.getDate()) + " " + z(dt.getHours()) + ":" + z(dt.getMinutes()); } } updTxt = t + " 기준"; }
+        if (r.updated) { let t = String(r.updated); if (/GMT|T\d\d:/.test(t)) { const dt = new Date(t); if (!isNaN(dt)) { const z = (n) => String(n).padStart(2, "0"); t = z(dt.getMonth() + 1) + "/" + z(dt.getDate()) + " " + z(dt.getHours()) + ":" + z(dt.getMinutes()); } } updTxt = t + " 기준 · 카드를 누르면 이유가 펼쳐져요"; }
         $("pickUpd").textContent = updTxt;
         pickData = r.items || [];
         if (r.groups) pickGroupList = r.groups;
