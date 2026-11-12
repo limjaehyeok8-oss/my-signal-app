@@ -179,6 +179,15 @@
     .glos dl { margin: 0; }
     .glos dt { color: var(--txt); font-weight: bold; margin-top: 6px; }
     .glos dd { margin: 0 0 2px 0; }
+    .stRow td { text-align: left !important; font-size: 12px; color: var(--sub); border-bottom: 1px solid var(--line); padding: 2px 4px 10px; }
+    .stRow select { margin-left: 6px; padding: 6px; font-size: 12px; max-width: 70%; background: var(--card); color: var(--txt); border: 1px solid var(--line); border-radius: 8px; }
+    .btRec { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 12px; background: rgba(61,220,151,.07); font-size: 13px; line-height: 1.6; }
+    .btRec b { color: var(--accent); }
+    .btRec .warn { color: #ffb44d; }
+    .btRec .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .btRec button, .btApply { font-size: 12px; padding: 8px 10px; }
+    .btApply { width: 100%; margin-top: 8px; border-color: var(--accent2); color: var(--accent2); }
+    .btApplyMsg { font-size: 12px; margin-top: 4px; color: var(--sub); }
   </style>
 </head>
 <body>
@@ -454,12 +463,40 @@
     });
     $("analyze").onclick = () => { hideResults(); analyze(symbolEl.value); };
 
+    // ================= 종목별 알림 전략 =================
+    const STRATS = [
+      ["default", "기본 (모든 신호 알림)"],
+      ["base", "① 기본: 신호대로 사고 팔기"],
+      ["side", "② 기본 + 횡보장 거르기"],
+      ["cl1", "③ 저점매수 → 매도 신호에 팔기"],
+      ["cl2", "④ 강한 저점매수만 → 매도 신호에 팔기"],
+      ["cl3", "⑤ 저점매수 → 반등 목표/손절로 팔기"],
+      ["cl4", "⑥ 강한 저점매수만 → 반등 목표/손절로 팔기"],
+      ["cl5", "⑦ 저점매수 → 최소 3일 보유 후 매도 신호"],
+      ["cl6", "⑧ 저점매수 → 음봉 2연속에 팔기"],
+      ["cl7", "⑨ 저점매수 → 음봉 2연속 또는 저점 이탈"],
+      ["hold1", "⑩ 첫 저점매수 후 보유"],
+      ["holdAll", "⑪ 저점매수마다 추가+보유"],
+      ["holdStrong", "⑫ 강한 저점매수 추가+보유"]
+    ];
+    async function saveStrategy(sym, key, msgEl) {
+      if (!myToken) { msgEl.textContent = "먼저 '알림 받기'로 등록하세요"; return false; }
+      msgEl.textContent = "저장 중...";
+      try {
+        const x = await api({ action: "setStrategy", token: myToken, symbol: sym, strategy: key });
+        msgEl.textContent = x.msg || "";
+        return !!x.ok;
+      } catch (e) { msgEl.textContent = "오류: " + e.message; return false; }
+    }
+
     // ================= 보유 종목 =================
     async function loadHoldings() {
       const r = await api({ action: "listHoldings", token: myToken });
       const tbody = $("list");
       tbody.textContent = "";
       if (!r.ok) return log(r.msg);
+      let stMap = {};
+      try { const sr = await api({ action: "getStrategies", token: myToken }); if (sr.ok) stMap = sr.map || {}; } catch (e) {}
       r.holdings.forEach((h) => {
         const tr = document.createElement("tr");
 
@@ -489,6 +526,22 @@
         };
         delTd.appendChild(del); tr.appendChild(delTd);
         tbody.appendChild(tr);
+
+        // 알림 전략 선택줄
+        const stTr = document.createElement("tr");
+        stTr.className = "stRow";
+        const stTd = document.createElement("td");
+        stTd.colSpan = 5;
+        stTd.appendChild(document.createTextNode("🔔 알림 전략"));
+        const sel = document.createElement("select");
+        STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = label; sel.appendChild(o); });
+        sel.value = stMap[h.symbol] || "default";
+        const stMsg = document.createElement("span");
+        sel.onchange = async () => { const ok = await saveStrategy(h.symbol, sel.value, stMsg); if (!ok) sel.value = stMap[h.symbol] || "default"; else stMap[h.symbol] = sel.value; };
+        stTd.appendChild(sel);
+        stTd.appendChild(stMsg);
+        stTr.appendChild(stTd);
+        tbody.appendChild(stTr);
       });
     }
 
@@ -929,6 +982,35 @@
       out.appendChild(table);
       out.appendChild(mkEl("div", "btNote", "초록 줄이 총수익이 가장 높은 전략이에요. 거래가 5회 미만이면 우연일 수 있어서 참고만 하세요."));
 
+      // 수익 최고 전략 자동 추천 + 적용
+      const rec = mkEl("div", "btRec");
+      const cand = r.strategies.filter((x) => x.n >= 5 && x.mdd >= -50);
+      const recMsg = mkEl("div", "btApplyMsg");
+      if (cand.length) {
+        const bst = cand.reduce((a, b) => (b.total > a.total ? b : a), cand[0]);
+        const diff = bst.total - r.bh.total;
+        rec.appendChild(mkEl("div", null, "🏆 자동 추천 (거래 5회 이상, 최대 낙폭 -50% 이내 중 총수익 1위)"));
+        const line = mkEl("div");
+        line.appendChild(mkEl("b", null, bst.name));
+        line.appendChild(document.createTextNode(" — 총수익 " + pct(bst.total, 0) + ", 최대 낙폭 " + pct(bst.mdd, 0) + ", 거래 " + bst.n + "회"));
+        rec.appendChild(line);
+        rec.appendChild(mkEl("div", diff > 0 ? null : "warn", diff > 0
+          ? "그냥 들고 있었을 때보다 " + diff.toFixed(0) + "%p 높아요."
+          : "※ 그냥 들고 있었을 때(" + pct(r.bh.total, 0) + ")보다 낫지 않아요. 적용 전에 한 번 더 생각해 보세요."));
+        rec.appendChild(mkEl("div", "warn", "과거에 가장 잘 맞았던 걸 고른 거라, 앞으로도 그렇다는 보장은 없어요."));
+        const acts = mkEl("div", "acts");
+        const b1 = mkEl("button", null, "🏆 " + r.ticker + "에 추천 전략 적용");
+        b1.onclick = () => saveStrategy(r.ticker, bst.key, recMsg).then((ok) => { if (ok) loadHoldings(); });
+        const b2 = mkEl("button", null, "기본 알림으로 되돌리기");
+        b2.onclick = () => saveStrategy(r.ticker, "default", recMsg).then((ok) => { if (ok) loadHoldings(); });
+        acts.appendChild(b1); acts.appendChild(b2);
+        rec.appendChild(acts);
+      } else {
+        rec.appendChild(mkEl("div", null, "🏆 자동 추천: 거래 5회 이상이면서 최대 낙폭 -50% 이내인 전략이 없어요. 아래 전략을 직접 골라 보세요."));
+      }
+      rec.appendChild(recMsg);
+      out.appendChild(rec);
+
       r.strategies.forEach((s) => {
         const det = mkEl("details", "btCard");
         det.appendChild(mkEl("summary", null, s.name + " · " + s.n + "회"));
@@ -968,6 +1050,11 @@
         } else {
           inner.appendChild(mkEl("div", null, "이 기간에는 거래가 없었어요."));
         }
+        const ap = mkEl("button", "btApply", "✅ " + r.ticker + "에 이 전략으로 알림 받기");
+        const apMsg = mkEl("div", "btApplyMsg");
+        ap.onclick = () => saveStrategy(r.ticker, s.key, apMsg).then((ok) => { if (ok) loadHoldings(); });
+        inner.appendChild(ap);
+        inner.appendChild(apMsg);
         det.appendChild(inner);
         out.appendChild(det);
       });
@@ -1011,6 +1098,7 @@
         ["반등 목표/손절로 팔기", "저점매수는 짧은 반등을 노리는 거라, 일반 매도 신호 대신 따로 정한 규칙으로 팔아요. 20일선에 닿으면 익절, 신호 당일 저점을 종가로 깨면 손절, 10거래일이 지나면 정리예요."],
         ["둔한(약한) 매도", "매도 신호에 덜 민감하게 반응하는 규칙이에요. ⑦은 산 뒤 3거래일 동안 매도 신호를 무시하고, ⑧은 평균 캔들 음봉이 2번 연속일 때만 팔아요. 대신 더 늦게 팔게 되니 손실이 커질 수 있어서 ⑨처럼 손절 안전장치를 같이 비교해 보세요."],
         ["안 팔고 보유 (⑩⑪⑫)", "저점매수 신호에 사기만 하고 끝까지 팔지 않는 장투 방식이에요. 거래 수는 '산 횟수'이고, 승률·수익은 지금 가격 기준 평가예요. 총수익은 산 금액 대비 지금 평가이고, 최대 낙폭은 보유 평가가 고점에서 얼마나 빠졌는지예요. ⑪⑫는 신호마다 같은 금액씩 사 모으는 분할매수예요."],
+        ["알림 전략", "종목마다 어떤 규칙으로 알림을 받을지 정하는 거예요. 기본은 모든 신호를 알려주고, 전략을 고르면 그 전략의 사는 날·파는 날만 알려줘요. (장기손절가 이탈과 초고점 경고는 그대로 와요.) 🔔 내 보유 종목 목록이나 백테스트 화면에서 고를 수 있어요."],
         ["차트의 색 띠", "산 상태로 보유한 기간이에요. 빨강은 이익으로, 파랑은 손실로 끝났다는 뜻이고, 띠가 없는 곳은 현금이에요. ▲는 매수, ▼는 매도예요."]
       ]]
     ];
