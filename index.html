@@ -322,7 +322,7 @@
       <button id="pfBtn" class="pfCta"><span class="pfT">📋 내 포트폴리오 확인하기</span><span class="pfS">눌러서 수익률 표와 종목별 차트를 확인하세요</span></button>
 
       <div id="pfBox">
-        <h3>📋 포트폴리오 현황</h3>
+        <div class="secHead"><h3>📋 포트폴리오 현황</h3><button id="pfClose" style="font-size:13px;padding:6px 12px">✕ 닫기</button></div>
         <div id="pfCards"></div>
         <p id="pfInfo"></p>
         <div id="pfCharts"></div>
@@ -1129,7 +1129,8 @@
         if (seq === pfSeq) pfBtn.disabled = false;
       }
     }
-    pfBtn.onclick = loadPortfolio;
+    pfBtn.onclick = () => { const bx = $("pfBox"); if (bx.style.display === "block" && !pfBtn.disabled) { pfSeq++; bx.style.display = "none"; } else loadPortfolio(); };
+    $("pfClose").onclick = () => { pfSeq++; $("pfBox").style.display = "none"; pfBtn.disabled = false; };
 
     // ================= 알림 등록 초기화 =================
     async function init() {
