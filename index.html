@@ -245,6 +245,7 @@
   <div class="mainTabs">
     <button id="tabHome" class="on">📈 내 종목</button>
     <button id="tabPick">🔎 추천</button>
+    <button id="tabComm">💬 커뮤</button>
     <button id="tabFg">😨 공포탐욕</button>
     <button id="tabBt">🧪 백테스트</button>
   </div>
@@ -306,6 +307,19 @@
       </div>
     </div>
     <div id="homeGlos"></div>
+  </div>
+
+  <!-- ===== 탭: 커뮤 ===== -->
+  <div id="commView" style="display:none">
+    <h3 style="margin:14px 0 4px">💬 커뮤</h3>
+    <div class="alertHint">등록한 사람들이 같이 보는 게시판이에요. 글에는 닉네임이 보여요.</div>
+    <textarea id="cmText" rows="3" maxlength="500" placeholder="글을 적어보세요 (500자까지)" style="width:100%;margin-top:8px"></textarea>
+    <div class="row">
+      <input id="cmTicker" placeholder="종목 (선택, 예: NVDA)" style="text-transform:uppercase">
+      <button id="cmPost">올리기</button>
+    </div>
+    <div id="cmMsg" class="btApplyMsg"></div>
+    <div id="cmList"></div>
   </div>
 
   <!-- ===== 탭: 추천 ===== -->
@@ -1207,6 +1221,72 @@
     }
 
 
+    // ================= 커뮤 탭 =================
+    function showComm() {
+      $("homeView").style.display = "none";
+      $("fgView").style.display = "none";
+      $("btView").style.display = "none";
+      $("pickView").style.display = "none";
+      const rv = document.getElementById("reportView"); if (rv) rv.style.display = "none";
+      document.querySelectorAll(".mainTabs button").forEach((b) => b.className = "");
+      $("tabComm").className = "on";
+      $("commView").style.display = "block";
+      history.replaceState(null, "", "#comm");
+      loadPosts();
+    }
+    $("tabComm").onclick = showComm;
+    async function loadPosts() {
+      const box = $("cmList");
+      if (!myToken) { box.textContent = ""; box.appendChild(mkEl("div", "alertHint", "먼저 '내 종목' 탭에서 '알림 받기'를 눌러 등록하세요")); return; }
+      try {
+        const r = await api({ action: "getPosts", token: myToken });
+        box.textContent = "";
+        if (!r || !r.ok) { box.appendChild(mkEl("div", "alertHint", (r && r.msg) || "아직 불러올 수 없어요")); return; }
+        r.posts.forEach((p) => box.appendChild(postCard(p)));
+      } catch (e) { box.textContent = ""; box.appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); }
+    }
+    function postCard(p) {
+      const c = mkEl("div", "pkCard");
+      const top = mkEl("div", "pkTop");
+      top.appendChild(mkEl("b", null, p.name));
+      top.appendChild(mkEl("span", "alertHint", p.time));
+      if (p.ticker) { const t = mkEl("span", "sym", p.ticker); t.onclick = () => { showPage("home"); symbolEl.value = p.ticker; analyze(p.ticker); window.scrollTo({ top: 0, behavior: "smooth" }); }; top.appendChild(t); }
+      if (p.mine) { const d = mkEl("button", "linkBtn", "삭제"); d.style.marginLeft = "auto"; d.onclick = async () => { if (!confirm("이 글을 지울까요?")) return; await api({ action: "deletePost", token: myToken, id: p.id }); loadPosts(); }; top.appendChild(d); }
+      c.appendChild(top);
+      const body = mkEl("div", null, p.text); body.style.whiteSpace = "pre-wrap"; body.style.margin = "6px 0";
+      c.appendChild(body);
+      const tg = mkEl("button", "linkBtn", "💬 댓글 " + p.cc);
+      const cbox = mkEl("div"); cbox.style.display = "none";
+      tg.onclick = () => { if (cbox.style.display === "none") { cbox.style.display = "block"; loadComments(p.id, cbox); } else cbox.style.display = "none"; };
+      c.appendChild(tg); c.appendChild(cbox);
+      return c;
+    }
+    async function loadComments(postId, box) {
+      box.textContent = "";
+      try {
+        const r = await api({ action: "getComments", token: myToken, postId });
+        (r.comments || []).forEach((m) => {
+          const row = mkEl("div", "alertHint"); row.style.margin = "6px 0";
+          row.appendChild(mkEl("b", null, m.name + " "));
+          row.appendChild(document.createTextNode(m.text + "  "));
+          row.appendChild(mkEl("span", null, m.time));
+          if (m.mine) { const d = mkEl("button", "linkBtn", " 삭제"); d.onclick = async () => { await api({ action: "deleteComment", token: myToken, id: m.id }); loadComments(postId, box); }; row.appendChild(d); }
+          box.appendChild(row);
+        });
+        const inp = document.createElement("input"); inp.placeholder = "댓글 달기"; inp.maxLength = 300; inp.style.width = "calc(100% - 70px)";
+        const go = mkEl("button", null, "등록"); go.style.marginLeft = "6px";
+        const msg = mkEl("div", "btApplyMsg");
+        go.onclick = async () => { const x = await api({ action: "addComment", token: myToken, postId, text: inp.value }); if (x.ok) loadComments(postId, box); else msg.textContent = x.msg || ""; };
+        box.appendChild(inp); box.appendChild(go); box.appendChild(msg);
+      } catch (e) { box.appendChild(mkEl("div", "alertHint", "댓글을 불러오지 못했어요")); }
+    }
+    $("cmPost").onclick = async () => {
+      if (!myToken) { $("cmMsg").textContent = "먼저 알림 받기로 등록하세요"; return; }
+      const x = await api({ action: "addPost", token: myToken, text: $("cmText").value, ticker: $("cmTicker").value });
+      $("cmMsg").textContent = x.ok ? "" : (x.msg || "올리지 못했어요");
+      if (x.ok) { $("cmText").value = ""; $("cmTicker").value = ""; loadPosts(); }
+    };
+
     // ================= 백테스트 탭 =================
     function showBt() {
       $("homeView").style.display = "none";
@@ -1224,6 +1304,7 @@
     document.querySelector(".mainTabs").addEventListener("click", (e) => {
       const b = e.target.closest("button");
       if (b && b.id !== "tabBt") { $("btView").style.display = "none"; $("tabBt").className = ""; }
+      if (b && b.id !== "tabComm") { $("commView").style.display = "none"; $("tabComm").className = ""; }
       if (b && b.id !== "tabPick") { $("pickView").style.display = "none"; $("tabPick").className = ""; }
     });
 
@@ -1515,6 +1596,7 @@
     buildGlossary($("homeGlos"));
     if (location.hash === "#bt") showBt();
     if (location.hash === "#pick") showPick();
+    if (location.hash === "#comm") showComm();
 
     // 주소 끝에 #fg가 붙어 있으면 바로 공포탐욕지수 탭으로 열기
     if (location.hash === "#fg") showPage("fg");
