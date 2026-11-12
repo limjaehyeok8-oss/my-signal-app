@@ -1248,7 +1248,7 @@
     fbReady.then(() => { if (messaging) {
       messaging.onMessage(async (payload) => {
         const reg = await navigator.serviceWorker.ready;
-        reg.showNotification(payload.notification.title, { body: payload.notification.body });
+        reg.showNotification(payload.notification.title, { body: payload.notification.body, data: { url: (payload.data && payload.data.url) || (payload.fcmOptions && payload.fcmOptions.link) || "" } });
       });
     } });
 
@@ -1885,6 +1885,11 @@
     if (location.hash === "#bt") showBt();
     if (location.hash === "#pick") showPick();
     if (location.hash === "#comm") showComm();
+    window.addEventListener("hashchange", () => {            // 알림을 눌러 이미 열린 앱에서 화면 이동
+      if (location.hash === "#comm") showComm();
+      else if (location.hash === "#home") $("tabHome").click();
+      else if (location.hash === "#pick") showPick();
+    });
 
     // 주소 끝에 #fg가 붙어 있으면 바로 공포탐욕지수 탭으로 열기
     if (location.hash === "#fg") showPage("fg");
