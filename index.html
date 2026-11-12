@@ -418,9 +418,11 @@
       STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = label; sel.appendChild(o); });
       sel.value = cur;
       const save = mkEl("button", null, "이 전략으로 저장");
-      save.onclick = () => saveStrategy(symbol, sel.value, msg).then((ok) => { if (ok) loadHoldings(); });
+      save.onclick = () => saveStrategy(symbol, sel.value, msg).then((ok) => { if (ok) { loadHoldings(); analyze(symbol); } });
       row.appendChild(sel); row.appendChild(save);
       box.appendChild(row);
+      const nm = (STRATS.find((x) => x[0] === cur) || [])[1];
+      box.appendChild(mkEl("div", "btApplyMsg", cur === "default" ? "위 차트의 ▲(매수)·▼(매도)는 기본 신호 기준이에요. 전략을 저장하면 그 전략의 사는 날·파는 날로 바뀌어요." : "위 차트의 ▲(매수)·▼(매도)는 '" + nm + "' 전략 기준이에요."));
       const rec = mkEl("button", "btApply", "🏆 백테스트로 내게 제일 맞는 전략 찾기 (10~30초)");
       const recOut = mkEl("div");
       rec.onclick = async () => {
@@ -436,7 +438,7 @@
           const d = b.total - r.bh.total;
           recOut.appendChild(mkEl("div", "warn", d > 0 ? "그냥 들고 있기(" + pct(r.bh.total, 0) + ")보다 " + d.toFixed(0) + "%p 높아요. 단, 과거 기준이라 앞으로를 보장하진 않아요." : "그냥 들고 있기(" + pct(r.bh.total, 0) + ")보다 낫지 않아요."));
           const ap = mkEl("button", null, "추천 전략 적용");
-          ap.onclick = () => saveStrategy(symbol, b.key, msg).then((ok) => { if (ok) { sel.value = b.key; loadHoldings(); } });
+          ap.onclick = () => saveStrategy(symbol, b.key, msg).then((ok) => { if (ok) { sel.value = b.key; loadHoldings(); analyze(symbol); } });
           recOut.appendChild(ap);
         } catch (e) { recOut.textContent = "오류: " + e.message; } finally { rec.disabled = false; }
       };
