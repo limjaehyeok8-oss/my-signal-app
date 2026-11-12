@@ -269,6 +269,7 @@
     #commView .cmIn input { flex: 1; min-width: 0; background: var(--card2); border: none; border-radius: 12px; padding: 11px 14px; }
     #commView .cmIn button { background: var(--toss); color: #fff; border: none; border-radius: 12px; font-weight: 700; padding: 0 16px; }
     #commView .cmMsg { color: var(--sub); font-size: 13px; margin-top: 6px; }
+    #list .frCard > div:first-child .frRow { border-top: none; }
     .pfCta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; margin: 12px 0 4px; padding: 16px 18px;
              background: var(--card); border: none; border-radius: 18px; text-align: left; }
     .pfCta .pfT { font-size: 16px; font-weight: 800; color: #6aa6ff; }
@@ -958,39 +959,42 @@
       if (sr && sr.ok) stMap = sr.map || {};
       let hsMap = {}, hsSeq = ++holdSeq;
       if (!r.holdings.length) { box.appendChild(mkEl("div", "alertHint", "등록된 보유 종목이 없어요. 위에서 종목을 검색해 추가해 보세요.")); return; }
+      const card = mkEl("div", "frCard");                       // 친구들 종목과 같은 간단한 줄 모양
       r.holdings.forEach((h) => {
-        const card = mkEl("div", "hold");
-        const top = mkEl("div", "hTop");
+        const wrap = mkEl("div");
+        const row = mkEl("div", "frRow");
         const sym = mkEl("span", "sym", h.symbol);
-        sym.onclick = () => { symbolEl.value = h.symbol; analyze(h.symbol); };
-        top.appendChild(sym);
-        top.appendChild(mkEl("span", "px", fmt(h.price)));
-        const pnl = mkEl("span", "pnl " + (h.pnl == null ? "" : (h.pnl >= 0 ? "up" : "down")),
-          h.pnl != null ? (h.pnl >= 0 ? "+" : "") + h.pnl.toFixed(1) + "%" : "-");
-        top.appendChild(pnl);
-        const del = mkEl("button", "del", "✕");
-        del.title = "삭제";
-        del.onclick = async () => {
-          if (!confirm(h.symbol + " 을(를) 보유 종목에서 삭제할까요?")) return;
-          const x = await api({ action: "removeHolding", token: myToken, symbol: h.symbol });
-          log(x.msg); loadHoldings();
-        };
-        top.appendChild(del);
-        card.appendChild(top);
-        card.appendChild(mkEl("div", "hSub", "평단 " + fmt(h.avgPrice)));
-        const badge = mkEl("div", "hSub", "상태 확인 중…");
+        sym.onclick = (e) => { e.stopPropagation(); symbolEl.value = h.symbol; analyze(h.symbol); };
+        row.appendChild(sym);
+        row.appendChild(mkEl("span", "sub", (h.avgPrice != null ? "평단 " + fmt(h.avgPrice) + " · " : "") + "현재 " + fmt(h.price)));
+        row.appendChild(mkEl("span", "pnl " + (h.pnl == null ? "" : (h.pnl >= 0 ? "up" : "down")),
+          h.pnl != null ? (h.pnl >= 0 ? "+" : "") + h.pnl.toFixed(1) + "%" : "-"));
+        row.style.cursor = "pointer";
+        wrap.appendChild(row);
+        const badge = mkEl("div", "alertHint", "");
         badge.dataset.sym = h.symbol;
-        card.appendChild(badge);
+        wrap.appendChild(badge);
 
+        // 누르면 펼쳐지는 부분: 알림 전략, 삭제
+        const det = mkEl("div"); det.style.display = "none"; det.style.padding = "6px 0 10px";
         const sel = document.createElement("select");
         STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = "🔔 " + label; sel.appendChild(o); });
         sel.value = stMap[h.symbol] || "default";
         const stMsg = mkEl("div", "hMsg");
         sel.onchange = async () => { const ok = await saveStrategy(h.symbol, sel.value, stMsg); if (!ok) sel.value = stMap[h.symbol] || "default"; else stMap[h.symbol] = sel.value; };
-        card.appendChild(sel);
-        card.appendChild(stMsg);
-        box.appendChild(card);
+        det.appendChild(sel); det.appendChild(stMsg);
+        const del = mkEl("button", "linkBtn", "이 종목 삭제");
+        del.onclick = async () => {
+          if (!confirm(h.symbol + " 을(를) 보유 종목에서 삭제할까요?")) return;
+          const x = await api({ action: "removeHolding", token: myToken, symbol: h.symbol });
+          log(x.msg); loadHoldings();
+        };
+        det.appendChild(del);
+        wrap.appendChild(det);
+        row.onclick = () => { det.style.display = det.style.display === "none" ? "block" : "none"; };
+        card.appendChild(wrap);
       });
+      box.appendChild(card);
       const cb = lsGet("sigBadges");
       if (cb) document.querySelectorAll("#list [data-sym]").forEach((el) => { if (cb[el.dataset.sym]) el.textContent = cb[el.dataset.sym]; });
       if (!fromCache) loadHoldingBadges(hsSeq);
