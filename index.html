@@ -316,7 +316,7 @@
       <button data-f="today" class="on">오늘</button>
       <button data-f="d3">최근 3일</button>
     </div>
-    <select id="pickGroupSel" style="margin:4px 0 6px;width:100%"></select>
+    <div class="pkChips" id="pickGroups"></div>
     <div id="pickUpd" class="alertHint"></div>
     <div id="pickList"></div>
     <button id="pickRefresh" style="font-size:12px;padding:8px 10px;margin-top:8px">새로고침</button>
@@ -657,16 +657,14 @@
     // ===== 추천 탭: 오늘 신호 뜬 종목 =====
     let pickGroupList = [], pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "";
     function renderGroups() {
-      const sel = $("pickGroupSel"); sel.textContent = "";
+      const box = $("pickGroups"); box.textContent = "";
       const cnt = {};
       pickData.forEach((x) => { if (x.g && (x.tag || []).length) cnt[x.g] = (cnt[x.g] || 0) + 1; });
       pickGroupOrder = {}; pickGroupList.forEach((g) => { pickGroupOrder[g] = 1; });
-      const add = (label, val) => { const o = document.createElement("option"); o.value = val; o.textContent = label; sel.appendChild(o); };
-      add("전체 분야", "");
-      (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => { if (cnt[g]) add(g + " (" + cnt[g] + ")", g); });
       if (pickGroup && !cnt[pickGroup]) pickGroup = "";
-      sel.value = pickGroup;
-      sel.onchange = () => { pickGroup = sel.value; renderPicks(); };
+      const mk = (label, val) => { const b = mkEl("button", val === pickGroup ? "on" : "", label); b.onclick = () => { pickGroup = val; renderGroups(); renderPicks(); }; box.appendChild(b); };
+      mk("전체 분야", "");
+      (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => { if (cnt[g]) mk(g + " " + cnt[g], g); });
     }
     function pickCard(x) {
       const c = mkEl("div", "pkCard");
@@ -676,15 +674,12 @@
       top.appendChild(sym);
       top.appendChild(mkEl("span", null, fmt(x.p)));
       top.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
-      top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc));
+      top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc + (x.cls ? " · " + x.cls : "")));
       c.appendChild(top);
       c.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ")));
-      const why = mkEl("div", "pkWhy", (x.cls ? x.cls + "\n" : "") + (x.why || []).map((w) => "• " + w).join("\n"));
+      const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n"));
       why.style.whiteSpace = "pre-wrap";
-      why.style.display = "none";
       c.appendChild(why);
-      c.style.cursor = "pointer";
-      c.onclick = () => { why.style.display = why.style.display === "none" ? "block" : "none"; };
       return c;
     }
     function renderPicks() {
@@ -728,7 +723,7 @@
         const r = await api({ action: "getPicks", token: myToken, force: force === true });
         if (!r || !r.ok) { pickData = []; renderPicks(); $("pickList").appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); return; }
         let updTxt = "";
-        if (r.updated) { let t = String(r.updated); if (/GMT|T\d\d:/.test(t)) { const dt = new Date(t); if (!isNaN(dt)) { const z = (n) => String(n).padStart(2, "0"); t = z(dt.getMonth() + 1) + "/" + z(dt.getDate()) + " " + z(dt.getHours()) + ":" + z(dt.getMinutes()); } } updTxt = t + " 기준 · 카드를 누르면 이유가 보여요"; }
+        if (r.updated) { let t = String(r.updated); if (/GMT|T\d\d:/.test(t)) { const dt = new Date(t); if (!isNaN(dt)) { const z = (n) => String(n).padStart(2, "0"); t = z(dt.getMonth() + 1) + "/" + z(dt.getDate()) + " " + z(dt.getHours()) + ":" + z(dt.getMinutes()); } } updTxt = t + " 기준"; }
         $("pickUpd").textContent = updTxt;
         pickData = r.items || [];
         if (r.groups) pickGroupList = r.groups;
