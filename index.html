@@ -319,14 +319,14 @@
         <button id="add">위 종목 추가</button>
       </div>
 
+      <div id="frHold"></div>
+
       <div class="secHead">
         <h3>내 보유 종목</h3>
         <button id="pfBtn">📋 포트폴리오</button>
       </div>
       <div id="list"></div>
       <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
-
-      <div id="frHold"></div>
 
       <details id="frBox" class="alertBox">
         <summary>⚙️ 설정 · 내 닉네임 <span id="frCnt"></span></summary>
@@ -698,7 +698,14 @@
         me.appendChild(nl);
         $("frCnt").textContent = r.friends.length ? "(" + r.friends.length + "명과 공유 중)" : "";
 
-        const fh = await api({ action: "friendHoldings", token: myToken });
+        const [fh, sr0] = await Promise.all([
+          api({ action: "friendHoldings", token: myToken }),
+          api({ action: "getStrategies", token: myToken }).catch(() => null)
+        ]);
+        if (fh && fh.ok && fh.me && fh.me.length) {              // 친구 목록과 같은 경로로 내 종목도 받아서 그림
+          holdFromFr = true;
+          try { paintHoldings({ ok: true, holdings: fh.me }, (sr0 && sr0.ok && sr0.map) ? sr0 : { ok: true, map: {} }, false); } catch (e) {}
+        }
         hold.textContent = "";
         if (fh && fh.ok && fh.friends.length) {
           hold.appendChild(mkEl("div", "secHead")).appendChild(mkEl("h3", null, "👥 친구들의 종목"));
@@ -941,6 +948,7 @@
     }
     const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
     const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+    let holdFromFr = false;
     async function loadHoldings() {
       const box = $("list");
       const cached = lsGet("sigHold");                       // 지난번 화면을 먼저 바로 보여주고, 서버 응답이 오면 갱신
@@ -952,8 +960,10 @@
           api({ action: "getStrategies", token: myToken }).catch(() => null)
         ]);
         if (r && r.ok) lsSet("sigHold", { r, sr });
+        if (holdFromFr && !(r && r.ok && r.holdings && r.holdings.length)) return;     // 이미 그려놨으면 빈 응답으로 덮어쓰지 않음
         paintHoldings(r, sr, false);
       } catch (e) {
+        if (holdFromFr) return;
         box.textContent = "";
         box.appendChild(mkEl("div", "alertHint", "내 종목을 불러오지 못했어요: " + (e && e.message ? e.message : e) + " (기기 " + String(myToken || "").slice(0, 4) + ")"));
       }
