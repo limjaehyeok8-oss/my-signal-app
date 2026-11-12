@@ -215,6 +215,7 @@
       <div id="analysis">
         <img id="chartImg" alt="차트">
         <pre id="analysisText"></pre>
+        <div id="anaStrat" class="btRec" style="display:none"></div>
       </div>
 
       <h3>보유 종목 등록</h3>
@@ -399,6 +400,48 @@
       }
     }
 
+
+    // ===== 분석 화면: 이 종목 알림 전략 고르기 / 자동 추천 =====
+    async function renderStratPanel(symbol, seq) {
+      const box = $("anaStrat");
+      box.style.display = "block";
+      box.textContent = "";
+      box.appendChild(mkEl("div", null, "🔔 " + symbol + " 알림 전략 (이 종목 알림을 어떤 규칙으로 받을지)"));
+      let cur = "default";
+      try { const sr = await api({ action: "getStrategies", token: myToken }); if (sr.ok && sr.map) cur = sr.map[symbol] || "default"; } catch (e) {}
+      if (seq !== analyzeSeq) return;
+      const msg = mkEl("div", "btApplyMsg");
+      const row = mkEl("div", "acts");
+      const sel = document.createElement("select");
+      sel.style.cssText = "padding:8px;font-size:12px;max-width:100%;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:8px";
+      STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = label; sel.appendChild(o); });
+      sel.value = cur;
+      const save = mkEl("button", null, "이 전략으로 저장");
+      save.onclick = () => saveStrategy(symbol, sel.value, msg).then((ok) => { if (ok) loadHoldings(); });
+      row.appendChild(sel); row.appendChild(save);
+      box.appendChild(row);
+      const rec = mkEl("button", "btApply", "🏆 백테스트로 내게 제일 맞는 전략 찾기 (10~30초)");
+      const recOut = mkEl("div");
+      rec.onclick = async () => {
+        rec.disabled = true; recOut.textContent = "계산 중...";
+        try {
+          const r = await api({ action: "backtest", token: myToken, ticker: symbol, years: 5 });
+          if (!r.ok) { recOut.textContent = r.msg || "실패"; return; }
+          const cand = r.strategies.filter((x) => x.n >= 5 && x.mdd >= -50);
+          recOut.textContent = "";
+          if (!cand.length) { recOut.appendChild(mkEl("div", "warn", "거래 5회 이상 + 최대 낙폭 -50% 이내인 전략이 없어요. 🧪 백테스트 탭에서 직접 비교해 보세요.")); return; }
+          const b = cand.reduce((a, c) => (c.total > a.total ? c : a), cand[0]);
+          recOut.appendChild(mkEl("div", null, "추천: " + b.name + " — 5년 총수익 " + pct(b.total, 0) + ", 최대 낙폭 " + pct(b.mdd, 0) + ", 거래 " + b.n + "회"));
+          const d = b.total - r.bh.total;
+          recOut.appendChild(mkEl("div", "warn", d > 0 ? "그냥 들고 있기(" + pct(r.bh.total, 0) + ")보다 " + d.toFixed(0) + "%p 높아요. 단, 과거 기준이라 앞으로를 보장하진 않아요." : "그냥 들고 있기(" + pct(r.bh.total, 0) + ")보다 낫지 않아요."));
+          const ap = mkEl("button", null, "추천 전략 적용");
+          ap.onclick = () => saveStrategy(symbol, b.key, msg).then((ok) => { if (ok) { sel.value = b.key; loadHoldings(); } });
+          recOut.appendChild(ap);
+        } catch (e) { recOut.textContent = "오류: " + e.message; } finally { rec.disabled = false; }
+      };
+      box.appendChild(rec); box.appendChild(recOut); box.appendChild(msg);
+    }
+
     let analyzeSeq = 0;
     async function analyze(symbol) {
       symbol = String(symbol || "").trim().toUpperCase();
@@ -415,6 +458,7 @@
         if (!r.ok) { pre.textContent = r.msg || "분석에 실패했어요"; return; }
         if (r.image) { img.src = "data:image/png;base64," + r.image; img.style.display = "block"; }
         renderAnalysis(pre, r.text);
+        renderStratPanel(symbol, seq);
       } catch (e) {
         if (seq === analyzeSeq) pre.textContent = "오류: " + e.message;
       }
