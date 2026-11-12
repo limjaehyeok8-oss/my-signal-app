@@ -304,6 +304,9 @@
     #commView .cmHead .cmDel { margin-left: 6px; }
     .topBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .topBar #toggle { width: auto; margin: 0; padding: 8px 14px; font-size: 13px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+    .frName { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .frOn { font-size: 12px; font-weight: 600; color: var(--sub); background: var(--card2); padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .frOn.off { color: #ffb44d; }
   </style>
 </head>
 <body>
@@ -721,7 +724,10 @@
         hold.appendChild(mkEl("div", "secHead")).appendChild(mkEl("h3", null, "👥 친구들의 종목"));
         fh.friends.forEach((f) => {
           const card = mkEl("div", "frCard");
-          card.appendChild(mkEl("div", "frName", f.name));
+          const nm = mkEl("div", "frName");
+          nm.appendChild(document.createTextNode(f.name));
+          nm.appendChild(mkEl("span", "frOn" + (f.on === false ? " off" : ""), f.on === false ? "🔕 알림 꺼짐" : "🔔 알림 켜짐"));
+          card.appendChild(nm);
           f.holdings.forEach((x) => {
             const row = mkEl("div", "frRow");
             const sym = mkEl("span", "sym", x.symbol);
@@ -1032,7 +1038,10 @@
       let hsMap = {}, hsSeq = ++holdSeq;
       if (!r.holdings.length) { box.appendChild(mkEl("div", "alertHint", "등록된 보유 종목이 없어요. 위에서 종목을 검색해 추가해 보세요. (기기 " + String(myToken || "").slice(0, 4) + ")")); return; }
       const card = mkEl("div", "frCard");                       // 친구들 종목과 같은 모양
-      card.appendChild(mkEl("div", "frName", "나"));
+      const meNm = mkEl("div", "frName");
+      meNm.appendChild(document.createTextNode("나"));
+      meNm.appendChild(mkEl("span", "frOn" + (paused ? " off" : ""), paused ? "🔕 알림 꺼짐" : "🔔 알림 켜짐"));
+      card.appendChild(meNm);
       r.holdings.forEach((h) => {
         const wrap = mkEl("div");
         const row = mkEl("div", "frRow");
@@ -1507,7 +1516,7 @@
           if (cntBtn) { const m = /\d+/.exec(cntBtn.textContent); cntBtn.textContent = "댓글 " + ((m ? +m[0] : 0) + 1); }
           try {
             const x = await api({ action: "addComment", token: myToken, postId, text });
-            if (x.ok) row.style.opacity = "1";
+            if (x.ok) { row.style.opacity = "1"; if (x.id) api({ action: "notifyComm", token: myToken, id: x.id }).catch(() => {}); }
             else { row.remove(); msg.textContent = x.msg || "등록하지 못했어요"; inp.value = text; }
           } catch (e) { row.remove(); msg.textContent = "등록하지 못했어요"; inp.value = text; }
         };
@@ -1560,7 +1569,7 @@
       try {
         const x = await api({ action: "addPost", token: myToken, text, ticker, image, cat: cmPickCat });
         if (x.ok) {
-          if (x.id) { const real = postCard({ id: x.id, time: "방금", name: card.querySelector(".cmName") ? "나" : "나", ticker, text, image, cat: cmPickCat, mine: true, cc: 0 }); card.replaceWith(real); }
+          if (x.id) { api({ action: "notifyComm", token: myToken, id: x.id }).catch(() => {}); const real = postCard({ id: x.id, time: "방금", name: card.querySelector(".cmName") ? "나" : "나", ticker, text, image, cat: cmPickCat, mine: true, cc: 0 }); card.replaceWith(real); }
           else loadPosts();
         } else restore(x.msg || "올리지 못했어요");
       } catch (e) { restore("올리지 못했어요"); }
