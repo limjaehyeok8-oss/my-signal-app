@@ -440,7 +440,29 @@
           recOut.appendChild(ap);
         } catch (e) { recOut.textContent = "오류: " + e.message; } finally { rec.disabled = false; }
       };
-      box.appendChild(rec); box.appendChild(recOut); box.appendChild(msg);
+      const tpBtn = mkEl("button", "btApply", "📈 선택한 전략의 매수·매도 타점 차트 보기");
+      const tpOut = mkEl("div");
+      tpBtn.onclick = async () => {
+        tpBtn.disabled = true; tpOut.textContent = "계산 중...";
+        try {
+          const r = await api({ action: "backtest", token: myToken, ticker: symbol, years: 5 });
+          if (!r.ok) { tpOut.textContent = r.msg || "실패"; return; }
+          const key = sel.value === "default" ? "base" : sel.value;
+          const st = r.strategies.find((x) => x.key === key);
+          tpOut.textContent = "";
+          if (!st) { tpOut.textContent = "이 전략 결과를 찾지 못했어요"; return; }
+          tpOut.appendChild(mkEl("div", null, st.name + " — 거래 " + st.n + "회 · 총수익 " + pct(st.total, 0) + " · 최대 낙폭 " + pct(st.mdd, 0) + (sel.value === "default" ? " (기본 알림은 ①번 기준으로 보여줘요)" : "")));
+          const cb = mkEl("div"); tpOut.appendChild(cb);
+          drawBtChart(cb, r.series, st.trades);
+          const recent = st.trades.slice(-5).reverse();
+          if (recent.length) {
+            tpOut.appendChild(mkEl("div", null, "최근 거래"));
+            recent.forEach((t) => tpOut.appendChild(mkEl("div", "btApplyMsg", t.inDate + " 매수 " + t.inPx + " → " + (t.open ? "보유 중" : t.outDate + " 매도 " + t.outPx) + " (" + pct(t.ret, 1) + ")")));
+          }
+        } catch (e) { tpOut.textContent = "오류: " + e.message; } finally { tpBtn.disabled = false; }
+      };
+      box.appendChild(rec); box.appendChild(recOut);
+      box.appendChild(tpBtn); box.appendChild(tpOut); box.appendChild(msg);
     }
 
     $("stResetAll").onclick = async () => {
