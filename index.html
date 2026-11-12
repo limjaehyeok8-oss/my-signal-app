@@ -7,7 +7,15 @@
   <style>
     body { font-family: sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; }
     button { padding: 10px 16px; font-size: 15px; }
-    input { padding: 10px; font-size: 15px; width: 110px; }
+    input { padding: 10px; font-size: 15px; box-sizing: border-box; }
+    #symbol { width: 100%; }
+    #avg { width: 140px; }
+    .row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+    #results { border: 1px solid #ddd; border-radius: 6px; margin-top: 4px; display: none; }
+    #results div { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 14px; }
+    #results div:last-child { border-bottom: none; }
+    #results div:hover { background: #f5f5f5; }
+    #results small { color: #888; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     th, td { padding: 8px 4px; text-align: right; border-bottom: 1px solid #ddd; font-size: 14px; }
     th:first-child, td:first-child { text-align: left; }
@@ -22,10 +30,13 @@
 
   <div id="holdingsBox" style="display:none">
     <h3>보유 종목 등록</h3>
-    <input id="symbol" placeholder="티커 (SOXL)" autocapitalize="characters">
-    <input id="avg" placeholder="평단가" type="number" step="any" inputmode="decimal">
-    <button id="add">추가</button>
-    <p style="font-size:13px;color:#777">같은 티커를 다시 입력하면 평단가가 수정돼요.</p>
+    <input id="symbol" placeholder="종목 검색 (이름 또는 티커, 예: nvidia, SOXL)" autocomplete="off" autocapitalize="off">
+    <div id="results"></div>
+    <div class="row">
+      <input id="avg" placeholder="평단가" type="number" step="any" inputmode="decimal">
+      <button id="add">추가</button>
+    </div>
+    <p style="font-size:13px;color:#777">검색 결과를 누르면 티커가 입력돼요. 같은 티커를 다시 추가하면 평단가가 수정됩니다.</p>
     <table>
       <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>수익률</th><th></th></tr></thead>
       <tbody id="list"></tbody>
@@ -69,6 +80,46 @@
 
     function fmt(n) { return n == null ? "-" : Number(n).toFixed(2); }
 
+    // ---------- 종목 검색 ----------
+    const symbolEl = document.getElementById("symbol");
+    const resultsEl = document.getElementById("results");
+    let searchTimer = null;
+    let searchSeq = 0;
+
+    function hideResults() { resultsEl.style.display = "none"; resultsEl.textContent = ""; }
+
+    symbolEl.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      const q = symbolEl.value.trim();
+      if (!q) return hideResults();
+      searchTimer = setTimeout(async () => {
+        const seq = ++searchSeq;
+        try {
+          const r = await api({ action: "search", token: myToken, query: q });
+          if (seq !== searchSeq) return; // 오래된 응답은 무시
+          resultsEl.textContent = "";
+          if (!r.ok || !r.results.length) {
+            const none = document.createElement("div");
+            none.textContent = r.ok ? "검색 결과가 없어요" : r.msg;
+            resultsEl.appendChild(none);
+          } else {
+            r.results.forEach((item) => {
+              const div = document.createElement("div");
+              const b = document.createElement("b");
+              b.textContent = item.symbol;
+              const small = document.createElement("small");
+              small.textContent = "  " + item.name + " · " + item.exchange;
+              div.appendChild(b); div.appendChild(small);
+              div.onclick = () => { symbolEl.value = item.symbol; hideResults(); document.getElementById("avg").focus(); };
+              resultsEl.appendChild(div);
+            });
+          }
+          resultsEl.style.display = "block";
+        } catch (e) { hideResults(); }
+      }, 350);
+    });
+
+    // ---------- 보유 종목 ----------
     async function loadHoldings() {
       const r = await api({ action: "listHoldings", token: myToken });
       const tbody = document.getElementById("list");
@@ -76,8 +127,9 @@
       if (!r.ok) return log(r.msg);
       r.holdings.forEach((h) => {
         const tr = document.createElement("tr");
-        const cells = [h.symbol, fmt(h.avgPrice), fmt(h.price)];
-        cells.forEach((t) => { const td = document.createElement("td"); td.textContent = t; tr.appendChild(td); });
+        [h.symbol, fmt(h.avgPrice), fmt(h.price)].forEach((t) => {
+          const td = document.createElement("td"); td.textContent = t; tr.appendChild(td);
+        });
 
         const pnlTd = document.createElement("td");
         if (h.pnl != null) {
@@ -116,16 +168,16 @@
     };
 
     document.getElementById("add").onclick = async () => {
-      const symbol = document.getElementById("symbol").value;
+      const symbol = symbolEl.value.trim();
       const avg = document.getElementById("avg").value;
-      if (!symbol) return log("티커를 입력하세요");
+      if (!symbol) return log("종목을 검색하거나 티커를 입력하세요");
+      hideResults();
       log("등록 중...");
       const r = await api({ action: "addHolding", token: myToken, symbol: symbol, avgPrice: avg });
       log(r.msg);
-      if (r.ok) { document.getElementById("symbol").value = ""; document.getElementById("avg").value = ""; loadHoldings(); }
+      if (r.ok) { symbolEl.value = ""; document.getElementById("avg").value = ""; loadHoldings(); }
     };
 
-    // 이미 권한을 허용했다면 자동으로 시작
     if (Notification.permission === "granted") init();
 
     messaging.onMessage(async (payload) => {
