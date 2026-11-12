@@ -11,3 +11,4 @@ firebase.initializeApp({
 });
 
 firebase.messaging();
+self.addEventListener('fetch', function () {});
