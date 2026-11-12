@@ -8,7 +8,7 @@
     body { font-family: sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; }
     button { padding: 10px 16px; font-size: 15px; }
     input { padding: 10px; font-size: 15px; box-sizing: border-box; }
-    #symbol { width: 100%; }
+    #symbol { flex: 1; min-width: 0; }
     #avg { width: 140px; }
     .row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
     #results { border: 1px solid #ddd; border-radius: 6px; margin-top: 4px; display: none; }
@@ -19,8 +19,12 @@
     table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     th, td { padding: 8px 4px; text-align: right; border-bottom: 1px solid #ddd; font-size: 14px; }
     th:first-child, td:first-child { text-align: left; }
+    td.sym { color: #1565c0; text-decoration: underline; cursor: pointer; }
     .up { color: #d32f2f; } .down { color: #1976d2; }
     #status { margin: 12px 0; color: #555; }
+    #analysis { display: none; margin-top: 16px; }
+    #chartImg { display: none; width: 100%; border-radius: 6px; }
+    #analysisText { white-space: pre-wrap; font-family: inherit; font-size: 13px; line-height: 1.5; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -29,14 +33,24 @@
   <p id="status"></p>
 
   <div id="holdingsBox" style="display:none">
-    <h3>보유 종목 등록</h3>
-    <input id="symbol" placeholder="종목 검색 (이름 또는 티커, 예: nvidia, SOXL)" autocomplete="off" autocapitalize="off">
+    <h3>종목 검색 · 분석</h3>
+    <div class="row">
+      <input id="symbol" placeholder="이름 또는 티커 (예: sandisk, SOXL)" autocomplete="off" autocapitalize="off">
+      <button id="analyze">분석</button>
+    </div>
     <div id="results"></div>
+
+    <div id="analysis">
+      <img id="chartImg" alt="차트">
+      <pre id="analysisText"></pre>
+    </div>
+
+    <h3>보유 종목 등록</h3>
     <div class="row">
       <input id="avg" placeholder="평단가" type="number" step="any" inputmode="decimal">
-      <button id="add">추가</button>
+      <button id="add">위 종목 추가</button>
     </div>
-    <p style="font-size:13px;color:#777">검색 결과를 누르면 티커가 입력돼요. 같은 티커를 다시 추가하면 평단가가 수정됩니다.</p>
+    <p style="font-size:13px;color:#777">검색창의 종목이 등록돼요. 같은 티커를 다시 추가하면 평단가가 수정됩니다. 목록의 티커를 누르면 분석을 볼 수 있어요.</p>
     <table>
       <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>수익률</th><th></th></tr></thead>
       <tbody id="list"></tbody>
@@ -56,6 +70,7 @@
     };
     const VAPID_KEY = "BEFQ2PtyXgvk_Bs3t5pNx_A-a4hYtAC3Zk2X6Nguvb-eF3NfC5uBa5SJVQ3ooAWbzhlL2a7k9vK8pAmaStGSPOE";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyjHP1DGPoYL9njJb_ok6WnpKTUaLUObZjFwqLGa8JJR8mS5roAqb6F0h_MAobuVSTz-g/exec";
+    const ANALYSIS_URL = "여기에_텔레그램봇_GAS_exec_URL";
 
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
@@ -80,6 +95,31 @@
 
     function fmt(n) { return n == null ? "-" : Number(n).toFixed(2); }
 
+    // ---------- 종목 분석 (텍스트 + 차트) ----------
+    let analyzeSeq = 0;
+    async function analyze(symbol) {
+      symbol = String(symbol || "").trim().toUpperCase();
+      if (!symbol) return log("종목을 입력하거나 검색해서 선택하세요");
+      const seq = ++analyzeSeq;
+      const box = document.getElementById("analysis");
+      const img = document.getElementById("chartImg");
+      const pre = document.getElementById("analysisText");
+      box.style.display = "block";
+      img.style.display = "none";
+      pre.textContent = symbol + " 분석 중... (10초 정도 걸려요)";
+      box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      try {
+        const res = await fetch(ANALYSIS_URL + "?action=analyze&ticker=" + encodeURIComponent(symbol));
+        const r = await res.json();
+        if (seq !== analyzeSeq) return; // 오래된 요청은 무시
+        if (!r.ok) { pre.textContent = r.msg || "분석에 실패했어요"; return; }
+        if (r.image) { img.src = "data:image/png;base64," + r.image; img.style.display = "block"; }
+        pre.textContent = r.text;
+      } catch (e) {
+        if (seq === analyzeSeq) pre.textContent = "오류: " + e.message;
+      }
+    }
+
     // ---------- 종목 검색 ----------
     const symbolEl = document.getElementById("symbol");
     const resultsEl = document.getElementById("results");
@@ -96,7 +136,7 @@
         const seq = ++searchSeq;
         try {
           const r = await api({ action: "search", token: myToken, query: q });
-          if (seq !== searchSeq) return; // 오래된 응답은 무시
+          if (seq !== searchSeq) return;
           resultsEl.textContent = "";
           if (!r.ok || !r.results.length) {
             const none = document.createElement("div");
@@ -110,7 +150,7 @@
               const small = document.createElement("small");
               small.textContent = "  " + item.name + " · " + item.exchange;
               div.appendChild(b); div.appendChild(small);
-              div.onclick = () => { symbolEl.value = item.symbol; hideResults(); document.getElementById("avg").focus(); };
+              div.onclick = () => { symbolEl.value = item.symbol; hideResults(); analyze(item.symbol); };
               resultsEl.appendChild(div);
             });
           }
@@ -118,6 +158,11 @@
         } catch (e) { hideResults(); }
       }, 350);
     });
+
+    symbolEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { hideResults(); analyze(symbolEl.value); }
+    });
+    document.getElementById("analyze").onclick = () => { hideResults(); analyze(symbolEl.value); };
 
     // ---------- 보유 종목 ----------
     async function loadHoldings() {
@@ -127,7 +172,14 @@
       if (!r.ok) return log(r.msg);
       r.holdings.forEach((h) => {
         const tr = document.createElement("tr");
-        [h.symbol, fmt(h.avgPrice), fmt(h.price)].forEach((t) => {
+
+        const symTd = document.createElement("td");
+        symTd.className = "sym";
+        symTd.textContent = h.symbol;
+        symTd.onclick = () => { symbolEl.value = h.symbol; analyze(h.symbol); };
+        tr.appendChild(symTd);
+
+        [fmt(h.avgPrice), fmt(h.price)].forEach((t) => {
           const td = document.createElement("td"); td.textContent = t; tr.appendChild(td);
         });
 
@@ -175,7 +227,7 @@
       log("등록 중...");
       const r = await api({ action: "addHolding", token: myToken, symbol: symbol, avgPrice: avg });
       log(r.msg);
-      if (r.ok) { symbolEl.value = ""; document.getElementById("avg").value = ""; loadHoldings(); }
+      if (r.ok) { document.getElementById("avg").value = ""; loadHoldings(); }
     };
 
     if (Notification.permission === "granted") init();
