@@ -1,7 +1,7 @@
 {
-  "updated": "2026-11-12T13:28:22+09:00",
+  "updated": "2026-11-13T08:14:44+09:00",
   "sentiment": {
-    "score": 36,
+    "score": 39,
     "rating": "fear",
     "label": "😨 공포"
   },
@@ -33,34 +33,34 @@
   },
   "macro": {
     "lines": [
-      "10년물 금리 5.00% (+2bp) · ⚠️ 위험 구간",
-      "VIX 17.5 · 안정",
-      "WTI $85.37 (-0.78%) · ⚠️ 인플레 우려",
-      "금 $3,988 (-1.04%) / 달러인덱스 103.01 (+0.76%)",
+      "10년물 금리 5.10% (+10bp) · ⚠️ 위험 구간",
+      "VIX 18.7 · 안정",
+      "WTI $88.81 (+2.63%) · ⚠️ 인플레 우려",
+      "금 $3,884 (-2.92%) / 달러인덱스 103.17 (+0.25%)",
       "🚨 종합: 위험자산 비우호적 (경계 4개)"
     ],
     "score": 4
   },
   "strong": [
     {
-      "symbol": "TMO",
-      "text": "TMO  3개월 +20.5%"
-    },
-    {
       "symbol": "LLY",
-      "text": "LLY  3개월 +19.1%"
+      "text": "LLY  3개월 +20.9%"
     },
     {
-      "symbol": "CME",
-      "text": "CME  3개월 +18.8%"
+      "symbol": "TMO",
+      "text": "TMO  3개월 +19.0%"
     },
     {
       "symbol": "ABBV",
-      "text": "ABBV  3개월 +18.3%"
+      "text": "ABBV  3개월 +18.8%"
     },
     {
-      "symbol": "PG",
-      "text": "PG  3개월 +17.0%"
+      "symbol": "CME",
+      "text": "CME  3개월 +17.5%"
+    },
+    {
+      "symbol": "BRK-B",
+      "text": "BRK-B  3개월 +17.0%"
     }
   ],
   "value": {
@@ -71,16 +71,16 @@
         "star": true
       },
       {
-        "symbol": "TPL",
-        "star": true
-      },
-      {
         "symbol": "MU",
         "star": false
       },
       {
+        "symbol": "TPL",
+        "star": true
+      },
+      {
         "symbol": "SMCI",
-        "star": false
+        "star": true
       },
       {
         "symbol": "APTV",
@@ -97,8 +97,9 @@
     ]
   },
   "insider": [
-    "베이커휴즈(BKR): Dir / +$531,000 매수",
-    "TSMC(TSM): Dir / +$299,880 매수"
+    "TSMC(TSM): Dir / +$299,880 매수",
+    "앨나일램(ALNY): Dir / +$299,526 매수",
+    "앨나일램(ALNY): Dir / +$243,600 매수"
   ],
   "weeklyHA": null,
   "earnings": []
