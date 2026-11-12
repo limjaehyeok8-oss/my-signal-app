@@ -279,23 +279,23 @@
         <input id="avg" placeholder="평단가" type="number" step="any" inputmode="decimal">
         <button id="add">위 종목 추가</button>
       </div>
-      <p style="font-size:13px;color:#777">검색창의 종목이 등록돼요. 같은 티커를 다시 추가하면 평단가가 수정됩니다. 목록의 티커를 누르면 분석을 볼 수 있어요.</p>
 
       <div class="secHead">
         <h3>내 보유 종목</h3>
         <button id="pfBtn">📋 포트폴리오</button>
       </div>
       <div id="list"></div>
-      <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
+
+      <div id="frHold"></div>
 
       <details id="frBox" class="alertBox">
-        <summary>👥 내 닉네임 <span id="frCnt"></span></summary>
+        <summary>⚙️ 설정 · 내 닉네임 <span id="frCnt"></span></summary>
         <div class="alertHint">이 앱에 등록한 사람들끼리 서로의 종목·평단·수익률이 자동으로 공유돼요. 닉네임을 정하면 친구들에게 그 이름으로 보여요.</div>
         <div id="frMe"></div>
         <div id="frMsg" class="btApplyMsg"></div>
+      <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
       </details>
 
-      <div id="frHold"></div>
 
       <div id="pfBox">
         <h3>📋 포트폴리오 현황</h3>
@@ -309,8 +309,8 @@
 
   <!-- ===== 탭: 추천 ===== -->
   <div id="pickView" style="display:none">
-    <h3 style="margin:14px 0 4px">🔎 오늘 신호 뜬 종목</h3>
-    <p class="alertHint">대형주·ETF·레버리지 등 후보 종목을 매일 아침 훑어서, 저점매수나 매수 신호가 막 뜬 종목만 보여줘요. 점수는 참고용이고 매수 권유가 아니에요.</p>
+    <h3 style="margin:14px 0 4px">🔎 추천</h3>
+    <p class="alertHint">점수는 참고용이고 매수 권유가 아니에요.</p>
     <div class="pkChips" id="pickChips">
       <button data-f="all">전체</button>
       <button data-f="today" class="on">오늘</button>
