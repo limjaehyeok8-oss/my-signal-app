@@ -139,6 +139,14 @@
     .pfTag { font-size: 11px; padding: 3px 8px; border-radius: 999px; background: var(--card2); color: var(--sub); }
     .pfTag.warn { background: rgba(255,170,60,.15); color: #ffb44d; }
     .pfTag.stop { background: rgba(255,90,106,.18); color: #ff7a88; font-weight: bold; }
+    #analysisText .anBlock { white-space: pre-wrap; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.6; }
+    #analysisText .anBlock:last-child { border-bottom: none; }
+    #analysisText .anMore { margin-top: 6px; }
+    #analysisText .anMore summary { cursor: pointer; padding: 12px; text-align: center; border-radius: 10px;
+                                    background: var(--card2); color: var(--accent2); font-weight: bold; list-style: none; }
+    #analysisText .anMore summary::-webkit-details-marker { display: none; }
+    #analysisText .anMore[open] summary { margin-bottom: 4px; }
+    #analysisText .anMore .anBlock { font-size: 13px; color: var(--sub); }
   </style>
 </head>
 <body>
@@ -302,6 +310,38 @@
     };
 
     // ================= 종목 분석 (텍스트 + 차트) =================
+    // 분석 글: 핵심만 위에, 나머지는 "자세히 보기"로 접기
+    function renderAnalysis(pre, text) {
+      const blocks = String(text || "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+      const pick = (kw) => blocks.find((b) => b.indexOf(kw) !== -1);
+      const head = blocks[0];
+      const keyList = [head, pick("[봇 상태]"), pick("[종목 성격"), pick("[AI 전략 요약]"), pick("[AI 지표 스코어보드]")]
+        .filter((b, i, a) => b && a.indexOf(b) === i);
+      const rest = blocks.filter((b) => keyList.indexOf(b) === -1);
+
+      pre.textContent = "";
+      keyList.forEach((b) => {
+        const d = document.createElement("div");
+        d.className = "anBlock";
+        d.textContent = b;
+        pre.appendChild(d);
+      });
+      if (rest.length) {
+        const det = document.createElement("details");
+        det.className = "anMore";
+        const sm = document.createElement("summary");
+        sm.textContent = "📄 자세한 분석 보기";
+        det.appendChild(sm);
+        rest.forEach((b) => {
+          const d = document.createElement("div");
+          d.className = "anBlock";
+          d.textContent = b;
+          det.appendChild(d);
+        });
+        pre.appendChild(det);
+      }
+    }
+
     let analyzeSeq = 0;
     async function analyze(symbol) {
       symbol = String(symbol || "").trim().toUpperCase();
@@ -317,7 +357,7 @@
         if (seq !== analyzeSeq) return;
         if (!r.ok) { pre.textContent = r.msg || "분석에 실패했어요"; return; }
         if (r.image) { img.src = "data:image/png;base64," + r.image; img.style.display = "block"; }
-        pre.textContent = r.text;
+        renderAnalysis(pre, r.text);
       } catch (e) {
         if (seq === analyzeSeq) pre.textContent = "오류: " + e.message;
       }
