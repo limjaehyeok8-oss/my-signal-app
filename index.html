@@ -671,7 +671,7 @@
           card.appendChild(top);
 
           // 봇 상태 (매수/매도 신호 진행중)
-          if (row.state) card.appendChild(mk("div", "pfBadge " + (row.state.type === "buy" ? "buy" : "sell"), row.state.short));
+          if (row.state) card.appendChild(mk("div", "pfBadge " + ((row.state.type === "buy" || row.state.type === "clover") ? "buy" : (row.state.type === "none" ? "" : "sell")), row.state.short));
           else card.appendChild(mk("div", "pfBadge none", "신호 이력 없음"));
 
           // 종목 성격 / 횡보 / 손절 참고선 태그
