@@ -226,6 +226,17 @@
     .frRow .pnl { font-weight: 800; min-width: 58px; text-align: right; }
     .hold .hideRow { font-size: 12px; color: var(--sub); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
     .hold .hideRow input { width: auto; margin: 0; }
+    .pkCard { border-top: 1px solid var(--line); padding: 10px 0; }
+    .pkCard .pkTop { display: flex; align-items: baseline; gap: 10px; }
+    .pkCard .sym { font-weight: 800; font-size: 16px; color: var(--accent2); cursor: pointer; }
+    .pkCard .pkSc { margin-left: auto; font-size: 12px; color: var(--sub); }
+    .pkCard .pkTag { font-size: 13px; margin-top: 3px; }
+    .pkCard .pkWhy { font-size: 12px; color: var(--sub); margin-top: 3px; line-height: 1.5; }
+    .mainTabs { overflow-x: auto; }
+    .mainTabs button { font-size: 13px !important; padding: 12px 6px !important; white-space: nowrap; }
+    .pkChips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+    .pkChips button { font-size: 12px; padding: 6px 12px; border-radius: 999px; }
+    .pkChips button.on { border-color: var(--accent); color: var(--accent); }
   </style>
 </head>
 <body>
@@ -233,6 +244,7 @@
 
   <div class="mainTabs">
     <button id="tabHome" class="on">📈 내 종목</button>
+    <button id="tabPick">🔎 추천</button>
     <button id="tabFg">😨 공포탐욕</button>
     <button id="tabBt">🧪 백테스트</button>
   </div>
@@ -293,6 +305,21 @@
       </div>
     </div>
     <div id="homeGlos"></div>
+  </div>
+
+  <!-- ===== 탭: 추천 ===== -->
+  <div id="pickView" style="display:none">
+    <h3 style="margin:14px 0 4px">🔎 오늘 신호 뜬 종목</h3>
+    <p class="alertHint">대형주·ETF·레버리지 등 후보 종목을 매일 아침 훑어서, 저점매수나 매수 신호가 막 뜬 종목만 보여줘요. 점수는 참고용이고 매수 권유가 아니에요.</p>
+    <div class="pkChips" id="pickChips">
+      <button data-f="all" class="on">전체</button>
+      <button data-f="clover">☘️ 저점매수</button>
+      <button data-f="buy">🟢 매수 신호</button>
+      <button data-f="strong">점수 3+</button>
+    </div>
+    <div id="pickUpd" class="alertHint"></div>
+    <div id="pickList"></div>
+    <button id="pickRefresh" style="font-size:12px;padding:8px 10px;margin-top:8px">새로고침</button>
   </div>
 
   <!-- ===== 탭: 백테스트 ===== -->
@@ -389,6 +416,7 @@
       $("tabHome").className = isFg ? "" : "on";
       $("tabFg").className = isFg ? "on" : "";
       $("btView").style.display = "none"; $("tabBt").className = "";
+      $("pickView").style.display = "none"; $("tabPick").className = "";
       history.replaceState(null, "", isFg ? "#fg" : location.pathname + location.search);
       if (isFg && !fgLoaded) { fgLoaded = true; fgLoad(); }
     }
@@ -618,6 +646,64 @@
       }
     }
     $("frBox").addEventListener("toggle", () => { if ($("frBox").open) loadFriends(); });
+
+    // ===== 추천 탭: 오늘 신호 뜬 종목 =====
+    let pickData = [], pickFilter = "all";
+    function renderPicks() {
+      const list = $("pickList");
+      list.textContent = "";
+      let items = pickData.slice();
+      if (pickFilter === "clover") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("저점매수") !== -1));
+      if (pickFilter === "buy") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("매수 신호") !== -1));
+      if (pickFilter === "strong") items = items.filter((x) => x.sc >= 3);
+      if (!items.length) { list.appendChild(mkEl("div", "alertHint", pickData.length ? "이 조건에 맞는 종목이 없어요" : "")); return; }
+      items.forEach((x) => {
+        const c = mkEl("div", "pkCard");
+        const top = mkEl("div", "pkTop");
+        const sym = mkEl("span", "sym", x.s);
+        sym.onclick = () => { showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+        top.appendChild(sym);
+        top.appendChild(mkEl("span", null, fmt(x.p)));
+        top.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
+        top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc + " · " + x.cls));
+        c.appendChild(top);
+        c.appendChild(mkEl("div", "pkTag", (x.tag || []).join("  ")));
+        const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n"));
+        why.style.whiteSpace = "pre-wrap";
+        c.appendChild(why);
+        list.appendChild(c);
+      });
+    }
+    async function loadPicks() {
+      if (!myToken) { $("pickList").textContent = ""; $("pickList").appendChild(mkEl("div", "alertHint", "먼저 '내 종목' 탭에서 '알림 받기'를 눌러 등록하세요")); return; }
+      try {
+        const r = await api({ action: "getPicks", token: myToken });
+        if (!r || !r.ok) { pickData = []; renderPicks(); $("pickList").appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); return; }
+        $("pickUpd").textContent = r.updated ? "업데이트 " + r.updated + " · 훑은 종목 " + r.scanned + "개 · 신호 " + (r.items || []).length + "개" : "";
+        pickData = r.items || [];
+        renderPicks();
+        if (!pickData.length) $("pickList").appendChild(mkEl("div", "alertHint", r.updated ? "오늘은 신호가 뜬 종목이 없어요" : "아직 계산된 결과가 없어요 (매일 아침 자동으로 계산돼요)"));
+      } catch (e) { pickData = []; renderPicks(); $("pickList").appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); }
+    }
+    $("pickChips").addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      pickFilter = b.dataset.f;
+      document.querySelectorAll("#pickChips button").forEach((x) => x.classList.toggle("on", x === b));
+      renderPicks();
+    });
+    $("pickRefresh").onclick = loadPicks;
+    function showPick() {
+      $("homeView").style.display = "none";
+      $("fgView").style.display = "none";
+      $("btView").style.display = "none";
+      const rv = document.getElementById("reportView"); if (rv) rv.style.display = "none";
+      document.querySelectorAll(".mainTabs button").forEach((b) => b.className = "");
+      $("tabPick").className = "on";
+      $("pickView").style.display = "block";
+      history.replaceState(null, "", "#pick");
+      loadPicks();
+    }
+    $("tabPick").onclick = showPick;
 
     let analyzeSeq = 0;
     async function analyze(symbol) {
@@ -1048,6 +1134,7 @@
     function showBt() {
       $("homeView").style.display = "none";
       $("fgView").style.display = "none";
+      $("pickView").style.display = "none";
       const rv = document.getElementById("reportView"); if (rv) rv.style.display = "none";
       document.querySelectorAll(".mainTabs button").forEach((b) => b.className = "");
       $("tabBt").className = "on";
@@ -1060,6 +1147,7 @@
     document.querySelector(".mainTabs").addEventListener("click", (e) => {
       const b = e.target.closest("button");
       if (b && b.id !== "tabBt") { $("btView").style.display = "none"; $("tabBt").className = ""; }
+      if (b && b.id !== "tabPick") { $("pickView").style.display = "none"; $("tabPick").className = ""; }
     });
 
     const pct = (v, d = 1) => v == null ? "-" : (v >= 0 ? "+" : "") + v.toFixed(d) + "%";
@@ -1349,6 +1437,7 @@
     buildGlossary($("btGlos"));
     buildGlossary($("homeGlos"));
     if (location.hash === "#bt") showBt();
+    if (location.hash === "#pick") showPick();
 
     // 주소 끝에 #fg가 붙어 있으면 바로 공포탐욕지수 탭으로 열기
     if (location.hash === "#fg") showPage("fg");
