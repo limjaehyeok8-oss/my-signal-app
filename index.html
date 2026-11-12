@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>내 보유 종목 알림</title>
+  <title>내 투자 도우미</title>
   <style>
     body { font-family: sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; }
     button { padding: 10px 16px; font-size: 15px; }
@@ -30,51 +30,123 @@
     .pfWrap { margin-top: 12px; }
     .pfCap { font-size: 12px; color: #888; margin-bottom: 4px; }
     #pfInfo { font-size: 14px; color: #555; margin-top: 8px; }
+
+    /* 메인 탭 */
+    .mainTabs { display: flex; border-bottom: 2px solid #eee; margin: 4px 0 12px; }
+    .mainTabs button { flex: 1; padding: 12px 8px; font-size: 15px; background: none; border: none;
+                       border-bottom: 3px solid transparent; margin-bottom: -2px; color: #777; cursor: pointer; }
+    .mainTabs button.on { color: #222; font-weight: bold; border-bottom-color: #222; }
+
+    /* 공포탐욕지수 */
+    .fgTabs { display: flex; gap: 8px; }
+    .fgTabs button { flex: 1; padding: 10px; font-size: 15px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 6px; }
+    .fgTabs button.on { background: #222; color: #fff; border-color: #222; }
+    #fgMsg { margin: 16px 0; color: #666; font-size: 14px; }
+    #fgCard { display: none; margin-top: 16px; }
+    #fgScore { font-size: 64px; font-weight: bold; text-align: center; line-height: 1.1; }
+    #fgLabel { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 14px; }
+    .fgBar { position: relative; display: flex; height: 14px; border-radius: 7px; margin: 22px 0 4px; }
+    .fgBar .seg { height: 100%; }
+    .fgBar .seg:first-child { border-radius: 7px 0 0 7px; }
+    .fgBar .seg:nth-last-child(2) { border-radius: 0 7px 7px 0; }
+    #fgMarker { position: absolute; top: -12px; width: 0; height: 0; margin-left: -7px;
+                border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 11px solid #222; }
+    .fgLegend { display: flex; font-size: 10px; color: #888; text-align: center; }
+    .fgLegend span { box-sizing: border-box; padding: 0 1px; }
+    .fgCmp { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 18px 0; }
+    .fgCmp div { background: #f7f7f7; border-radius: 8px; padding: 8px 4px; text-align: center; }
+    .fgCmp small { display: block; color: #888; font-size: 11px; }
+    .fgCmp b { display: block; font-size: 20px; margin: 2px 0; }
+    .fgCmp em { font-style: normal; font-size: 11px; }
+    #fgView h3 { margin: 22px 0 6px; font-size: 16px; }
+    svg#fgSpark { width: 100%; height: 120px; display: block; border-radius: 6px; background: #fafafa; }
+    .ind { margin: 10px 0; }
+    .ind .top { display: flex; justify-content: space-between; font-size: 14px; }
+    .ind small { color: #888; font-size: 11px; display: block; }
+    .ind .track { height: 6px; background: #eee; border-radius: 3px; margin-top: 4px; }
+    .ind .fill { height: 6px; border-radius: 3px; }
+    #fgMeta { margin-top: 20px; font-size: 12px; color: #999; line-height: 1.6; }
   </style>
 </head>
 <body>
-  <h2>📈 내 보유 종목 알림</h2>
-  <p><a href="feargreed.html">😨 공포탐욕지수 보기</a></p>
-  <button id="toggle">알림 받기</button>
-  <p id="status"></p>
+  <h2>📈 내 투자 도우미</h2>
 
-  <div id="holdingsBox" style="display:none">
-    <h3>종목 검색 · 분석</h3>
-    <div class="row">
-      <input id="symbol" placeholder="이름 또는 티커 (예: sandisk, SOXL)" autocomplete="off" autocapitalize="off">
-      <button id="analyze">분석</button>
-    </div>
-    <div id="results"></div>
+  <div class="mainTabs">
+    <button id="tabHome" class="on">📈 내 종목</button>
+    <button id="tabFg">😨 공포탐욕지수</button>
+  </div>
 
-    <div id="analysis">
-      <img id="chartImg" alt="차트">
-      <pre id="analysisText"></pre>
-    </div>
+  <!-- ===== 탭 1: 내 종목 ===== -->
+  <div id="homeView">
+    <button id="toggle">알림 받기</button>
+    <p id="status"></p>
 
-    <h3>보유 종목 등록</h3>
-    <div class="row">
-      <input id="avg" placeholder="평단가" type="number" step="any" inputmode="decimal">
-      <button id="add">위 종목 추가</button>
-    </div>
-    <p style="font-size:13px;color:#777">검색창의 종목이 등록돼요. 같은 티커를 다시 추가하면 평단가가 수정됩니다. 목록의 티커를 누르면 분석을 볼 수 있어요.</p>
+    <div id="holdingsBox" style="display:none">
+      <h3>종목 검색 · 분석</h3>
+      <div class="row">
+        <input id="symbol" placeholder="이름 또는 티커 (예: sandisk, SOXL)" autocomplete="off" autocapitalize="off">
+        <button id="analyze">분석</button>
+      </div>
+      <div id="results"></div>
 
-    <div class="row" style="justify-content:space-between">
-      <h3 style="margin:12px 0 0">내 보유 종목</h3>
-      <button id="pfBtn">📋 포트폴리오</button>
-    </div>
-    <table>
-      <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>수익률</th><th></th></tr></thead>
-      <tbody id="list"></tbody>
-    </table>
+      <div id="analysis">
+        <img id="chartImg" alt="차트">
+        <pre id="analysisText"></pre>
+      </div>
 
-    <div id="pfBox">
-      <h3>📋 포트폴리오 현황</h3>
-      <table class="pf">
-        <thead><tr><th>종목</th><th>현재가</th><th>평단</th><th>수익률</th><th>점수</th><th>추매</th><th>추세</th></tr></thead>
-        <tbody id="pfBody"></tbody>
+      <h3>보유 종목 등록</h3>
+      <div class="row">
+        <input id="avg" placeholder="평단가" type="number" step="any" inputmode="decimal">
+        <button id="add">위 종목 추가</button>
+      </div>
+      <p style="font-size:13px;color:#777">검색창의 종목이 등록돼요. 같은 티커를 다시 추가하면 평단가가 수정됩니다. 목록의 티커를 누르면 분석을 볼 수 있어요.</p>
+
+      <div class="row" style="justify-content:space-between">
+        <h3 style="margin:12px 0 0">내 보유 종목</h3>
+        <button id="pfBtn">📋 포트폴리오</button>
+      </div>
+      <table>
+        <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>수익률</th><th></th></tr></thead>
+        <tbody id="list"></tbody>
       </table>
-      <p id="pfInfo"></p>
-      <div id="pfCharts"></div>
+
+      <div id="pfBox">
+        <h3>📋 포트폴리오 현황</h3>
+        <table class="pf">
+          <thead><tr><th>종목</th><th>현재가</th><th>평단</th><th>수익률</th><th>점수</th><th>추매</th><th>추세</th></tr></thead>
+          <tbody id="pfBody"></tbody>
+        </table>
+        <p id="pfInfo"></p>
+        <div id="pfCharts"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 탭 2: 공포탐욕지수 ===== -->
+  <div id="fgView" style="display:none">
+    <div class="fgTabs">
+      <button id="fgTabStock" class="on">주식 (CNN)</button>
+      <button id="fgTabCrypto">코인</button>
+    </div>
+    <div id="fgMsg">불러오는 중...</div>
+
+    <div id="fgCard">
+      <div id="fgScore"></div>
+      <div id="fgLabel"></div>
+      <div class="fgBar" id="fgBar"><div id="fgMarker"></div></div>
+      <div class="fgLegend" id="fgLegend"></div>
+
+      <div class="fgCmp" id="fgCmp"></div>
+
+      <h3>최근 추이</h3>
+      <svg id="fgSpark" viewBox="0 0 300 100" preserveAspectRatio="none"></svg>
+
+      <div id="fgIndBox">
+        <h3>세부 지표 7가지</h3>
+        <div id="fgInds"></div>
+      </div>
+
+      <div id="fgMeta"></div>
     </div>
   </div>
 
@@ -93,9 +165,13 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyjHP1DGPoYL9njJb_ok6WnpKTUaLUObZjFwqLGa8JJR8mS5roAqb6F0h_MAobuVSTz-g/exec";
 
     firebase.initializeApp(firebaseConfig);
-    const messaging = firebase.messaging();
-    const statusEl = document.getElementById("status");
-    const toggleBtn = document.getElementById("toggle");
+    // 푸시를 지원하지 않는 브라우저에서도 다른 기능은 동작하도록 보호
+    let messaging = null;
+    try { messaging = firebase.messaging(); } catch (e) { console.warn("푸시 미지원: " + e.message); }
+
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
+    const toggleBtn = $("toggle");
     const log = (m) => statusEl.textContent = m;
     let myToken = null;
     let paused = false;
@@ -110,6 +186,7 @@
     }
 
     async function getMyToken() {
+      if (!messaging) throw new Error("이 브라우저는 푸시 알림을 지원하지 않아요 (아이폰은 홈 화면에 추가 후 열어주세요)");
       const reg = await navigator.serviceWorker.register("firebase-messaging-sw.js");
       await navigator.serviceWorker.ready;
       return messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
@@ -117,7 +194,21 @@
 
     function fmt(n) { return n == null ? "-" : Number(n).toFixed(2); }
 
-    // ---------- 알림 켜기/끄기 ----------
+    // ================= 메인 탭 전환 =================
+    let fgLoaded = false;
+    function showPage(name) {
+      const isFg = name === "fg";
+      $("homeView").style.display = isFg ? "none" : "block";
+      $("fgView").style.display = isFg ? "block" : "none";
+      $("tabHome").className = isFg ? "" : "on";
+      $("tabFg").className = isFg ? "on" : "";
+      history.replaceState(null, "", isFg ? "#fg" : location.pathname + location.search);
+      if (isFg && !fgLoaded) { fgLoaded = true; fgLoad(); }
+    }
+    $("tabHome").onclick = () => showPage("home");
+    $("tabFg").onclick = () => showPage("fg");
+
+    // ================= 알림 켜기/끄기 =================
     function renderToggle() {
       if (!myToken) { toggleBtn.textContent = "알림 받기"; return; }
       toggleBtn.textContent = paused ? "알림 켜기" : "알림 끄기";
@@ -126,6 +217,7 @@
 
     toggleBtn.onclick = async () => {
       if (!myToken) {
+        if (typeof Notification === "undefined") return log("이 브라우저는 알림을 지원하지 않아요 (아이폰은 홈 화면에 추가 후 열어주세요)");
         const permission = await Notification.requestPermission();
         if (permission !== "granted") return log("알림 권한이 거부됐어요. 브라우저 설정에서 허용해 주세요.");
         return init();
@@ -139,15 +231,13 @@
       toggleBtn.disabled = false;
     };
 
-    // ---------- 종목 분석 (텍스트 + 차트) ----------
+    // ================= 종목 분석 (텍스트 + 차트) =================
     let analyzeSeq = 0;
     async function analyze(symbol) {
       symbol = String(symbol || "").trim().toUpperCase();
       if (!symbol) return log("종목을 입력하거나 검색해서 선택하세요");
       const seq = ++analyzeSeq;
-      const box = document.getElementById("analysis");
-      const img = document.getElementById("chartImg");
-      const pre = document.getElementById("analysisText");
+      const box = $("analysis"), img = $("chartImg"), pre = $("analysisText");
       box.style.display = "block";
       img.style.display = "none";
       pre.textContent = symbol + " 분석 중... (10초 정도 걸려요)";
@@ -163,11 +253,10 @@
       }
     }
 
-    // ---------- 종목 검색 ----------
-    const symbolEl = document.getElementById("symbol");
-    const resultsEl = document.getElementById("results");
-    let searchTimer = null;
-    let searchSeq = 0;
+    // ================= 종목 검색 =================
+    const symbolEl = $("symbol");
+    const resultsEl = $("results");
+    let searchTimer = null, searchSeq = 0;
 
     function hideResults() { resultsEl.style.display = "none"; resultsEl.textContent = ""; }
 
@@ -205,12 +294,12 @@
     symbolEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter") { hideResults(); analyze(symbolEl.value); }
     });
-    document.getElementById("analyze").onclick = () => { hideResults(); analyze(symbolEl.value); };
+    $("analyze").onclick = () => { hideResults(); analyze(symbolEl.value); };
 
-    // ---------- 보유 종목 ----------
+    // ================= 보유 종목 =================
     async function loadHoldings() {
       const r = await api({ action: "listHoldings", token: myToken });
-      const tbody = document.getElementById("list");
+      const tbody = $("list");
       tbody.textContent = "";
       if (!r.ok) return log(r.msg);
       r.holdings.forEach((h) => {
@@ -245,16 +334,13 @@
       });
     }
 
-    // ---------- 포트폴리오 (표 + 종목별 차트) ----------
+    // ================= 포트폴리오 (표 + 종목별 차트) =================
     let pfSeq = 0;
-    const pfBtn = document.getElementById("pfBtn");
+    const pfBtn = $("pfBtn");
 
     async function loadPortfolio() {
       const seq = ++pfSeq;
-      const box = document.getElementById("pfBox");
-      const body = document.getElementById("pfBody");
-      const charts = document.getElementById("pfCharts");
-      const info = document.getElementById("pfInfo");
+      const box = $("pfBox"), body = $("pfBody"), charts = $("pfCharts"), info = $("pfInfo");
       box.style.display = "block";
       body.textContent = "";
       charts.textContent = "";
@@ -275,7 +361,6 @@
             td.textContent = text;
             if (cls) td.className = cls;
             tr.appendChild(td);
-            return td;
           };
           add(row.symbol);
           if (row.error) {
@@ -297,7 +382,6 @@
           ? "평균 수익률: " + (r.avgPnl >= 0 ? "+" : "") + r.avgPnl.toFixed(1) + "%"
           : "";
 
-        // 종목별 차트를 하나씩 이어서 불러옴
         for (const row of r.rows) {
           if (row.error) continue;
           if (seq !== pfSeq) return;
@@ -333,6 +417,7 @@
     }
     pfBtn.onclick = loadPortfolio;
 
+    // ================= 알림 등록 초기화 =================
     async function init() {
       try {
         myToken = await getMyToken();
@@ -341,30 +426,180 @@
         if (!r.ok) return log(r.msg);
         paused = r.paused === true;
         renderToggle();
-        document.getElementById("holdingsBox").style.display = "block";
+        $("holdingsBox").style.display = "block";
         loadHoldings();
       } catch (e) { log("오류: " + e.message); }
     }
 
-    document.getElementById("add").onclick = async () => {
+    $("add").onclick = async () => {
       const symbol = symbolEl.value.trim();
-      const avg = document.getElementById("avg").value;
+      const avg = $("avg").value;
       if (!symbol) return log("종목을 검색하거나 티커를 입력하세요");
       hideResults();
       log("등록 중...");
       const r = await api({ action: "addHolding", token: myToken, symbol: symbol, avgPrice: avg });
       log(r.msg);
-      if (r.ok) { document.getElementById("avg").value = ""; loadHoldings(); }
+      if (r.ok) { $("avg").value = ""; loadHoldings(); }
     };
 
-    if (Notification.permission === "granted") init();
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") init();
 
-    messaging.onMessage(async (payload) => {
-      const reg = await navigator.serviceWorker.ready;
-      reg.showNotification(payload.notification.title, { body: payload.notification.body });
-    });
+    if (messaging) {
+      messaging.onMessage(async (payload) => {
+        const reg = await navigator.serviceWorker.ready;
+        reg.showNotification(payload.notification.title, { body: payload.notification.body });
+      });
+    }
+
+    // ================= 공포탐욕지수 =================
+    // 구간: 0~24 극단적 공포 / 25~44 공포 / 45~55 중립 / 56~75 탐욕 / 76~100 극단적 탐욕
+    const FG_LEVELS = [
+      { max: 24,  text: "극단적 공포", color: "#d32f2f", width: 25 },
+      { max: 44,  text: "공포",       color: "#f57c00", width: 20 },
+      { max: 55,  text: "중립",       color: "#9e9e9e", width: 11 },
+      { max: 75,  text: "탐욕",       color: "#7cb342", width: 20 },
+      { max: 100, text: "극단적 탐욕", color: "#2e7d32", width: 24 }
+    ];
+    function fgLevelOf(score) {
+      for (const l of FG_LEVELS) if (score <= l.max) return l;
+      return FG_LEVELS[FG_LEVELS.length - 1];
+    }
+
+    let fgData = null, fgCurrent = "stock";
+
+    function el(tag, props, children) {
+      const e = document.createElement(tag);
+      if (props) Object.assign(e, props);
+      (children || []).forEach((c) => e.appendChild(c));
+      return e;
+    }
+
+    function fgBuildBar() {
+      const bar = $("fgBar"), legend = $("fgLegend");
+      bar.querySelectorAll(".seg").forEach((n) => n.remove());
+      legend.textContent = "";
+      FG_LEVELS.forEach((l) => {
+        const seg = el("div", { className: "seg" });
+        seg.style.width = l.width + "%"; seg.style.background = l.color;
+        bar.insertBefore(seg, $("fgMarker"));
+        const sp = el("span", { textContent: l.text });
+        sp.style.width = l.width + "%";
+        legend.appendChild(sp);
+      });
+    }
+
+    function fgDrawSpark(history) {
+      const svg = $("fgSpark");
+      svg.textContent = "";
+      const NS = "http://www.w3.org/2000/svg";
+      [[0, 25, "#d32f2f"], [25, 45, "#f57c00"], [45, 56, "#9e9e9e"], [56, 76, "#7cb342"], [76, 100, "#2e7d32"]].forEach(([a, b, c]) => {
+        const r = document.createElementNS(NS, "rect");
+        r.setAttribute("x", 0); r.setAttribute("width", 300);
+        r.setAttribute("y", 100 - b); r.setAttribute("height", b - a);
+        r.setAttribute("fill", c); r.setAttribute("opacity", "0.12");
+        svg.appendChild(r);
+      });
+      if (!history || history.length < 2) return;
+      const pts = history.map((p, i) => (i / (history.length - 1) * 300).toFixed(1) + "," + (100 - p.v).toFixed(1));
+      const line = document.createElementNS(NS, "polyline");
+      line.setAttribute("points", pts.join(" "));
+      line.setAttribute("fill", "none");
+      line.setAttribute("stroke", "#222");
+      line.setAttribute("stroke-width", "1.5");
+      line.setAttribute("vector-effect", "non-scaling-stroke");
+      svg.appendChild(line);
+    }
+
+    function fgRender() {
+      const d = fgData[fgCurrent];
+      const card = $("fgCard");
+      if (!d) {
+        card.style.display = "none";
+        $("fgMsg").textContent = (fgCurrent === "stock" ? "주식" : "코인") + " 지수를 불러오지 못했어요. " + ((fgData.errors || []).join(" / "));
+        return;
+      }
+      $("fgMsg").textContent = "";
+      card.style.display = "block";
+
+      const lv = fgLevelOf(d.score);
+      $("fgScore").textContent = Math.round(d.score);
+      $("fgScore").style.color = lv.color;
+      $("fgLabel").textContent = lv.text;
+      $("fgLabel").style.color = lv.color;
+      $("fgMarker").style.left = Math.min(100, Math.max(0, d.score)) + "%";
+
+      const cmp = $("fgCmp");
+      cmp.textContent = "";
+      [["어제", d.prev.day], ["1주 전", d.prev.week], ["1개월 전", d.prev.month], ["1년 전", d.prev.year]].forEach(([name, v]) => {
+        const box = el("div");
+        box.appendChild(el("small", { textContent: name }));
+        if (v == null) {
+          box.appendChild(el("b", { textContent: "-" }));
+        } else {
+          const l = fgLevelOf(v);
+          const b = el("b", { textContent: Math.round(v) }); b.style.color = l.color;
+          const em = el("em", { textContent: l.text }); em.style.color = l.color;
+          box.appendChild(b); box.appendChild(em);
+        }
+        cmp.appendChild(box);
+      });
+
+      fgDrawSpark(d.history);
+
+      const indBox = $("fgIndBox"), inds = $("fgInds");
+      inds.textContent = "";
+      if (d.indicators && d.indicators.length) {
+        indBox.style.display = "block";
+        d.indicators.forEach((i) => {
+          const l = fgLevelOf(i.score);
+          const val = el("b", { textContent: Math.round(i.score) + " · " + l.text });
+          val.style.color = l.color;
+          const top = el("div", { className: "top" }, [el("span", { textContent: i.name }), val]);
+          const fill = el("div", { className: "fill" });
+          fill.style.width = Math.min(100, Math.max(0, i.score)) + "%"; fill.style.background = l.color;
+          inds.appendChild(el("div", { className: "ind" }, [
+            top, el("small", { textContent: i.desc }), el("div", { className: "track" }, [fill])
+          ]));
+        });
+      } else {
+        indBox.style.display = "none";
+      }
+
+      const when = d.asOf ? new Date(d.asOf).toLocaleString("ko-KR") : "";
+      $("fgMeta").textContent = (fgCurrent === "stock"
+        ? "출처: CNN Fear & Greed Index (S&P 500 등 7개 지표 종합)"
+        : "출처: alternative.me Crypto Fear & Greed Index (비트코인 기준)") +
+        (when ? " · 기준 " + when : "") + " · 투자 판단의 참고용이며 30분마다 갱신돼요.";
+    }
+
+    function fgSetTab(name) {
+      fgCurrent = name;
+      $("fgTabStock").className = name === "stock" ? "on" : "";
+      $("fgTabCrypto").className = name === "crypto" ? "on" : "";
+      if (fgData) fgRender();
+    }
+    $("fgTabStock").onclick = () => fgSetTab("stock");
+    $("fgTabCrypto").onclick = () => fgSetTab("crypto");
+
+    async function fgLoad() {
+      fgBuildBar();
+      $("fgMsg").textContent = "불러오는 중...";
+      try {
+        const res = await fetch(GAS_URL + "?action=fearGreed");
+        const r = await res.json();
+        if (!r.ok) { $("fgMsg").textContent = "불러오기 실패: " + (r.msg || "알 수 없는 오류"); fgLoaded = false; return; }
+        fgData = r;
+        if (!fgData.stock && fgData.crypto) fgSetTab("crypto"); else fgRender();
+      } catch (e) {
+        $("fgMsg").textContent = "오류: " + e.message;
+        fgLoaded = false; // 다시 탭을 누르면 재시도
+      }
+    }
+
+    // 주소 끝에 #fg가 붙어 있으면 바로 공포탐욕지수 탭으로 열기
+    if (location.hash === "#fg") showPage("fg");
   </script>
-<script src="report.js"></script>
+
+  <script src="report.js"></script>
 </body>
 </html>
-
