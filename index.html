@@ -215,6 +215,17 @@
     .stTitle { font-weight: 700; font-size: 14px; }
     .stActs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
     .stActs button { font-size: 12px; padding: 9px 6px; margin: 0; width: 100%; }
+    .frChip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; margin: 4px 6px 0 0; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; }
+    .frChip button { background: none; border: none; color: var(--sub); padding: 0; font-size: 13px; }
+    .frCode { font-family: monospace; font-size: 18px; font-weight: 800; letter-spacing: 2px; color: var(--accent); }
+    .frCard { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 8px; background: var(--card); }
+    .frCard .frName { font-weight: 800; margin-bottom: 4px; }
+    .frRow { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
+    .frRow .sym { font-weight: 800; color: var(--accent2); cursor: pointer; min-width: 64px; }
+    .frRow .sub { color: var(--sub); font-size: 12px; margin-left: auto; }
+    .frRow .pnl { font-weight: 800; min-width: 58px; text-align: right; }
+    .hold .hideRow { font-size: 12px; color: var(--sub); margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+    .hold .hideRow input { width: auto; margin: 0; }
   </style>
 </head>
 <body>
@@ -264,6 +275,15 @@
       </div>
       <div id="list"></div>
       <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
+
+      <details id="frBox" class="alertBox">
+        <summary>👥 내 닉네임 <span id="frCnt"></span></summary>
+        <div class="alertHint">이 앱에 등록한 사람들끼리 서로의 종목·평단·수익률이 자동으로 공유돼요. 닉네임을 정하면 친구들에게 그 이름으로 보여요.</div>
+        <div id="frMe"></div>
+        <div id="frMsg" class="btApplyMsg"></div>
+      </details>
+
+      <div id="frHold"></div>
 
       <div id="pfBox">
         <h3>📋 포트폴리오 현황</h3>
@@ -539,6 +559,59 @@
     $("alertRefresh").onclick = loadAlerts;
     $("alertBox").addEventListener("toggle", () => { if ($("alertBox").open) loadAlerts(); });
 
+    // ===== 친구: 종목·평단 보기 =====
+    async function loadFriends() {
+      if (!myToken) return;
+      const me = $("frMe"), hold = $("frHold");
+      try {
+        const r = await api({ action: "getFriendInfo", token: myToken });
+        if (!r || !r.ok) { me.textContent = ""; hold.textContent = ""; return; }
+        me.textContent = "";
+
+        // 방 비밀번호를 쓰는 경우: 처음 한 번만 입력
+        if (r.roomRequired && !r.joined) {
+          me.appendChild(mkEl("div", "stTitle", "🔒 방 비밀번호를 입력하면 친구들 종목이 보여요"));
+          const jl = mkEl("div", "stLine");
+          const key = document.createElement("input"); key.placeholder = "방 비밀번호"; key.type = "password"; key.style.cssText = "flex:1;min-width:0";
+          const jb = mkEl("button", null, "입장");
+          jb.onclick = async () => { const x = await api({ action: "joinRoom", token: myToken, key: key.value }); $("frMsg").textContent = x.msg || ""; if (x.ok) loadFriends(); };
+          jl.appendChild(key); jl.appendChild(jb); me.appendChild(jl);
+          hold.textContent = "";
+          return;
+        }
+
+        const nl = mkEl("div", "stLine");
+        const nick = document.createElement("input"); nick.placeholder = "내 닉네임 (친구에게 보여요)"; nick.maxLength = 12; nick.value = r.nickname || "";
+        nick.style.cssText = "flex:1;min-width:0";
+        const nb = mkEl("button", null, "저장");
+        nb.onclick = async () => { const x = await api({ action: "setNickname", token: myToken, name: nick.value }); $("frMsg").textContent = x.msg || ""; };
+        nl.appendChild(nick); nl.appendChild(nb);
+        me.appendChild(nl);
+        $("frCnt").textContent = r.friends.length ? "(" + r.friends.length + "명과 공유 중)" : "";
+
+        const fh = await api({ action: "friendHoldings", token: myToken });
+        hold.textContent = "";
+        if (fh && fh.ok && fh.friends.length) {
+          hold.appendChild(mkEl("div", "secHead")).appendChild(mkEl("h3", null, "👥 친구들의 종목"));
+          fh.friends.forEach((f) => {
+            const card = mkEl("div", "frCard");
+            card.appendChild(mkEl("div", "frName", f.name));
+            f.holdings.forEach((x) => {
+              const row = mkEl("div", "frRow");
+              const sym = mkEl("span", "sym", x.symbol);
+              sym.onclick = () => { symbolEl.value = x.symbol; analyze(x.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); };
+              row.appendChild(sym);
+              row.appendChild(mkEl("span", "sub", (x.avgPrice != null ? "평단 " + fmt(x.avgPrice) + " · " : "") + "현재 " + fmt(x.price)));
+              row.appendChild(mkEl("span", "pnl " + (x.pnl == null ? "" : (x.pnl >= 0 ? "up" : "down")), x.pnl != null ? (x.pnl >= 0 ? "+" : "") + x.pnl.toFixed(1) + "%" : "-"));
+              card.appendChild(row);
+            });
+            hold.appendChild(card);
+          });
+        }
+      } catch (e) { /* 서버가 아직 친구 기능을 모르면 조용히 숨김 */ }
+    }
+    $("frBox").addEventListener("toggle", () => { if ($("frBox").open) loadFriends(); });
+
     let analyzeSeq = 0;
     async function analyze(symbol) {
       symbol = String(symbol || "").trim().toUpperCase();
@@ -794,6 +867,7 @@
         $("holdingsBox").style.display = "block";
         loadHoldings();
         loadAlerts();
+        loadFriends();
       } catch (e) { log("오류: " + e.message); }
     }
 
