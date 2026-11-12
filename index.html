@@ -502,7 +502,7 @@
       row.appendChild(sel); row.appendChild(save);
       box.appendChild(row);
       const nm = (STRATS.find((x) => x[0] === cur) || [])[1];
-      box.appendChild(mkEl("div", "btApplyMsg", cur === "default" ? "차트 ▲▼는 기본 신호 기준이에요" : "차트 ▲▼는 '" + nm + "' 기준이에요"));
+      box.appendChild(mkEl("div", "btApplyMsg", cur === "default" ? "차트 🟢🔴는 기본 신호 기준이에요" : "차트 🟢🔴는 '" + nm + "' 기준이에요"));
 
       const acts = mkEl("div", "stActs");
       const rec = mkEl("button", null, "🏆 맞는 전략 찾기");
@@ -825,6 +825,15 @@
     }
 
     // ================= 보유 종목 =================
+    let holdSeq = 0;
+    async function loadHoldingBadges(seq) {
+      try {
+        const sr = await api({ action: "holdingStates", token: myToken });
+        if (seq !== holdSeq) return;
+        const m = (sr && sr.ok && sr.map) || {};
+        document.querySelectorAll("#list [data-sym]").forEach((el) => { el.textContent = (m[el.dataset.sym] && m[el.dataset.sym].b) || ""; });
+      } catch (e) { document.querySelectorAll("#list [data-sym]").forEach((el) => { el.textContent = ""; }); }
+    }
     async function loadHoldings() {
       const r = await api({ action: "listHoldings", token: myToken });
       const box = $("list");
@@ -832,6 +841,7 @@
       if (!r.ok) return log(r.msg);
       let stMap = {};
       try { const sr = await api({ action: "getStrategies", token: myToken }); if (sr.ok) stMap = sr.map || {}; } catch (e) {}
+      let hsMap = {}, hsSeq = ++holdSeq;
       if (!r.holdings.length) { box.appendChild(mkEl("div", "alertHint", "등록된 보유 종목이 없어요. 위에서 종목을 검색해 추가해 보세요.")); return; }
       r.holdings.forEach((h) => {
         const card = mkEl("div", "hold");
@@ -853,6 +863,9 @@
         top.appendChild(del);
         card.appendChild(top);
         card.appendChild(mkEl("div", "hSub", "평단 " + fmt(h.avgPrice)));
+        const badge = mkEl("div", "hSub", "상태 확인 중…");
+        badge.dataset.sym = h.symbol;
+        card.appendChild(badge);
 
         const sel = document.createElement("select");
         STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = "🔔 " + label; sel.appendChild(o); });
@@ -863,6 +876,7 @@
         card.appendChild(stMsg);
         box.appendChild(card);
       });
+      loadHoldingBadges(hsSeq);
     }
 
     // ================= 포트폴리오 (표 + 종목별 차트) =================
@@ -1192,7 +1206,7 @@
 
       const bar = mkEl("div", "btRange");
       const holder = mkEl("div");
-      const legend = mkEl("div", "btLegend", "색 띠 = 보유한 기간 (빨강: 이익으로 끝남 · 파랑: 손실로 끝남) · 띠가 없는 곳은 현금 · ▲ 매수 ▼ 매도 · 세로축은 로그 눈금");
+      const legend = mkEl("div", "btLegend", "색 띠 = 보유한 기간 (빨강: 이익으로 끝남 · 파랑: 손실로 끝남) · 띠가 없는 곳은 현금 · 🟢 매수 🔴 매도 · 세로축은 로그 눈금");
       const opts = [["3개월", 63], ["6개월", 126], ["1년", 252], ["3년", 756], ["전체", n]];
       const btns = [];
       box.appendChild(bar); box.appendChild(holder); box.appendChild(legend);
@@ -1423,7 +1437,7 @@
         ["둔한(약한) 매도", "매도 신호에 덜 민감하게 반응하는 규칙이에요. ⑦은 산 뒤 3거래일 동안 매도 신호를 무시하고, ⑧은 평균 캔들 음봉이 2번 연속일 때만 팔아요. 대신 더 늦게 팔게 되니 손실이 커질 수 있어서 ⑨처럼 손절 안전장치를 같이 비교해 보세요."],
         ["안 팔고 보유 (⑩⑪⑫)", "저점매수 신호에 사기만 하고 끝까지 팔지 않는 장투 방식이에요. 거래 수는 '산 횟수'이고, 승률·수익은 지금 가격 기준 평가예요. 총수익은 산 금액 대비 지금 평가이고, 최대 낙폭은 보유 평가가 고점에서 얼마나 빠졌는지예요. ⑪⑫는 신호마다 같은 금액씩 사 모으는 분할매수예요."],
         ["알림 전략", "종목마다 어떤 규칙으로 알림을 받을지 정하는 거예요. 기본은 모든 신호를 알려주고, 전략을 고르면 그 전략의 사는 날·파는 날만 알려줘요. (장기손절가 이탈과 초고점 경고는 그대로 와요.) 🔔 내 보유 종목 목록이나 백테스트 화면에서 고를 수 있어요."],
-        ["차트의 색 띠", "산 상태로 보유한 기간이에요. 빨강은 이익으로, 파랑은 손실로 끝났다는 뜻이고, 띠가 없는 곳은 현금이에요. ▲는 매수, ▼는 매도예요."]
+        ["차트의 색 띠", "산 상태로 보유한 기간이에요. 빨강은 이익으로, 파랑은 손실로 끝났다는 뜻이고, 띠가 없는 곳은 현금이에요. 🟢는 매수, 🔴는 매도예요."]
       ]]
     ];
     function buildGlossary(container) {
