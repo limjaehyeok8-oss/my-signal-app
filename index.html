@@ -293,6 +293,7 @@
         <div class="alertHint">이 앱에 등록한 사람들끼리 서로의 종목·평단·수익률이 자동으로 공유돼요. 닉네임을 정하면 친구들에게 그 이름으로 보여요.</div>
         <div id="frMe"></div>
         <div id="frMsg" class="btApplyMsg"></div>
+        <div class="tinyRow"><button id="copyLink" class="linkBtn">🔗 앱 주소 복사 (친구에게 공유)</button> <span id="copyMsg" class="btApplyMsg"></span></div>
       <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
       </details>
 
@@ -548,6 +549,14 @@
       };
     }
 
+    $("copyLink").onclick = async () => {
+      const url = location.origin + location.pathname;
+      let ok = false;
+      try { await navigator.clipboard.writeText(url); ok = true; } catch (e) {}
+      if (!ok) { try { const t = document.createElement("textarea"); t.value = url; document.body.appendChild(t); t.select(); ok = document.execCommand("copy"); t.remove(); } catch (e) {} }
+      $("copyMsg").textContent = ok ? "복사됐어요" : url;
+      setTimeout(() => { $("copyMsg").textContent = ""; }, 3000);
+    };
     $("stResetAll").onclick = async () => {
       const m = $("stResetMsg");
       if (!myToken) { m.textContent = "먼저 '알림 받기'로 등록하세요"; return; }
