@@ -19,12 +19,17 @@
     table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     th, td { padding: 8px 4px; text-align: right; border-bottom: 1px solid #ddd; font-size: 14px; }
     th:first-child, td:first-child { text-align: left; }
+    table.pf th, table.pf td { font-size: 12px; padding: 7px 2px; }
     td.sym { color: #1565c0; text-decoration: underline; cursor: pointer; }
     .up { color: #d32f2f; } .down { color: #1976d2; }
     #status { margin: 12px 0; color: #555; }
-    #analysis { display: none; margin-top: 16px; }
-    #chartImg { display: none; width: 100%; border-radius: 6px; }
+    #analysis, #pfBox { display: none; margin-top: 16px; }
+    #chartImg, .pfImg { display: block; width: 100%; border-radius: 6px; }
+    #chartImg { display: none; }
     #analysisText { white-space: pre-wrap; font-family: inherit; font-size: 13px; line-height: 1.5; margin-top: 8px; }
+    .pfWrap { margin-top: 12px; }
+    .pfCap { font-size: 12px; color: #888; margin-bottom: 4px; }
+    #pfInfo { font-size: 14px; color: #555; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -51,10 +56,25 @@
       <button id="add">위 종목 추가</button>
     </div>
     <p style="font-size:13px;color:#777">검색창의 종목이 등록돼요. 같은 티커를 다시 추가하면 평단가가 수정됩니다. 목록의 티커를 누르면 분석을 볼 수 있어요.</p>
+
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:12px 0 0">내 보유 종목</h3>
+      <button id="pfBtn">📋 포트폴리오</button>
+    </div>
     <table>
       <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>수익률</th><th></th></tr></thead>
       <tbody id="list"></tbody>
     </table>
+
+    <div id="pfBox">
+      <h3>📋 포트폴리오 현황</h3>
+      <table class="pf">
+        <thead><tr><th>종목</th><th>현재가</th><th>평단</th><th>수익률</th><th>점수</th><th>추매</th><th>추세</th></tr></thead>
+        <tbody id="pfBody"></tbody>
+      </table>
+      <p id="pfInfo"></p>
+      <div id="pfCharts"></div>
+    </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -104,7 +124,6 @@
     }
 
     toggleBtn.onclick = async () => {
-      // 아직 등록 전이면 권한 요청부터
       if (!myToken) {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") return log("알림 권한이 거부됐어요. 브라우저 설정에서 허용해 주세요.");
@@ -224,6 +243,94 @@
         tbody.appendChild(tr);
       });
     }
+
+    // ---------- 포트폴리오 (표 + 종목별 차트) ----------
+    let pfSeq = 0;
+    const pfBtn = document.getElementById("pfBtn");
+
+    async function loadPortfolio() {
+      const seq = ++pfSeq;
+      const box = document.getElementById("pfBox");
+      const body = document.getElementById("pfBody");
+      const charts = document.getElementById("pfCharts");
+      const info = document.getElementById("pfInfo");
+      box.style.display = "block";
+      body.textContent = "";
+      charts.textContent = "";
+      info.textContent = "포트폴리오 불러오는 중... (종목당 몇 초씩 걸려요)";
+      pfBtn.disabled = true;
+      box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+      try {
+        const r = await api({ action: "portfolio", token: myToken });
+        if (seq !== pfSeq) return;
+        if (!r.ok) { info.textContent = r.msg; return; }
+        if (!r.rows.length) { info.textContent = "등록된 종목이 없어요"; return; }
+
+        r.rows.forEach((row) => {
+          const tr = document.createElement("tr");
+          const add = (text, cls) => {
+            const td = document.createElement("td");
+            td.textContent = text;
+            if (cls) td.className = cls;
+            tr.appendChild(td);
+            return td;
+          };
+          add(row.symbol);
+          if (row.error) {
+            for (let i = 0; i < 5; i++) add("-");
+            add("조회 실패");
+          } else {
+            add(fmt(row.price));
+            add(fmt(row.avgPrice));
+            if (row.pnl != null) add((row.pnl >= 0 ? "+" : "") + row.pnl.toFixed(1) + "%", row.pnl >= 0 ? "up" : "down");
+            else add("-");
+            add((row.score >= 0 ? "+" : "") + row.score);
+            add(row.buyZone ? fmt(row.buyZone) : "-");
+            const dotUp = row.pnl != null ? row.pnl >= 0 : row.trendUp;
+            add((row.trendUp ? "UP " : "DOWN ") + (dotUp ? "🟢" : "🔴"));
+          }
+          body.appendChild(tr);
+        });
+        info.textContent = r.avgPnl != null
+          ? "평균 수익률: " + (r.avgPnl >= 0 ? "+" : "") + r.avgPnl.toFixed(1) + "%"
+          : "";
+
+        // 종목별 차트를 하나씩 이어서 불러옴
+        for (const row of r.rows) {
+          if (row.error) continue;
+          if (seq !== pfSeq) return;
+          const wrap = document.createElement("div");
+          wrap.className = "pfWrap";
+          const cap = document.createElement("div");
+          cap.className = "pfCap";
+          cap.textContent = row.symbol + " 차트 생성 중...";
+          wrap.appendChild(cap);
+          charts.appendChild(wrap);
+          try {
+            const a = await api({ action: "analyze", token: myToken, ticker: row.symbol });
+            if (seq !== pfSeq) return;
+            if (a.ok && a.image) {
+              cap.textContent = row.symbol;
+              const img = document.createElement("img");
+              img.className = "pfImg";
+              img.alt = row.symbol + " 차트";
+              img.src = "data:image/png;base64," + a.image;
+              wrap.appendChild(img);
+            } else {
+              cap.textContent = row.symbol + " 차트를 만들지 못했어요";
+            }
+          } catch (e) {
+            cap.textContent = row.symbol + " 차트 오류";
+          }
+        }
+      } catch (e) {
+        if (seq === pfSeq) info.textContent = "오류: " + e.message;
+      } finally {
+        if (seq === pfSeq) pfBtn.disabled = false;
+      }
+    }
+    pfBtn.onclick = loadPortfolio;
 
     async function init() {
       try {
