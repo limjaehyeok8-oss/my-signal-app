@@ -949,12 +949,13 @@
         api({ action: "getStrategies", token: myToken }).catch(() => null)
       ]);
       if (r && r.ok) lsSet("sigHold", { r, sr });
-      paintHoldings(r, sr, false);
+      try { paintHoldings(r, sr, false); }
+      catch (e) { const bx = $("list"); bx.textContent = ""; bx.appendChild(mkEl("div", "alertHint", "내 종목을 그리지 못했어요: " + e.message)); }
     }
     function paintHoldings(r, sr, fromCache) {
       const box = $("list");
       box.textContent = "";
-      if (!r.ok) return log(r.msg);
+      if (!r.ok) { box.appendChild(mkEl("div", "alertHint", "내 종목을 불러오지 못했어요: " + (r.msg || "잠시 후 다시 시도해 주세요"))); return; }
       let stMap = {};
       if (sr && sr.ok) stMap = sr.map || {};
       let hsMap = {}, hsSeq = ++holdSeq;
