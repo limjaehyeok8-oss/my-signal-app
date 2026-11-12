@@ -255,6 +255,7 @@
     #commView .cmName { font-weight: 700; font-size: 15px; }
     #commView .cmTime { font-size: 12px; color: var(--sub); }
     #commView .cmDel { margin-left: auto; background: none; border: none; color: var(--sub); font-size: 13px; padding: 4px 6px; }
+    #commView .cmImg { width: 100%; max-height: 420px; object-fit: cover; border-radius: 14px; margin: 4px 0 12px; display: block; background: var(--card2); }
     #commView .cmTick { display: inline-block; margin: 0 0 12px; background: rgba(49,130,246,.16); color: #6aa6ff; font-weight: 700;
                         font-size: 13px; padding: 4px 10px; border-radius: 999px; cursor: pointer; }
     #commView .cmText { font-size: 17px; line-height: 1.55; margin: 10px 0 12px; white-space: pre-wrap; word-break: break-word; }
@@ -319,9 +320,9 @@
 
       <div class="secHead">
         <h3>내 보유 종목</h3>
+        <button id="pfBtn">📋 포트폴리오</button>
       </div>
       <div id="list"></div>
-      <button id="pfBtn" class="pfCta"><span class="pfT">📋 내 포트폴리오 확인하기</span><span class="pfS">눌러서 수익률 표와 종목별 차트를 확인하세요</span></button>
 
       <div id="frHold"></div>
 
@@ -351,7 +352,10 @@
     <h3>💬 커뮤</h3>
     <div class="cmBox">
       <textarea id="cmText" rows="2" maxlength="500" placeholder="무슨 생각을 하고 있어요?"></textarea>
+      <div id="cmPrev" style="display:none;position:relative;margin-top:10px"><img id="cmPrevImg" style="max-width:100%;max-height:220px;border-radius:14px;display:block"><button id="cmPrevX" style="position:absolute;top:6px;right:6px;border-radius:50%;width:28px;height:28px;padding:0;background:rgba(0,0,0,.6);color:#fff;border:none">✕</button></div>
+      <input id="cmFile" type="file" accept="image/*" style="display:none">
       <div class="cmBar">
+        <button id="cmPic" title="사진" style="background:var(--card2);border:none;border-radius:12px;padding:11px 13px;font-size:16px">📷</button>
         <input id="cmTicker" placeholder="종목 (선택)" style="text-transform:uppercase">
         <button id="cmPost">올리기</button>
       </div>
@@ -1365,7 +1369,13 @@
       head.appendChild(who);
       if (p.mine) { const d = mkEl("button", "cmDel", "삭제"); d.onclick = async () => { if (!confirm("이 글을 지울까요?")) return; c.remove(); await api({ action: "deletePost", token: myToken, id: p.id }); }; head.appendChild(d); }
       c.appendChild(head);
-      c.appendChild(mkEl("div", "cmText", p.text));
+      if (p.text) c.appendChild(mkEl("div", "cmText", p.text));
+      if (p.image) {
+        const im = document.createElement("img"); im.className = "cmImg"; im.loading = "lazy";
+        im.src = p.image.indexOf("data:") === 0 ? p.image : "https://lh3.googleusercontent.com/d/" + p.image + "=w1000";
+        im.onclick = () => window.open(p.image.indexOf("data:") === 0 ? p.image : "https://lh3.googleusercontent.com/d/" + p.image, "_blank");
+        c.appendChild(im);
+      }
       if (p.ticker) { const t = mkEl("span", "cmTick", "$" + p.ticker); t.onclick = () => { showPage("home"); symbolEl.value = p.ticker; analyze(p.ticker); window.scrollTo({ top: 0, behavior: "smooth" }); }; c.appendChild(t); }
       const foot = mkEl("div", "cmFoot");
       const tg = mkEl("button", null, "댓글 " + p.cc);
@@ -1411,18 +1421,41 @@
         box.appendChild(wrap); box.appendChild(msg);
       } catch (e) { box.appendChild(mkEl("div", "cmMsg", "댓글을 불러오지 못했어요")); }
     }
+    let cmImage = "";
+    function resizeImage(file, maxSide, quality) {
+      return new Promise((resolve, reject) => {
+        const img = new Image(), url = URL.createObjectURL(file);
+        img.onload = () => {
+          const s = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const cv = document.createElement("canvas"); cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
+          cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+          URL.revokeObjectURL(url); resolve(cv.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("사진을 열 수 없어요")); };
+        img.src = url;
+      });
+    }
+    $("cmPic").onclick = () => $("cmFile").click();
+    $("cmFile").onchange = async () => {
+      const f = $("cmFile").files[0]; if (!f) return;
+      try { cmImage = await resizeImage(f, 1280, 0.82); $("cmPrevImg").src = cmImage; $("cmPrev").style.display = "block"; $("cmMsg").textContent = ""; }
+      catch (e) { $("cmMsg").textContent = e.message; }
+      $("cmFile").value = "";
+    };
+    $("cmPrevX").onclick = () => { cmImage = ""; $("cmPrev").style.display = "none"; };
     $("cmPost").onclick = async () => {
       if (!myToken) { $("cmMsg").textContent = "먼저 알림 받기로 등록하세요"; return; }
-      const text = $("cmText").value.trim(), ticker = $("cmTicker").value.trim().toUpperCase();
-      if (!text) { $("cmMsg").textContent = "내용을 적어주세요"; return; }
-      $("cmText").value = ""; $("cmTicker").value = ""; $("cmMsg").textContent = "";
-      const card = postCard({ id: "", time: "방금", name: "나", ticker, text, mine: false, cc: 0 });
+      const text = $("cmText").value.trim(), ticker = $("cmTicker").value.trim().toUpperCase(), image = cmImage;
+      if (!text && !image) { $("cmMsg").textContent = "내용을 적거나 사진을 골라주세요"; return; }
+      $("cmText").value = ""; $("cmTicker").value = ""; $("cmMsg").textContent = ""; cmImage = ""; $("cmPrev").style.display = "none";
+      const card = postCard({ id: "", time: "방금", name: "나", ticker, text, image, mine: false, cc: 0 });
       card.style.opacity = "0.6";
       $("cmList").insertBefore(card, $("cmList").firstChild);
+      const restore = (msg) => { card.remove(); $("cmText").value = text; $("cmTicker").value = ticker; if (image) { cmImage = image; $("cmPrevImg").src = image; $("cmPrev").style.display = "block"; } $("cmMsg").textContent = msg; };
       try {
-        const x = await api({ action: "addPost", token: myToken, text, ticker });
-        if (x.ok) loadPosts(); else { card.remove(); $("cmText").value = text; $("cmTicker").value = ticker; $("cmMsg").textContent = x.msg || "올리지 못했어요"; }
-      } catch (e) { card.remove(); $("cmText").value = text; $("cmMsg").textContent = "올리지 못했어요"; }
+        const x = await api({ action: "addPost", token: myToken, text, ticker, image });
+        if (x.ok) loadPosts(); else restore(x.msg || "올리지 못했어요");
+      } catch (e) { restore("올리지 못했어요"); }
     };
 
     // ================= 백테스트 탭 =================
