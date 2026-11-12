@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>내 투자 도우미</title>
+  <title>주식 알리미</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <meta name="theme-color" content="#222222">
+  <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <style>
     body { font-family: sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; }
@@ -70,10 +70,26 @@
     .ind .track { height: 6px; background: #eee; border-radius: 3px; margin-top: 4px; }
     .ind .fill { height: 6px; border-radius: 3px; }
     #fgMeta { margin-top: 20px; font-size: 12px; color: #999; line-height: 1.6; }
+
+    /* 포트폴리오 카드 */
+    #pfCards { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .pfCard { border: 1px solid #e3e3e3; border-radius: 12px; padding: 12px 14px; background: #fff; }
+    .pfCard .top { display: flex; justify-content: space-between; align-items: baseline; }
+    .pfCard .sym { font-size: 18px; font-weight: bold; }
+    .pfCard .px { font-size: 18px; font-weight: bold; }
+    .pfBadge { display: inline-block; margin-top: 8px; padding: 6px 10px; border-radius: 8px; font-size: 14px; font-weight: bold; }
+    .pfBadge.buy { background: #e8f5e9; color: #2e7d32; }
+    .pfBadge.sell { background: #ffebee; color: #c62828; }
+    .pfBadge.none { background: #f3f3f3; color: #888; font-weight: normal; }
+    .pfStats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+    .pfStats div { background: #f7f7f7; border-radius: 8px; padding: 6px 4px; text-align: center; }
+    .pfStats small { display: block; color: #888; font-size: 11px; }
+    .pfStats b { font-size: 14px; }
+    .pfMeta { margin-top: 8px; font-size: 12px; color: #777; }
   </style>
 </head>
 <body>
-  <h2>📈 내 투자 도우미</h2>
+  <h2>📈 주식 알리미</h2>
 
   <div class="mainTabs">
     <button id="tabHome" class="on">📈 내 종목</button>
@@ -116,10 +132,7 @@
 
       <div id="pfBox">
         <h3>📋 포트폴리오 현황</h3>
-        <table class="pf">
-          <thead><tr><th>종목</th><th>현재가</th><th>평단</th><th>수익률</th><th>점수</th><th>추매</th><th>추세</th></tr></thead>
-          <tbody id="pfBody"></tbody>
-        </table>
+        <div id="pfCards"></div>
         <p id="pfInfo"></p>
         <div id="pfCharts"></div>
       </div>
@@ -344,7 +357,7 @@
 
     async function loadPortfolio() {
       const seq = ++pfSeq;
-      const box = $("pfBox"), body = $("pfBody"), charts = $("pfCharts"), info = $("pfInfo");
+      const box = $("pfBox"), body = $("pfCards"), charts = $("pfCharts"), info = $("pfInfo");
       box.style.display = "block";
       body.textContent = "";
       charts.textContent = "";
@@ -359,38 +372,47 @@
         if (!r.rows.length) { info.textContent = "등록된 종목이 없어요"; return; }
 
         r.rows.forEach((row) => {
-          const tr = document.createElement("tr");
-          const add = (text, cls) => {
-            const td = document.createElement("td");
-            td.textContent = text;
-            if (cls) td.className = cls;
-            tr.appendChild(td);
+          const card = document.createElement("div");
+          card.className = "pfCard";
+          const mk = (tag, cls, text) => {
+            const e = document.createElement(tag);
+            if (cls) e.className = cls;
+            if (text != null) e.textContent = text;
+            return e;
           };
-          {
-            const td = document.createElement("td");
-            td.textContent = row.symbol;
-            if (row.state) {
-              const s = document.createElement("div");
-              s.style.cssText = "font-size:11px;font-weight:normal;color:#666;margin-top:2px";
-              s.textContent = row.state.short;
-              td.appendChild(s);
-            }
-            tr.appendChild(td);
-          }
+          const top = mk("div", "top");
+          top.appendChild(mk("span", "sym", row.symbol));
           if (row.error) {
-            for (let i = 0; i < 5; i++) add("-");
-            add("조회 실패");
-          } else {
-            add(fmt(row.price));
-            add(fmt(row.avgPrice));
-            if (row.pnl != null) add((row.pnl >= 0 ? "+" : "") + row.pnl.toFixed(1) + "%", row.pnl >= 0 ? "up" : "down");
-            else add("-");
-            add((row.score >= 0 ? "+" : "") + row.score);
-            add(row.buyZone ? fmt(row.buyZone) : "-");
-            const dotUp = row.pnl != null ? row.pnl >= 0 : row.trendUp;
-            add((row.trendUp ? "UP " : "DOWN ") + (dotUp ? "🟢" : "🔴"));
+            top.appendChild(mk("span", "px", "조회 실패"));
+            card.appendChild(top);
+            body.appendChild(card);
+            return;
           }
-          body.appendChild(tr);
+          top.appendChild(mk("span", "px", fmt(row.price)));
+          card.appendChild(top);
+
+          // 봇 상태 (매수/매도 신호 진행중)
+          if (row.state) card.appendChild(mk("div", "pfBadge " + (row.state.type === "buy" ? "buy" : "sell"), row.state.short));
+          else card.appendChild(mk("div", "pfBadge none", "신호 이력 없음"));
+
+          const stats = mk("div", "pfStats");
+          const stat = (label, text, cls) => {
+            const d = mk("div");
+            d.appendChild(mk("small", null, label));
+            d.appendChild(mk("b", cls || "", text));
+            stats.appendChild(d);
+          };
+          stat("평단", row.avgPrice != null ? fmt(row.avgPrice) : "-");
+          stat("수익률", row.pnl != null ? (row.pnl >= 0 ? "+" : "") + row.pnl.toFixed(1) + "%" : "-",
+               row.pnl != null ? (row.pnl >= 0 ? "up" : "down") : "");
+          stat("점수", (row.score >= 0 ? "+" : "") + row.score);
+          card.appendChild(stats);
+
+          const dotUp = row.pnl != null ? row.pnl >= 0 : row.trendUp;
+          card.appendChild(mk("div", "pfMeta",
+            "추세 " + (row.trendUp ? "UP" : "DOWN") + " " + (dotUp ? "🟢" : "🔴") +
+            " · 추매구간 " + (row.buyZone ? fmt(row.buyZone) : "-")));
+          body.appendChild(card);
         });
         info.textContent = r.avgPnl != null
           ? "평균 수익률: " + (r.avgPnl >= 0 ? "+" : "") + r.avgPnl.toFixed(1) + "%"
