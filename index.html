@@ -317,7 +317,6 @@
       <button data-f="d3">최근 3일</button>
       <button data-f="clover">☘️ 저점매수</button>
       <button data-f="buy">🟢 매수 신호</button>
-      <button data-f="os">☘️ 반복(저점 후보)</button>
       <button data-f="strong">점수 3+</button>
     </div>
     <div class="pkChips" id="pickGroups"></div>
@@ -688,21 +687,38 @@
     function renderPicks() {
       const list = $("pickList");
       list.textContent = "";
-      let items = pickData.slice();
+      // 태그가 하나도 없는 종목은 숨김
+      let all = pickData.filter((x) => (x.tag || []).length > 0);
+      let items = all.filter((x) => !x.lt);
+      const lts = all.filter((x) => x.lt);
       if (pickFilter === "d3") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("일 전") !== -1 || t.indexOf("오늘") !== -1));
       if (pickFilter === "today") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("오늘") !== -1));
       if (pickFilter === "clover") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("저점매수") !== -1));
       if (pickFilter === "buy") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("매수 신호") !== -1));
-      if (pickFilter === "os") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("번째") !== -1));
       if (pickFilter === "strong") items = items.filter((x) => x.sc >= 3);
-      if (!pickData.length) return;
       const groups = pickGroup ? [pickGroup] : (pickGroupList.length ? pickGroupList.slice() : Array.from(new Set(items.map((x) => x.g))));
+      let shown = 0;
       groups.forEach((g) => {
         const gi = items.filter((x) => x.g === g).sort((a, b) => b.sc - a.sc || b.ch - a.ch);
-        list.appendChild(mkEl("div", "alertHint", g + " · " + Math.min(gi.length, 5) + "개"));
-        gi.slice(0, pickGroup ? 15 : 5).forEach((x) => list.appendChild(pickCard(x)));
-        if (gi.length < 5) list.appendChild(mkEl("div", "alertHint", gi.length ? "5개가 안 채워졌어요 (신호가 뜬 종목이 " + gi.length + "개뿐)" : "신호가 뜬 종목이 없어요"));
+        if (!gi.length) return;                                  // 종목이 없는 분야는 아예 안 보임
+        shown++;
+        const lim = pickGroup ? 15 : 5;
+        list.appendChild(mkEl("div", "alertHint", g + " · " + Math.min(gi.length, lim) + "개"));
+        gi.slice(0, lim).forEach((x) => list.appendChild(pickCard(x)));
+        if (gi.length < 5) list.appendChild(mkEl("div", "alertHint", "5개가 안 채워졌어요 (" + gi.length + "개뿐)"));
       });
+      if (!shown && pickData.length) list.appendChild(mkEl("div", "alertHint", "이 조건에 맞는 종목이 없어요"));
+
+      // ===== 아래 칸: 장기 저점 후보 (☘️가 하락장에서 여러 번 뜬 종목) =====
+      const lt2 = pickGroup ? lts.filter((x) => x.g === pickGroup) : lts;
+      if (lt2.length) {
+        const hr = document.createElement("div");
+        hr.style.cssText = "border-top:2px solid #3c4256;margin:22px 0 14px";
+        list.appendChild(hr);
+        list.appendChild(mkEl("h3", null, "🌱 장기 저점 후보"));
+        list.appendChild(mkEl("div", "alertHint", "하락장에서 ☘️ 저점매수가 여러 번 뜬 종목이에요. 3번째 이상이면 큰 저점이었던 적이 많지만, 검증된 규칙은 아니에요."));
+        lt2.forEach((x) => list.appendChild(pickCard(x)));
+      }
     }
     let pickPoll = 0, pickTimer = null;
     async function loadPicks(force) {
@@ -715,7 +731,7 @@
         if (r.groups) pickGroupList = r.groups;
         renderGroups();
         renderPicks();
-        if (!pickData.length) $("pickList").appendChild(mkEl("div", "alertHint", r.updated ? "최근 3일 안에 신호가 뜬 종목이 없어요" : "아직 계산된 결과가 없어요"));
+        if (!pickData.length) $("pickList").appendChild(mkEl("div", "alertHint", r.updated ? "" : "아직 계산된 결과가 없어요"));
         if (r.refreshing) {
           $("pickUpd").textContent += " · 🔄 최신으로 계산 중 (잠시 뒤 자동 갱신)";
           if (pickPoll < 4) { pickPoll++; clearTimeout(pickTimer); pickTimer = setTimeout(loadPicks, 90000); }
