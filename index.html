@@ -312,8 +312,9 @@
     <h3 style="margin:14px 0 4px">🔎 오늘 신호 뜬 종목</h3>
     <p class="alertHint">대형주·ETF·레버리지 등 후보 종목을 매일 아침 훑어서, 저점매수나 매수 신호가 막 뜬 종목만 보여줘요. 점수는 참고용이고 매수 권유가 아니에요.</p>
     <div class="pkChips" id="pickChips">
+      <button data-f="all">전체</button>
       <button data-f="today" class="on">오늘</button>
-      <button data-f="all">최근 3일</button>
+      <button data-f="d3">최근 3일</button>
       <button data-f="clover">☘️ 저점매수</button>
       <button data-f="buy">🟢 매수 신호</button>
       <button data-f="strong">점수 3+</button>
@@ -666,6 +667,7 @@
       let items = pickData.slice();
       if (pickGroup) items = items.filter((x) => x.g === pickGroup);
       else { const ord = Object.keys(pickGroupOrder); items.sort((a, b) => ord.indexOf(a.g) - ord.indexOf(b.g) || b.sc - a.sc); }
+      if (pickFilter === "d3") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("일 전") !== -1 || t.indexOf("오늘") !== -1));
       if (pickFilter === "today") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("오늘") !== -1));
       if (pickFilter === "clover") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("저점매수") !== -1));
       if (pickFilter === "buy") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("매수 신호") !== -1));
