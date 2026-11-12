@@ -3,17 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>타점 알림</title>
+  <title>내 보유 종목 알림</title>
   <style>
-    body { font-family: sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
-    button { padding: 12px 20px; font-size: 16px; }
-    #status { margin-top: 16px; color: #555; white-space: pre-wrap; }
+    body { font-family: sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; }
+    button { padding: 10px 16px; font-size: 15px; }
+    input { padding: 10px; font-size: 15px; width: 110px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 8px 4px; text-align: right; border-bottom: 1px solid #ddd; font-size: 14px; }
+    th:first-child, td:first-child { text-align: left; }
+    .up { color: #d32f2f; } .down { color: #1976d2; }
+    #status { margin: 12px 0; color: #555; }
   </style>
 </head>
 <body>
-  <h2>📈 주식 타점 알림</h2>
+  <h2>📈 내 보유 종목 알림</h2>
   <button id="subscribe">알림 받기</button>
   <p id="status"></p>
+
+  <div id="holdingsBox" style="display:none">
+    <h3>보유 종목 등록</h3>
+    <input id="symbol" placeholder="티커 (SOXL)" autocapitalize="characters">
+    <input id="avg" placeholder="평단가" type="number" step="any" inputmode="decimal">
+    <button id="add">추가</button>
+    <p style="font-size:13px;color:#777">같은 티커를 다시 입력하면 평단가가 수정돼요.</p>
+    <table>
+      <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>수익률</th><th></th></tr></thead>
+      <tbody id="list"></tbody>
+    </table>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
@@ -33,29 +50,83 @@
     const messaging = firebase.messaging();
     const statusEl = document.getElementById("status");
     const log = (m) => statusEl.textContent = m;
+    let myToken = null;
+
+    async function api(body) {
+      const res = await fetch(GAS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(body)
+      });
+      return res.json();
+    }
+
+    async function getMyToken() {
+      const reg = await navigator.serviceWorker.register("firebase-messaging-sw.js");
+      await navigator.serviceWorker.ready;
+      return messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    }
+
+    function fmt(n) { return n == null ? "-" : Number(n).toFixed(2); }
+
+    async function loadHoldings() {
+      const r = await api({ action: "listHoldings", token: myToken });
+      const tbody = document.getElementById("list");
+      tbody.textContent = "";
+      if (!r.ok) return log(r.msg);
+      r.holdings.forEach((h) => {
+        const tr = document.createElement("tr");
+        const cells = [h.symbol, fmt(h.avgPrice), fmt(h.price)];
+        cells.forEach((t) => { const td = document.createElement("td"); td.textContent = t; tr.appendChild(td); });
+
+        const pnlTd = document.createElement("td");
+        if (h.pnl != null) {
+          pnlTd.textContent = (h.pnl >= 0 ? "+" : "") + h.pnl.toFixed(1) + "%";
+          pnlTd.className = h.pnl >= 0 ? "up" : "down";
+        } else pnlTd.textContent = "-";
+        tr.appendChild(pnlTd);
+
+        const delTd = document.createElement("td");
+        const del = document.createElement("button");
+        del.textContent = "삭제";
+        del.onclick = async () => {
+          const x = await api({ action: "removeHolding", token: myToken, symbol: h.symbol });
+          log(x.msg); loadHoldings();
+        };
+        delTd.appendChild(del); tr.appendChild(delTd);
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function init() {
+      try {
+        myToken = await getMyToken();
+        if (!myToken) return log("토큰 발급 실패");
+        const r = await api({ action: "register", token: myToken });
+        log(r.ok ? "알림이 켜져 있어요" : r.msg);
+        document.getElementById("holdingsBox").style.display = "block";
+        loadHoldings();
+      } catch (e) { log("오류: " + e.message); }
+    }
 
     document.getElementById("subscribe").onclick = async () => {
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") return log("알림 권한이 거부됐어요. 브라우저 설정에서 허용해 주세요.");
-
-        const reg = await navigator.serviceWorker.register("firebase-messaging-sw.js");
-        await navigator.serviceWorker.ready;
-
-        const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
-        if (!token) return log("토큰 발급 실패");
-
-        const res = await fetch(GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "register", token })
-        });
-        const result = await res.json();
-        log("등록 결과: " + result.msg);
-      } catch (e) {
-        log("오류: " + e.message);
-      }
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return log("알림 권한이 거부됐어요. 브라우저 설정에서 허용해 주세요.");
+      init();
     };
+
+    document.getElementById("add").onclick = async () => {
+      const symbol = document.getElementById("symbol").value;
+      const avg = document.getElementById("avg").value;
+      if (!symbol) return log("티커를 입력하세요");
+      log("등록 중...");
+      const r = await api({ action: "addHolding", token: myToken, symbol: symbol, avgPrice: avg });
+      log(r.msg);
+      if (r.ok) { document.getElementById("symbol").value = ""; document.getElementById("avg").value = ""; loadHoldings(); }
+    };
+
+    // 이미 권한을 허용했다면 자동으로 시작
+    if (Notification.permission === "granted") init();
 
     messaging.onMessage(async (payload) => {
       const reg = await navigator.serviceWorker.ready;
