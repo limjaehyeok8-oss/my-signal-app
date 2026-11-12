@@ -37,8 +37,8 @@
     <div class="row">
       <input id="symbol" placeholder="이름 또는 티커 (예: sandisk, SOXL)" autocomplete="off" autocapitalize="off">
       <button id="analyze">분석</button>
-    const res = await fetch(ANALYSIS_URL + "?action=analyze&ticker=" + encodeURIComponent(symbol));
-    const r = await res.json();
+    </div>
+    <div id="results"></div>
 
     <div id="analysis">
       <img id="chartImg" alt="차트">
@@ -70,7 +70,6 @@
     };
     const VAPID_KEY = "BEFQ2PtyXgvk_Bs3t5pNx_A-a4hYtAC3Zk2X6Nguvb-eF3NfC5uBa5SJVQ3ooAWbzhlL2a7k9vK8pAmaStGSPOE";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyjHP1DGPoYL9njJb_ok6WnpKTUaLUObZjFwqLGa8JJR8mS5roAqb6F0h_MAobuVSTz-g/exec";
-  
 
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
@@ -109,8 +108,7 @@
       pre.textContent = symbol + " 분석 중... (10초 정도 걸려요)";
       box.scrollIntoView({ behavior: "smooth", block: "nearest" });
       try {
-        const res = await fetch(ANALYSIS_URL + "?action=analyze&ticker=" + encodeURIComponent(symbol));
-        const r = await res.json();
+        const r = await api({ action: "analyze", token: myToken, ticker: symbol });
         if (seq !== analyzeSeq) return; // 오래된 요청은 무시
         if (!r.ok) { pre.textContent = r.msg || "분석에 실패했어요"; return; }
         if (r.image) { img.src = "data:image/png;base64," + r.image; img.style.display = "block"; }
