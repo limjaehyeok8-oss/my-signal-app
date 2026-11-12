@@ -6,7 +6,7 @@
   <title>주식 알리미</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#0f1419">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <style>
     body { font-family: sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; }
@@ -86,10 +86,59 @@
     .pfStats small { display: block; color: #888; font-size: 11px; }
     .pfStats b { font-size: 14px; }
     .pfMeta { margin-top: 8px; font-size: 12px; color: #777; }
+    /* ===== 테마: 어두운 배경 + 포인트 컬러 ===== */
+    :root { --bg: #0f1419; --card: #1a212b; --card2: #222b37; --line: #2c3745; --txt: #eef2f6; --sub: #93a1b1;
+            --accent: #3ddc97; --accent2: #5b8cff; --up: #ff5a6a; --down: #5ba8ff; }
+    html { background: var(--bg); }
+    body { background: var(--bg); color: var(--txt); margin: 0 auto; padding: 20px 16px 48px; }
+    h2 { margin: 0 0 14px; font-size: 24px; }
+    h2 .gt { background: linear-gradient(90deg, #3ddc97, #5b8cff);
+             -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    h3 { color: var(--txt); }
+    button { background: var(--card2); color: var(--txt); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+    button:active { transform: scale(0.98); }
+    #toggle, #analyze, #add { background: linear-gradient(90deg, #3ddc97, #5b8cff); color: #07210f; border: none; font-weight: bold; }
+    #pfBtn { border-color: var(--accent2); color: var(--accent2); }
+    input { background: var(--card); color: var(--txt); border: 1px solid var(--line); border-radius: 10px; }
+    input::placeholder { color: #6b7886; }
+    #status { color: var(--sub); }
+    p, small { color: var(--sub); }
+    #results { background: var(--card); border-color: var(--line); }
+    #results div { border-bottom-color: var(--line); }
+    #results div:hover { background: var(--card2); }
+    th { color: var(--sub); font-weight: normal; }
+    th, td { border-bottom-color: var(--line); }
+    td.sym, td a { color: var(--accent2); }
+    .up { color: var(--up); } .down { color: var(--down); }
+    .mainTabs { border-bottom-color: var(--line); }
+    .mainTabs button { background: none; border: none; border-bottom: 3px solid transparent; border-radius: 0; color: var(--sub); }
+    .mainTabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
+    #analysisText { color: var(--txt); background: var(--card); border-radius: 10px; padding: 12px; }
+    #pfInfo, .pfCap { color: var(--sub); }
+    .pfCard { background: var(--card); border-color: var(--line); }
+    .pfBadge.buy { background: rgba(61,220,151,.15); color: #3ddc97; }
+    .pfBadge.sell { background: rgba(255,90,106,.15); color: #ff7a88; }
+    .pfBadge.none { background: var(--card2); color: var(--sub); }
+    .pfStats div { background: var(--card2); }
+    .pfStats small { color: var(--sub); }
+    .pfMeta { color: var(--sub); }
+    .fgTabs button { background: var(--card); color: var(--sub); border-color: var(--line); }
+    .fgTabs button.on { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+    #fgMsg { color: var(--sub); }
+    #fgMarker { border-top-color: var(--txt); }
+    .fgLegend { color: var(--sub); }
+    .fgCmp div { background: var(--card); }
+    .fgCmp small { color: var(--sub); }
+    svg#fgSpark { background: var(--card); }
+    .ind .track { background: var(--card2); }
+    .ind small, #fgMeta { color: var(--sub); }
+    #reportView .chip { background: var(--card2); color: var(--txt); }
+    #reportView th, #reportView td { border-bottom-color: var(--line); }
+    #reportView .note, #reportView .none, #reportMsg { color: var(--sub); }
   </style>
 </head>
 <body>
-  <h2>📈 주식 알리미</h2>
+  <h2>📈 <span class="gt">주식 알리미</span></h2>
 
   <div class="mainTabs">
     <button id="tabHome" class="on">📈 내 종목</button>
