@@ -181,7 +181,7 @@
     .glos dd { margin: 0 0 2px 0; }
     .stRow td { text-align: left !important; font-size: 12px; color: var(--sub); border-bottom: 1px solid var(--line); padding: 2px 4px 10px; }
     .stRow select { margin-left: 6px; padding: 6px; font-size: 12px; max-width: 70%; background: var(--card); color: var(--txt); border: 1px solid var(--line); border-radius: 8px; }
-    .btRec { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--accent); border-radius: 12px; background: rgba(61,220,151,.07); font-size: 13px; line-height: 1.6; }
+    .btRec { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); font-size: 13px; line-height: 1.6; }
     .btRec b { color: var(--accent); }
     .btRec .warn { color: #ffb44d; }
     .btRec .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
@@ -195,6 +195,26 @@
     .alItem .alT { color: var(--sub); font-size: 12px; }
     .alItem .alH { font-weight: 700; margin: 2px 0 4px; }
     .alItem .alB { white-space: pre-wrap; color: var(--txt); }
+    .secHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; }
+    .secHead h3 { margin: 0; }
+    .secHead button { font-size: 13px; padding: 8px 12px; white-space: nowrap; }
+    .hold { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 8px; background: var(--card); }
+    .hold .hTop { display: flex; align-items: center; gap: 10px; }
+    .hold .sym { font-weight: 800; font-size: 17px; color: var(--accent2); cursor: pointer; }
+    .hold .px { margin-left: auto; font-size: 14px; }
+    .hold .pnl { font-weight: 800; min-width: 58px; text-align: right; }
+    .hold .del { background: none; border: none; color: var(--sub); font-size: 16px; padding: 0 2px 0 6px; }
+    .hold .hSub { font-size: 12px; color: var(--sub); margin-top: 2px; }
+    .hold select { width: 100%; margin-top: 8px; font-size: 12px; padding: 8px; background: var(--bg); color: var(--txt); border: 1px solid var(--line); border-radius: 8px; }
+    .hold .hMsg { font-size: 11px; color: var(--sub); }
+    .tinyRow { margin-top: 10px; text-align: center; }
+    .linkBtn { background: none; border: none; color: var(--sub); font-size: 12px; text-decoration: underline; padding: 6px; }
+    .stLine { display: flex; gap: 6px; margin-top: 8px; }
+    .stLine select { flex: 1; min-width: 0; font-size: 12px; padding: 8px; background: var(--bg); color: var(--txt); border: 1px solid var(--line); border-radius: 8px; }
+    .stLine button { font-size: 12px; padding: 8px 12px; white-space: nowrap; }
+    .stTitle { font-weight: 700; font-size: 14px; }
+    .stActs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+    .stActs button { font-size: 12px; padding: 9px 6px; margin: 0; width: 100%; }
   </style>
 </head>
 <body>
@@ -238,15 +258,12 @@
       </div>
       <p style="font-size:13px;color:#777">검색창의 종목이 등록돼요. 같은 티커를 다시 추가하면 평단가가 수정됩니다. 목록의 티커를 누르면 분석을 볼 수 있어요.</p>
 
-      <div class="row" style="justify-content:space-between">
-        <h3 style="margin:12px 0 0">내 보유 종목</h3>
-        <div style="margin:6px 0"><button id="stResetAll" style="font-size:12px;padding:8px 10px">🔄 모든 종목 알림 전략 초기화</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
+      <div class="secHead">
+        <h3>내 보유 종목</h3>
         <button id="pfBtn">📋 포트폴리오</button>
       </div>
-      <table>
-        <thead><tr><th>종목</th><th>평단</th><th>현재가</th><th>수익률</th><th></th></tr></thead>
-        <tbody id="list"></tbody>
-      </table>
+      <div id="list"></div>
+      <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
 
       <div id="pfBox">
         <h3>📋 포트폴리오 현황</h3>
@@ -420,26 +437,33 @@
       const box = $("anaStrat");
       box.style.display = "block";
       box.textContent = "";
-      box.appendChild(mkEl("div", null, "🔔 " + symbol + " 알림 전략 (이 종목 알림을 어떤 규칙으로 받을지)"));
+      box.appendChild(mkEl("div", "stTitle", "🔔 " + symbol + " 알림 전략"));
       let cur = "default";
       try { const sr = await api({ action: "getStrategies", token: myToken }); if (sr.ok && sr.map) cur = sr.map[symbol] || "default"; } catch (e) {}
       if (seq !== analyzeSeq) return;
       const msg = mkEl("div", "btApplyMsg");
-      const row = mkEl("div", "acts");
+      const row = mkEl("div", "stLine");
       const sel = document.createElement("select");
-      sel.style.cssText = "padding:8px;font-size:12px;max-width:100%;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:8px";
       STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = label; sel.appendChild(o); });
       sel.value = cur;
-      const save = mkEl("button", null, "이 전략으로 저장");
+      const save = mkEl("button", null, "저장");
       save.onclick = () => saveStrategy(symbol, sel.value, msg).then((ok) => { if (ok) { loadHoldings(); analyze(symbol); } });
       row.appendChild(sel); row.appendChild(save);
       box.appendChild(row);
       const nm = (STRATS.find((x) => x[0] === cur) || [])[1];
-      box.appendChild(mkEl("div", "btApplyMsg", cur === "default" ? "위 차트의 ▲(매수)·▼(매도)는 기본 신호 기준이에요. 전략을 저장하면 그 전략의 사는 날·파는 날로 바뀌어요." : "위 차트의 ▲(매수)·▼(매도)는 '" + nm + "' 전략 기준이에요."));
-      const rec = mkEl("button", "btApply", "🏆 백테스트로 내게 제일 맞는 전략 찾기 (10~30초)");
+      box.appendChild(mkEl("div", "btApplyMsg", cur === "default" ? "차트 ▲▼는 기본 신호 기준이에요" : "차트 ▲▼는 '" + nm + "' 기준이에요"));
+
+      const acts = mkEl("div", "stActs");
+      const rec = mkEl("button", null, "🏆 맞는 전략 찾기");
+      const tpBtn = mkEl("button", null, "📈 타점 차트 보기");
+      acts.appendChild(rec); acts.appendChild(tpBtn);
+      box.appendChild(acts);
       const recOut = mkEl("div");
+      const tpOut = mkEl("div");
+      box.appendChild(recOut); box.appendChild(tpOut); box.appendChild(msg);
+
       rec.onclick = async () => {
-        rec.disabled = true; recOut.textContent = "계산 중...";
+        rec.disabled = true; recOut.textContent = "계산 중... (10~30초)";
         try {
           const r = await api({ action: "backtest", token: myToken, ticker: symbol, years: 5 });
           if (!r.ok) { recOut.textContent = r.msg || "실패"; return; }
@@ -449,14 +473,12 @@
           const b = cand.reduce((a, c) => (c.total > a.total ? c : a), cand[0]);
           recOut.appendChild(mkEl("div", null, "추천: " + b.name + " — 5년 총수익 " + pct(b.total, 0) + ", 최대 낙폭 " + pct(b.mdd, 0) + ", 거래 " + b.n + "회"));
           const d = b.total - r.bh.total;
-          recOut.appendChild(mkEl("div", "warn", d > 0 ? "그냥 들고 있기(" + pct(r.bh.total, 0) + ")보다 " + d.toFixed(0) + "%p 높아요. 단, 과거 기준이라 앞으로를 보장하진 않아요." : "그냥 들고 있기(" + pct(r.bh.total, 0) + ")보다 낫지 않아요."));
+          recOut.appendChild(mkEl("div", "warn", d > 0 ? "그냥 들고 있기(" + pct(r.bh.total, 0) + ")보다 " + d.toFixed(0) + "%p 높아요. 과거 기준이라 앞으로를 보장하진 않아요." : "그냥 들고 있기(" + pct(r.bh.total, 0) + ")보다 낫지 않아요."));
           const ap = mkEl("button", null, "추천 전략 적용");
           ap.onclick = () => saveStrategy(symbol, b.key, msg).then((ok) => { if (ok) { sel.value = b.key; loadHoldings(); analyze(symbol); } });
           recOut.appendChild(ap);
         } catch (e) { recOut.textContent = "오류: " + e.message; } finally { rec.disabled = false; }
       };
-      const tpBtn = mkEl("button", "btApply", "📈 선택한 전략의 매수·매도 타점 차트 보기");
-      const tpOut = mkEl("div");
       tpBtn.onclick = async () => {
         tpBtn.disabled = true; tpOut.textContent = "계산 중...";
         try {
@@ -466,7 +488,7 @@
           const st = r.strategies.find((x) => x.key === key);
           tpOut.textContent = "";
           if (!st) { tpOut.textContent = "이 전략 결과를 찾지 못했어요"; return; }
-          tpOut.appendChild(mkEl("div", null, st.name + " — 거래 " + st.n + "회 · 총수익 " + pct(st.total, 0) + " · 최대 낙폭 " + pct(st.mdd, 0) + (sel.value === "default" ? " (기본 알림은 ①번 기준으로 보여줘요)" : "")));
+          tpOut.appendChild(mkEl("div", null, st.name + " — 거래 " + st.n + "회 · 총수익 " + pct(st.total, 0) + " · 최대 낙폭 " + pct(st.mdd, 0) + (sel.value === "default" ? " (기본은 ①번 기준)" : "")));
           const cb = mkEl("div"); tpOut.appendChild(cb);
           drawBtChart(cb, r.series, st.trades);
           const recent = st.trades.slice(-5).reverse();
@@ -476,8 +498,6 @@
           }
         } catch (e) { tpOut.textContent = "오류: " + e.message; } finally { tpBtn.disabled = false; }
       };
-      box.appendChild(rec); box.appendChild(recOut);
-      box.appendChild(tpBtn); box.appendChild(tpOut); box.appendChild(msg);
     }
 
     $("stResetAll").onclick = async () => {
@@ -613,56 +633,41 @@
     // ================= 보유 종목 =================
     async function loadHoldings() {
       const r = await api({ action: "listHoldings", token: myToken });
-      const tbody = $("list");
-      tbody.textContent = "";
+      const box = $("list");
+      box.textContent = "";
       if (!r.ok) return log(r.msg);
       let stMap = {};
       try { const sr = await api({ action: "getStrategies", token: myToken }); if (sr.ok) stMap = sr.map || {}; } catch (e) {}
+      if (!r.holdings.length) { box.appendChild(mkEl("div", "alertHint", "등록된 보유 종목이 없어요. 위에서 종목을 검색해 추가해 보세요.")); return; }
       r.holdings.forEach((h) => {
-        const tr = document.createElement("tr");
-
-        const symTd = document.createElement("td");
-        symTd.className = "sym";
-        symTd.textContent = h.symbol;
-        symTd.onclick = () => { symbolEl.value = h.symbol; analyze(h.symbol); };
-        tr.appendChild(symTd);
-
-        [fmt(h.avgPrice), fmt(h.price)].forEach((t) => {
-          const td = document.createElement("td"); td.textContent = t; tr.appendChild(td);
-        });
-
-        const pnlTd = document.createElement("td");
-        if (h.pnl != null) {
-          pnlTd.textContent = (h.pnl >= 0 ? "+" : "") + h.pnl.toFixed(1) + "%";
-          pnlTd.className = h.pnl >= 0 ? "up" : "down";
-        } else pnlTd.textContent = "-";
-        tr.appendChild(pnlTd);
-
-        const delTd = document.createElement("td");
-        const del = document.createElement("button");
-        del.textContent = "삭제";
+        const card = mkEl("div", "hold");
+        const top = mkEl("div", "hTop");
+        const sym = mkEl("span", "sym", h.symbol);
+        sym.onclick = () => { symbolEl.value = h.symbol; analyze(h.symbol); };
+        top.appendChild(sym);
+        top.appendChild(mkEl("span", "px", fmt(h.price)));
+        const pnl = mkEl("span", "pnl " + (h.pnl == null ? "" : (h.pnl >= 0 ? "up" : "down")),
+          h.pnl != null ? (h.pnl >= 0 ? "+" : "") + h.pnl.toFixed(1) + "%" : "-");
+        top.appendChild(pnl);
+        const del = mkEl("button", "del", "✕");
+        del.title = "삭제";
         del.onclick = async () => {
+          if (!confirm(h.symbol + " 을(를) 보유 종목에서 삭제할까요?")) return;
           const x = await api({ action: "removeHolding", token: myToken, symbol: h.symbol });
           log(x.msg); loadHoldings();
         };
-        delTd.appendChild(del); tr.appendChild(delTd);
-        tbody.appendChild(tr);
+        top.appendChild(del);
+        card.appendChild(top);
+        card.appendChild(mkEl("div", "hSub", "평단 " + fmt(h.avgPrice)));
 
-        // 알림 전략 선택줄
-        const stTr = document.createElement("tr");
-        stTr.className = "stRow";
-        const stTd = document.createElement("td");
-        stTd.colSpan = 5;
-        stTd.appendChild(document.createTextNode("🔔 알림 전략"));
         const sel = document.createElement("select");
-        STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = label; sel.appendChild(o); });
+        STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = "🔔 " + label; sel.appendChild(o); });
         sel.value = stMap[h.symbol] || "default";
-        const stMsg = document.createElement("span");
+        const stMsg = mkEl("div", "hMsg");
         sel.onchange = async () => { const ok = await saveStrategy(h.symbol, sel.value, stMsg); if (!ok) sel.value = stMap[h.symbol] || "default"; else stMap[h.symbol] = sel.value; };
-        stTd.appendChild(sel);
-        stTd.appendChild(stMsg);
-        stTr.appendChild(stTd);
-        tbody.appendChild(stTr);
+        card.appendChild(sel);
+        card.appendChild(stMsg);
+        box.appendChild(card);
       });
     }
 
