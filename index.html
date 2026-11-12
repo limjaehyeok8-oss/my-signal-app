@@ -366,7 +366,17 @@
             if (cls) td.className = cls;
             tr.appendChild(td);
           };
-          add(row.symbol);
+          {
+            const td = document.createElement("td");
+            td.textContent = row.symbol;
+            if (row.state) {
+              const s = document.createElement("div");
+              s.style.cssText = "font-size:11px;font-weight:normal;color:#666;margin-top:2px";
+              s.textContent = row.state.short;
+              td.appendChild(s);
+            }
+            tr.appendChild(td);
+          }
           if (row.error) {
             for (let i = 0; i < 5; i++) add("-");
             add("조회 실패");
