@@ -268,6 +268,11 @@
     #commView .cmIn input { flex: 1; min-width: 0; background: var(--card2); border: none; border-radius: 12px; padding: 11px 14px; }
     #commView .cmIn button { background: var(--toss); color: #fff; border: none; border-radius: 12px; font-weight: 700; padding: 0 16px; }
     #commView .cmMsg { color: var(--sub); font-size: 13px; margin-top: 6px; }
+    .pfCta { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; margin: 12px 0 4px; padding: 16px 18px;
+             background: var(--card); border: none; border-radius: 18px; text-align: left; }
+    .pfCta .pfT { font-size: 16px; font-weight: 800; color: #6aa6ff; }
+    .pfCta .pfS { font-size: 13px; color: var(--sub); }
+    .pfCta:disabled { opacity: .6; }
   </style>
 </head>
 <body>
@@ -314,9 +319,9 @@
 
       <div class="secHead">
         <h3>내 보유 종목</h3>
-        <button id="pfBtn">📋 포트폴리오</button>
       </div>
       <div id="list"></div>
+      <button id="pfBtn" class="pfCta"><span class="pfT">📋 내 포트폴리오 확인하기</span><span class="pfS">눌러서 수익률 표와 종목별 차트를 확인하세요</span></button>
 
       <div id="frHold"></div>
 
@@ -325,6 +330,7 @@
         <div class="alertHint">이 앱에 등록한 사람들끼리 서로의 종목·평단·수익률이 자동으로 공유돼요. 닉네임을 정하면 친구들에게 그 이름으로 보여요.</div>
         <div id="frMe"></div>
         <div id="frMsg" class="btApplyMsg"></div>
+        <div class="tinyRow"><button id="installApp" class="linkBtn">📲 앱으로 설치하기</button> <span id="installMsg" class="btApplyMsg"></span></div>
         <div class="tinyRow"><button id="copyLink" class="linkBtn">🔗 앱 주소 복사 (친구에게 공유)</button> <span id="copyMsg" class="btApplyMsg"></span></div>
       <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
       </details>
@@ -1300,6 +1306,30 @@
       }
     }
 
+
+    // ================= 앱 설치 (홈 화면에 추가) =================
+    (function () {
+      const ua = navigator.userAgent || "";
+      const isAndroid = /Android/i.test(ua), isIOS = /iPhone|iPad|iPod/i.test(ua);
+      const standalone = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+      // 카카오톡 같은 인앱 브라우저(안드로이드)는 설치가 안 돼서, 열리자마자 크롬으로 다시 열어줌
+      if (isAndroid && /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\//i.test(ua) && !sessionStorage.getItem("toChrome")) {
+        try { sessionStorage.setItem("toChrome", "1"); } catch (e) {}
+        location.href = "intent://" + location.host + location.pathname + location.search + "#Intent;scheme=https;package=com.android.chrome;end";
+      }
+      let deferred = null;
+      window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; });
+      window.addEventListener("appinstalled", () => { deferred = null; const m = $("installMsg"); if (m) m.textContent = "설치됐어요"; });
+      const btn = $("installApp"); if (!btn) return;
+      if (standalone) { btn.parentElement.style.display = "none"; return; }       // 이미 앱으로 쓰는 중이면 숨김
+      btn.onclick = async () => {
+        const m = $("installMsg");
+        if (deferred) { deferred.prompt(); try { await deferred.userChoice; } catch (e) {} deferred = null; return; }
+        if (isIOS) { m.textContent = "아래 공유 버튼(□↑) → '홈 화면에 추가'를 눌러주세요"; return; }
+        if (isAndroid) { m.textContent = "크롬 오른쪽 위 ⋮ 메뉴 → '앱 설치' 또는 '홈 화면에 추가'를 눌러주세요"; return; }
+        m.textContent = "주소창 오른쪽의 설치 아이콘(⊕)을 눌러주세요";
+      };
+    })();
 
     // ================= 커뮤 탭 =================
     function showComm() {
