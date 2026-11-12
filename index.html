@@ -241,6 +241,11 @@
     /* ===== 커뮤 (토스 느낌) ===== */
     #commView { --toss: #3182f6; }
     #commView h3 { font-size: 22px; font-weight: 800; margin: 18px 0 14px; }
+    #commView #cmCats { flex-wrap: nowrap; overflow-x: auto; }
+    #commView #cmCats button { font-size: 12px; padding: 5px 10px; }
+    #commView .cmTabs { flex-wrap: nowrap; overflow-x: auto; margin: 0 0 12px; padding-bottom: 2px; }
+    #commView .cmTabs button, #commView #cmCats button { white-space: nowrap; flex: none; }
+    #commView .cmCat { display: inline-block; font-size: 12px; font-weight: 700; color: var(--sub); background: var(--card2); padding: 3px 9px; border-radius: 999px; margin-right: 6px; }
     #commView .cmBox { background: var(--card); border-radius: 20px; padding: 16px; margin-bottom: 14px; }
     #commView textarea { width: 100%; box-sizing: border-box; background: transparent; color: var(--txt); border: none; outline: none;
                          font-size: 17px; line-height: 1.5; resize: none; padding: 0; font-family: inherit; }
@@ -349,7 +354,9 @@
   <!-- ===== 탭: 커뮤 ===== -->
   <div id="commView" style="display:none">
     <h3>💬 커뮤</h3>
+    <div class="pkChips cmTabs" id="cmTabs"></div>
     <div class="cmBox">
+      <div class="pkChips" id="cmCats" style="margin:0 0 10px"></div>
       <textarea id="cmText" rows="2" maxlength="500" placeholder="무슨 생각을 하고 있어요?"></textarea>
       <div id="cmPrev" style="display:none;position:relative;margin-top:10px"><img id="cmPrevImg" style="max-width:100%;max-height:220px;border-radius:14px;display:block"><button id="cmPrevX" style="position:absolute;top:6px;right:6px;border-radius:50%;width:28px;height:28px;padding:0;background:rgba(0,0,0,.6);color:#fff;border:none">✕</button></div>
       <input id="cmFile" type="file" accept="image/*" style="display:none">
@@ -663,9 +670,50 @@
     $("alertBox").addEventListener("toggle", () => { if ($("alertBox").open) loadAlerts(); });
 
     // ===== 친구: 종목·평단 보기 =====
+    function paintFriendsAndMe(fh, sr0) {
+      const hold = $("frHold");
+      if (fh && fh.ok && fh.me && fh.me.length) {              // 친구 목록과 같은 경로로 내 종목도 받아서 그림
+        holdFromFr = true;
+        try { paintHoldings({ ok: true, holdings: fh.me }, (sr0 && sr0.ok && sr0.map) ? sr0 : { ok: true, map: {} }, true); } catch (e) {}
+        loadHoldingBadges(holdSeq);
+      }
+      hold.textContent = "";
+      if (fh && fh.ok && fh.friends.length) {
+        hold.appendChild(mkEl("div", "secHead")).appendChild(mkEl("h3", null, "👥 친구들의 종목"));
+        fh.friends.forEach((f) => {
+          const card = mkEl("div", "frCard");
+          card.appendChild(mkEl("div", "frName", f.name));
+          f.holdings.forEach((x) => {
+            const row = mkEl("div", "frRow");
+            const sym = mkEl("span", "sym", x.symbol);
+            sym.onclick = () => { symbolEl.value = x.symbol; analyze(x.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); };
+            row.appendChild(sym);
+            row.appendChild(mkEl("span", "sub", (x.avgPrice != null ? "평단 " + fmt(x.avgPrice) + " · " : "") + "현재 " + fmt(x.price)));
+            row.appendChild(mkEl("span", "pnl " + (x.pnl == null ? "" : (x.pnl >= 0 ? "up" : "down")), x.pnl != null ? (x.pnl >= 0 ? "+" : "") + x.pnl.toFixed(1) + "%" : "-"));
+            card.appendChild(row);
+            const bd = mkEl("div", "alertHint", "");
+            bd.dataset.fsym = x.symbol;
+            card.appendChild(bd);
+          });
+          hold.appendChild(card);
+        });
+        const cb = lsGet("sigFBadges");
+        if (cb) hold.querySelectorAll("[data-fsym]").forEach((el) => { el.textContent = cb[el.dataset.fsym] || ""; });
+        api({ action: "friendStates", token: myToken }).then((sr) => {
+          const m = (sr && sr.ok && sr.map) || {};
+          lsSet("sigFBadges", m);
+          hold.querySelectorAll("[data-fsym]").forEach((el) => { el.textContent = m[el.dataset.fsym] || ""; });
+        }).catch(() => {});
+      }
+    }
     async function loadFriends() {
       if (!myToken) return;
       const me = $("frMe"), hold = $("frHold");
+      const pFh = api({ action: "friendHoldings", token: myToken });                 // 세 요청을 동시에 보냄
+      const pSt = api({ action: "getStrategies", token: myToken }).catch(() => null);
+      pFh.catch(() => {});
+      const cachedFr = lsGet("sigFr");                                                  // 지난번 화면을 먼저 보여줌
+      if (cachedFr && !hold.childElementCount) { try { paintFriendsAndMe(cachedFr.fh, cachedFr.sr0); } catch (e) {} }
       try {
         const r = await api({ action: "getFriendInfo", token: myToken });
         if (!r || !r.ok) {
@@ -696,39 +744,9 @@
         me.appendChild(nl);
         $("frCnt").textContent = r.friends.length ? "(" + r.friends.length + "명과 공유 중)" : "";
 
-        const [fh, sr0] = await Promise.all([
-          api({ action: "friendHoldings", token: myToken }),
-          api({ action: "getStrategies", token: myToken }).catch(() => null)
-        ]);
-        if (fh && fh.ok && fh.me && fh.me.length) {              // 친구 목록과 같은 경로로 내 종목도 받아서 그림
-          holdFromFr = true;
-          try { paintHoldings({ ok: true, holdings: fh.me }, (sr0 && sr0.ok && sr0.map) ? sr0 : { ok: true, map: {} }, false); } catch (e) {}
-        }
-        hold.textContent = "";
-        if (fh && fh.ok && fh.friends.length) {
-          hold.appendChild(mkEl("div", "secHead")).appendChild(mkEl("h3", null, "👥 친구들의 종목"));
-          fh.friends.forEach((f) => {
-            const card = mkEl("div", "frCard");
-            card.appendChild(mkEl("div", "frName", f.name));
-            f.holdings.forEach((x) => {
-              const row = mkEl("div", "frRow");
-              const sym = mkEl("span", "sym", x.symbol);
-              sym.onclick = () => { symbolEl.value = x.symbol; analyze(x.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); };
-              row.appendChild(sym);
-              row.appendChild(mkEl("span", "sub", (x.avgPrice != null ? "평단 " + fmt(x.avgPrice) + " · " : "") + "현재 " + fmt(x.price)));
-              row.appendChild(mkEl("span", "pnl " + (x.pnl == null ? "" : (x.pnl >= 0 ? "up" : "down")), x.pnl != null ? (x.pnl >= 0 ? "+" : "") + x.pnl.toFixed(1) + "%" : "-"));
-              card.appendChild(row);
-              const bd = mkEl("div", "alertHint", "");
-              bd.dataset.fsym = x.symbol;
-              card.appendChild(bd);
-            });
-            hold.appendChild(card);
-          });
-          api({ action: "friendStates", token: myToken }).then((sr) => {
-            const m = (sr && sr.ok && sr.map) || {};
-            hold.querySelectorAll("[data-fsym]").forEach((el) => { el.textContent = m[el.dataset.fsym] || ""; });
-          }).catch(() => {});
-        }
+        const [fh, sr0] = await Promise.all([pFh, pSt]);
+        if (fh && fh.ok) lsSet("sigFr", { fh, sr0 });
+        paintFriendsAndMe(fh, sr0);
       } catch (e) {
         me.textContent = ""; hold.textContent = "";
         me.appendChild(mkEl("div", "alertHint", "친구 기능을 불러오지 못했어요: " + e.message));
@@ -1357,6 +1375,17 @@
     })();
 
     // ================= 커뮤 탭 =================
+    const CM_CATS = [["free", "💬 자유"], ["chart", "📈 차트분석"], ["pick", "🎯 종목추천"], ["ask", "❓ 질문"], ["info", "📰 정보·뉴스"], ["log", "📓 매매일지"]];
+    const CM_LABEL = {}; CM_CATS.forEach(([k, l]) => { CM_LABEL[k] = l; });
+    let cmTab = "all", cmPickCat = "free";
+    function renderCmChips() {
+      const tabs = $("cmTabs"); tabs.textContent = "";
+      [["all", "전체"], ["pop", "🔥 인기"]].concat(CM_CATS).forEach(([k, l]) => {
+        const b = mkEl("button", k === cmTab ? "on" : "", l); b.onclick = () => { cmTab = k; renderCmChips(); loadPosts(); }; tabs.appendChild(b);
+      });
+      const cats = $("cmCats"); cats.textContent = "";
+      CM_CATS.forEach(([k, l]) => { const b = mkEl("button", k === cmPickCat ? "on" : "", l); b.onclick = () => { cmPickCat = k; renderCmChips(); }; cats.appendChild(b); });
+    }
     function showComm() {
       $("homeView").style.display = "none";
       $("fgView").style.display = "none";
@@ -1367,6 +1396,7 @@
       $("tabComm").className = "on";
       $("commView").style.display = "block";
       history.replaceState(null, "", "#comm");
+      renderCmChips();
       loadPosts();
     }
     $("tabComm").onclick = showComm;
@@ -1374,10 +1404,12 @@
       const box = $("cmList");
       if (!myToken) { box.textContent = ""; box.appendChild(mkEl("div", "alertHint", "먼저 '내 종목' 탭에서 '알림 받기'를 눌러 등록하세요")); return; }
       try {
-        const r = await api({ action: "getPosts", token: myToken });
+        const r = await api({ action: "getPosts", token: myToken, cat: (cmTab === "all" || cmTab === "pop") ? "" : cmTab });
         box.textContent = "";
         if (!r || !r.ok) { box.appendChild(mkEl("div", "alertHint", (r && r.msg) || "아직 불러올 수 없어요")); return; }
-        r.posts.forEach((p) => box.appendChild(postCard(p)));
+        let ps = r.posts.slice();
+        if (cmTab === "pop") ps = ps.filter((p) => p.cc > 0).sort((a, b) => b.cc - a.cc);
+        ps.forEach((p) => box.appendChild(postCard(p)));
       } catch (e) { box.textContent = ""; box.appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); }
     }
     function postCard(p) {
@@ -1390,6 +1422,7 @@
       head.appendChild(who);
       if (p.mine) { const d = mkEl("button", "cmDel", "삭제"); d.onclick = async () => { if (!confirm("이 글을 지울까요?")) return; c.remove(); await api({ action: "deletePost", token: myToken, id: p.id }); }; head.appendChild(d); }
       c.appendChild(head);
+      if (p.cat && p.cat !== "free" && CM_LABEL[p.cat]) { const cp = mkEl("span", "cmCat", CM_LABEL[p.cat]); cp.style.marginTop = "10px"; c.appendChild(cp); }
       if (p.text) c.appendChild(mkEl("div", "cmText", p.text));
       if (p.image) {
         const im = document.createElement("img"); im.className = "cmImg"; im.loading = "lazy";
@@ -1469,12 +1502,12 @@
       const text = $("cmText").value.trim(), ticker = $("cmTicker").value.trim().toUpperCase(), image = cmImage;
       if (!text && !image) { $("cmMsg").textContent = "내용을 적거나 사진을 골라주세요"; return; }
       $("cmText").value = ""; $("cmTicker").value = ""; $("cmMsg").textContent = ""; cmImage = ""; $("cmPrev").style.display = "none";
-      const card = postCard({ id: "", time: "방금", name: "나", ticker, text, image, mine: false, cc: 0 });
+      const card = postCard({ id: "", time: "방금", name: "나", ticker, text, image, cat: cmPickCat, mine: false, cc: 0 });
       card.style.opacity = "0.6";
       $("cmList").insertBefore(card, $("cmList").firstChild);
       const restore = (msg) => { card.remove(); $("cmText").value = text; $("cmTicker").value = ticker; if (image) { cmImage = image; $("cmPrevImg").src = image; $("cmPrev").style.display = "block"; } $("cmMsg").textContent = msg; };
       try {
-        const x = await api({ action: "addPost", token: myToken, text, ticker, image });
+        const x = await api({ action: "addPost", token: myToken, text, ticker, image, cat: cmPickCat });
         if (x.ok) loadPosts(); else restore(x.msg || "올리지 못했어요");
       } catch (e) { restore("올리지 못했어요"); }
     };
