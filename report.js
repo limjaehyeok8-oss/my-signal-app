@@ -6,20 +6,34 @@
 
   const style = document.createElement("style");
   style.textContent = `
-    .mainTabs button { font-size: 14px; padding: 12px 4px; }
-    #reportView h3 { margin: 22px 0 8px; font-size: 16px; }
-    #reportView .rBig { font-size: 44px; font-weight: bold; text-align: center; line-height: 1.1; }
-    #reportView .rSub { text-align: center; font-size: 16px; font-weight: bold; margin: 4px 0 10px; }
-    #reportView table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    #reportView th, #reportView td { padding: 7px 4px; font-size: 13px; border-bottom: 1px solid #ddd; text-align: right; }
-    #reportView th:first-child, #reportView td:first-child { text-align: left; }
-    #reportView .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    #reportView .chip { padding: 6px 10px; border-radius: 14px; background: #f1f3f5; font-size: 13px; text-decoration: none; color: #222; }
-    #reportView .line { font-size: 14px; line-height: 1.7; }
-    #reportView .note { font-size: 12px; color: #888; line-height: 1.6; white-space: pre-wrap; margin-top: 8px; }
-    #reportView .none { font-size: 14px; color: #888; }
-    #reportView .warn { color: #d32f2f; }
-    #reportMsg { margin: 16px 0; color: #666; font-size: 14px; }
+    #reportView { margin: 0 -16px; }
+    #reportView > * { margin-left: 16px; margin-right: 16px; }
+    #reportView .rSec { margin: 0; padding: 26px 16px 22px; border-top: 8px solid var(--band); }
+    #reportView .rSec:first-of-type { border-top: none; padding-top: 8px; }
+    #reportView h3 { margin: 0 0 14px; font-size: 18px; font-weight: 800; }
+    #reportView .rBig { font-size: 52px; font-weight: 800; line-height: 1; }
+    #reportView .rSub { font-size: 16px; font-weight: 800; margin: 8px 0 14px; }
+    #reportView .rRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+    #reportView .rRow:first-of-type { border-top: none; }
+    #reportView .rL { font-size: 15px; font-weight: 700; min-width: 0; }
+    #reportView .rL small { display: block; font-size: 12px; font-weight: 400; color: var(--sub); margin-top: 3px; }
+    #reportView .rR { text-align: right; font-size: 17px; font-weight: 800; flex: none; }
+    #reportView .rR small { display: block; font-size: 12px; font-weight: 400; color: var(--sub); margin-top: 3px; }
+    #reportView .up { color: var(--up); } #reportView .down { color: var(--down); }
+    #reportView .rTag { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--card2); color: var(--sub); white-space: nowrap; }
+    #reportView .rTag.bad { background: rgba(255,170,60,.16); color: #ffa63c; }
+    #reportView .rTag.ok { background: rgba(61,220,151,.15); color: var(--accent); }
+    #reportView .rBanner { margin-top: 12px; padding: 14px 16px; border-radius: 14px; font-size: 14px; font-weight: 800; line-height: 1.5; background: var(--card2); }
+    #reportView .rBanner.bad { background: rgba(255,90,106,.14); color: #ff7a88; }
+    #reportView .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    #reportView .chip { padding: 8px 14px; border-radius: 999px; background: var(--card2); font-size: 14px; font-weight: 700; text-decoration: none; color: var(--txt); }
+    #reportView .line { font-size: 14px; line-height: 1.6; padding: 10px 0; border-top: 1px solid var(--line); }
+    #reportView .line:first-of-type { border-top: none; }
+    #reportView .note { font-size: 12px; color: var(--sub); line-height: 1.6; white-space: pre-wrap; margin-top: 12px; }
+    #reportView .none { font-size: 14px; color: var(--sub); }
+    #reportView .warn { color: #ff7a88; }
+    #reportMsg { margin: 16px; color: var(--sub); font-size: 14px; }
+    html[data-theme="light"] #reportView .chip, html[data-theme="light"] #reportView .rTag, html[data-theme="light"] #reportView .rBanner { background: #eef1f6; }
   `;
   document.head.appendChild(style);
 
@@ -80,9 +94,11 @@
   }
 
   function section(title) {
-    view.appendChild(el("h3", { textContent: title }));
+    const wrap = el("div", { className: "rSec" });
+    wrap.appendChild(el("h3", { textContent: title }));
     const box = el("div");
-    view.appendChild(box);
+    wrap.appendChild(box);
+    view.appendChild(wrap);
     return box;
   }
   function none(box, text) { box.appendChild(el("div", { className: "none", textContent: text })); }
@@ -111,32 +127,47 @@
     }
     if (d.fearStats) {
       const fs = d.fearStats;
-      const table = el("table");
-      const head = el("tr");
-      ["보유 기간", "평균", "승률", "사례", "전체 평균"].forEach((t) => head.appendChild(el("th", { textContent: t })));
-      table.appendChild(head);
       Object.keys(fs.results).forEach((h) => {
-        const r = fs.results[h], b = fs.base[h] || {};
-        const tr = el("tr");
-        [h + "일 후", pctTxt(r.mean), winTxt(r.win), r.n + "회", pctTxt(b.mean)].forEach((t) => tr.appendChild(el("td", { textContent: t })));
-        table.appendChild(tr);
+        const r = fs.results[h], bs = fs.base[h] || {};
+        const row = el("div", { className: "rRow" });
+        row.appendChild(el("div", { className: "rL", innerHTML: "" }));
+        row.firstChild.textContent = h + "일 후";
+        row.firstChild.appendChild(el("small", { textContent: "승률 " + winTxt(r.win) + " · " + r.n + "회 · 전체 평균 " + pctTxt(bs.mean) }));
+        const rr = el("div", { className: "rR " + (r.mean >= 0 ? "up" : "down"), textContent: pctTxt(r.mean) });
+        rr.appendChild(el("small", { textContent: "평균 수익률" }));
+        row.appendChild(rr);
+        box.appendChild(row);
       });
-      box.appendChild(table);
-      box.appendChild(el("div", { className: "note", textContent: "공포 구간이 같은 일수만큼 이어졌던 과거에 SPY를 샀다면 이후 수익률이에요.\n" + fs.text }));
+      box.appendChild(el("div", { className: "note", textContent: "공포 구간이 같은 일수만큼 이어졌던 과거에 SPY를 샀다면 이후 수익률이에요.\n" + String(fs.text || "").split("\n").slice(1).join("\n") }));
     } else if (d.sentiment) {
       box.appendChild(el("div", { className: "note", textContent: "지금은 공포 구간이 아니라 과거 통계를 건너뛰었어요." }));
     }
 
     // 거시경제
     box = section("거시경제");
-    if (d.macro) d.macro.lines.forEach((t) => box.appendChild(el("div", { className: "line", textContent: t })));
+    if (d.macro) d.macro.lines.forEach((t) => {
+      if (/^🚨|^✅|종합/.test(t)) { box.appendChild(el("div", { className: "rBanner " + (/🚨|비우호/.test(t) ? "bad" : ""), textContent: t.replace(/^🚨\s*/, "🚨 ") })); return; }
+      const i = t.lastIndexOf(" · ");
+      const row = el("div", { className: "rRow" });
+      row.appendChild(el("div", { className: "rL", textContent: i > 0 ? t.slice(0, i) : t }));
+      if (i > 0) { const st = t.slice(i + 3); row.appendChild(el("span", { className: "rTag " + (/⚠️|위험|우려/.test(st) ? "bad" : /안정|양호/.test(st) ? "ok" : ""), textContent: st.replace("⚠️ ", "") })); }
+      box.appendChild(row);
+    });
     else none(box, "데이터를 가져오지 못했어요");
 
     // 경기 방어주
     box = section("경기 방어주");
     if (d.strong == null) none(box, "데이터를 가져오지 못했어요");
     else if (!d.strong.length) none(box, "조건 부합 종목 없음");
-    else { const c = el("div", { className: "chips" }); d.strong.forEach((s) => c.appendChild(chip(s.symbol, s.text))); box.appendChild(c); }
+    else d.strong.forEach((s) => {
+      const row = el("div", { className: "rRow" });
+      const l = el("a", { className: "rL", textContent: s.symbol }); l.style.color = "var(--accent2)"; l.style.textDecoration = "none";
+      if (/^[A-Z0-9.\-]{1,10}$/.test(s.symbol)) { l.href = "https://finviz.com/quote.ashx?t=" + encodeURIComponent(s.symbol); l.target = "_blank"; l.rel = "noopener noreferrer"; }
+      const m = /(\d+개월)\s*([+\-][\d.]+%)/.exec(s.text || "");
+      const rr = el("div", { className: "rR " + (m && m[2][0] === "-" ? "down" : "up"), textContent: m ? m[2] : s.text });
+      if (m) rr.appendChild(el("small", { textContent: m[1] + " 수익률" }));
+      row.appendChild(l); row.appendChild(rr); box.appendChild(row);
+    });
 
     // 저평가 후보
     box = section("저평가 후보");
