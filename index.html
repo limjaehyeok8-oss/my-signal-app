@@ -803,6 +803,31 @@
     .setOpts button { line-height: 1.35; }
     #stResetRow .tinyRow { margin: 0; text-align: left; }
     #stResetRow .linkBtn, #stResetRow #stResetAll { margin: 0 !important; display: block; text-align: left; font-size: 14px; color: var(--txt); text-decoration: none; padding: 6px 0; }
+
+    .sortBtn { font-size: 12px !important; padding: 6px 12px !important; border-radius: 999px; border: none; background: var(--card2); color: var(--sub); font-weight: 700; }
+    #holdSum { display: none; margin: 0 0 14px; }
+    #holdSum .hsMain { font-size: 34px; font-weight: 800; line-height: 1.1; }
+    #holdSum .hsSub { font-size: 13px; color: var(--sub); margin-top: 6px; }
+    #list .frCard > div, #wList .wItem { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+    .emptyBox { text-align: center; padding: 26px 10px 18px; }
+    .emptyBox .emIco { font-size: 34px; } .emptyBox .emT { font-size: 16px; font-weight: 800; margin-top: 8px; } .emptyBox .emS { font-size: 13px; color: var(--sub); margin-top: 6px; line-height: 1.5; }
+    .emptyBox .emBtn { margin-top: 16px; padding: 12px 20px; border-radius: 999px; border: none; font-weight: 800; font-size: 14px; background: var(--card2); color: var(--accent); }
+    .skel { height: 92px; border-radius: 18px; margin: 0 0 10px; background: linear-gradient(90deg, var(--card2) 25%, var(--line) 50%, var(--card2) 75%); background-size: 200% 100%; animation: skelMove 1.2s infinite linear; }
+    @keyframes skelMove { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .buyPill { display: inline-block; margin-top: 10px; padding: 6px 12px; font-size: 12px; font-weight: 800; border: none; border-radius: 999px; background: var(--card); color: var(--accent); }
+    .buyForm { display: flex; gap: 6px; margin-top: 10px; }
+    .buyForm input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: none; background: var(--card); color: var(--txt); font-size: 14px; }
+    .buyForm button { padding: 0 14px; border-radius: 12px; border: none; font-weight: 800; font-size: 13px; }
+    .buyForm .ok { background: var(--accent); color: #06130d; } .buyForm .no { background: var(--card); color: var(--sub); }
+    #actSheet { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.5); display: none; align-items: flex-end; justify-content: center; }
+    #actSheet.open { display: flex; }
+    #actSheet .actBox { width: 100%; max-width: 560px; background: var(--card); border-radius: 24px 24px 0 0; padding: 18px 16px 26px; }
+    #actSheet .actTitle { font-size: 17px; font-weight: 800; text-align: center; margin-bottom: 12px; }
+    #actSheet #actBtns button { display: block; width: 100%; padding: 15px; margin: 0 0 8px; border: none; border-radius: 14px; font-size: 15px; font-weight: 700; background: var(--card2); color: var(--txt); }
+    #actSheet #actBtns .danger { color: #ff6b79; } #actSheet #actBtns .cancel { background: none; color: var(--sub); margin: 0; }
+    html[data-theme="light"] .sortBtn, html[data-theme="light"] .emptyBox .emBtn { background: #eef1f6; }
+    html[data-theme="light"] #actSheet .actBox { background: #fff; } html[data-theme="light"] #actSheet #actBtns button { background: #f2f4f8; }
+    html[data-theme="light"] .buyPill, html[data-theme="light"] .buyForm input { background: #fff; }
 </style>
 </head>
 <body>
@@ -864,7 +889,9 @@
       <div class="blk">
       <div class="secHead secDiv">
         <h3>내 보유 종목</h3>
+        <button id="sortBtn" class="sortBtn" aria-label="정렬">정렬: 기본</button>
       </div>
+      <div id="holdSum"></div>
       <div id="list"></div>
       <div class="ctaRow">
         <button id="pfBtn" class="pfCta"><span class="pfI">📋</span><span class="pfT">내 포트폴리오</span><span class="pfS">수익률·차트 보기</span></button>
@@ -951,6 +978,8 @@
     <div id="alertList"><div class="alertHint">현재는 알림이 없어요</div></div>
     <button id="alertRefresh" style="font-size:13px;padding:10px 14px;margin-top:12px">새로고침</button>
   </div>
+
+  <div id="actSheet"><div class="actBox"><div class="actTitle" id="actTitle"></div><div id="actBtns"></div></div></div>
 
   <div id="setView" class="botView">
     <div class="botTop"><button id="setBack">← 뒤로</button><b>⚙️ 설정</b><span style="width:60px"></span></div>
@@ -1801,7 +1830,7 @@
       const box = $("list");
       const cached = lsGet("sigHold");                       // 지난번 화면을 먼저 바로 보여주고, 서버 응답이 오면 갱신
       if (cached && !box.childElementCount) { try { paintHoldings(cached.r, cached.sr, true); } catch (e) {} }
-      if (!box.childElementCount) box.appendChild(mkEl("div", "alertHint", "내 종목 불러오는 중…"));
+      if (!box.childElementCount) { for (let i = 0; i < 3; i++) box.appendChild(mkEl("div", "skel")); }
       try {
         const [r, sr] = await Promise.all([
           api({ action: "listHoldings", token: myToken }),
@@ -1823,15 +1852,24 @@
       let stMap = {};
       if (sr && sr.ok) stMap = sr.map || {};
       let hsMap = {}, hsSeq = ++holdSeq;
-      if (!r.holdings.length) { box.appendChild(mkEl("div", "alertHint", "등록된 보유 종목이 없어요. 위에서 종목을 검색해 추가해 보세요. (기기 " + String(myToken || "").slice(0, 4) + ")")); return; }
+      if (!r.holdings.length) {
+        const em = mkEl("div", "emptyBox"); em.appendChild(mkEl("div", "emIco", "📭")); em.appendChild(mkEl("div", "emT", "아직 보유 종목이 없어요")); em.appendChild(mkEl("div", "emS", "종목을 검색하고 평단가를 넣어 등록해 보세요"));
+        const eb = mkEl("button", "emBtn", "🔍 종목 검색하러 가기"); eb.onclick = () => { symbolEl.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); }; em.appendChild(eb);
+        box.appendChild(em); updateSummary(); return;
+      }
+      const sortMode = pref("sigSort", "def");
+      const hs = r.holdings.slice();
+      if (sortMode === "hi") hs.sort((a, b) => (b.pnl == null ? -1e9 : b.pnl) - (a.pnl == null ? -1e9 : a.pnl));
+      else if (sortMode === "lo") hs.sort((a, b) => (a.pnl == null ? 1e9 : a.pnl) - (b.pnl == null ? 1e9 : b.pnl));
+      else if (sortMode === "name") hs.sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
       const card = mkEl("div", "frCard");                       // 친구들 종목과 같은 모양
       const meNm = mkEl("div", "frName");
       meNm.appendChild(document.createTextNode("나"));
       meNm.appendChild(mkEl("span", "frOn" + (paused ? " off" : ""), paused ? "○ 알림 꺼짐" : "● 알림 켜짐"));
       card.appendChild(meNm);
-      r.holdings.forEach((h) => {
+      hs.forEach((h) => {
         const wrap = mkEl("div");
-        const row = mkEl("div", "frRow"); row.dataset.xsym = h.symbol; if (h.avgPrice != null) row.dataset.avg = h.avgPrice; row.dataset.px = h.price;
+        const row = mkEl("div", "frRow"); row.dataset.xsym = h.symbol; if (h.avgPrice != null) row.dataset.avg = h.avgPrice; row.dataset.px = h.price; row.dataset.cur = h.price;
         const sym = mkEl("span", "sym", h.symbol);
         sym.onclick = (e) => { e.stopPropagation(); symbolEl.value = h.symbol; analyze(h.symbol); };
         row.appendChild(sym);
@@ -1861,12 +1899,18 @@
         det.appendChild(del);
         wrap.appendChild(det);
         row.onclick = () => { det.style.display = det.style.display === "none" ? "block" : "none"; };
+        onLong(wrap, () => openAct(h.symbol, [
+          ["📈 분석 보기", () => { symbolEl.value = h.symbol; analyze(h.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); }],
+          ["🔔 알림 전략 바꾸기", () => { det.style.display = "block"; wrap.scrollIntoView({ behavior: "smooth", block: "center" }); }],
+          ["🗑 보유 종목에서 삭제", () => del.onclick(), true]
+        ]));
         card.appendChild(wrap);
       });
       box.appendChild(card);
       const cb = lsGet("sigBadges");
       if (cb) document.querySelectorAll("#list [data-sym]").forEach((el) => { if (cb[el.dataset.sym]) el.textContent = cb[el.dataset.sym]; });
       if (!fromCache) loadHoldingBadges(hsSeq);
+      updateSummary();
       loadExt();
     }
 
@@ -2432,6 +2476,7 @@
         "종목 분석을 핵심만 요약 (나머지는 자세히 보기)",
         "수익률·현재가를 실시간(20초마다) 갱신, 프리·애프터장은 그 시간 가격 기준",
         "설정에 등락 색상(한국/미국식)·글자 크기·자동 갱신 on/off 추가",
+        "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
@@ -2847,6 +2892,7 @@
       const pnl = el.querySelector(".pnl"), sub = el.querySelector(".sub:not(.extLine)");
       if (!pnl || !sub) return;
       const px = x && x.px ? +x.px : base;
+      el.dataset.cur = px;
       const p = avg > 0 ? (px / avg - 1) * 100 : null;
       if (p == null) return;
       pnl.textContent = (p >= 0 ? "+" : "") + p.toFixed(1) + "%";
@@ -2871,6 +2917,7 @@
             if (!line) { line = mkEl(el.dataset.xin ? "span" : "div", el.dataset.xin ? "sub extLine" : "alertHint extLine"); if (el.dataset.xin) el.appendChild(line); else el.insertAdjacentElement("afterend", line); }
             line.textContent = "🌙 " + x.sess + " $" + fmt(x.px) + (x.chg != null ? " (종가 대비 " + (x.chg >= 0 ? "+" : "") + x.chg.toFixed(1) + "%)" : "") + " · " + x.at;
           });
+          updateSummary();
         }).catch(() => {});
       }, 700);
     }
@@ -2878,7 +2925,6 @@
 
 
     // ===== 설정: 등락 색상 / 글자 크기 / 자동 갱신 =====
-    function pref(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
     function applyPrefs() {
       const ud = pref("sigUd", "kr"), fo = pref("sigFont", "n"), lv = pref("sigLive", "1");
       document.documentElement.setAttribute("data-ud", ud);
@@ -2887,6 +2933,68 @@
     }
     [["udOpts", "sigUd"], ["fontOpts", "sigFont"], ["liveOpts", "sigLive"]].forEach(([id, key]) => document.querySelectorAll("#" + id + " button").forEach((b) => b.onclick = () => { try { localStorage.setItem(key, b.dataset.v); } catch (e) {} applyPrefs(); }));
     applyPrefs();
+
+    function pref(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
+
+    // ===== 길게 누르기 / 액션 시트 / 정렬 / 요약 / 샀어요 =====
+    function onLong(el, fn) {
+      let t = null, fired = false;
+      const start = (e) => { if (e.target.closest && e.target.closest("button, a, input, select")) return; fired = false; clearTimeout(t); t = setTimeout(() => { fired = true; fn(); try { navigator.vibrate && navigator.vibrate(15); } catch (_) {} }, 550); };
+      const cancel = () => clearTimeout(t);
+      el.addEventListener("touchstart", start, { passive: true }); el.addEventListener("touchmove", cancel, { passive: true });
+      el.addEventListener("touchend", cancel); el.addEventListener("touchcancel", cancel);
+      el.addEventListener("mousedown", start); el.addEventListener("mouseup", cancel); el.addEventListener("mouseleave", cancel);
+      el.addEventListener("click", (e) => { if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; } }, true);
+      el.addEventListener("contextmenu", (e) => e.preventDefault());
+    }
+    function closeAct() { $("actSheet").classList.remove("open"); }
+    function openAct(title, items) {
+      $("actTitle").textContent = title;
+      const box = $("actBtns"); box.textContent = "";
+      items.forEach(([label, fn, danger]) => { const b = mkEl("button", danger ? "danger" : "", label); b.onclick = () => { closeAct(); fn(); }; box.appendChild(b); });
+      const c = mkEl("button", "cancel", "닫기"); c.onclick = closeAct; box.appendChild(c);
+      $("actSheet").classList.add("open");
+    }
+    $("actSheet").addEventListener("click", (e) => { if (e.target === $("actSheet")) closeAct(); });
+    function openBuyForm(sym, anchor) {
+      const host = anchor.parentNode; if (host.querySelector(".buyForm")) return;
+      anchor.style.display = "none";
+      const f = mkEl("div", "buyForm");
+      const inp = document.createElement("input"); inp.type = "number"; inp.step = "any"; inp.inputMode = "decimal"; inp.placeholder = "평단가 ($)";
+      const ok = mkEl("button", "ok", "등록"), no = mkEl("button", "no", "취소"), msg = mkEl("div", "hMsg");
+      no.onclick = (e) => { e.stopPropagation(); f.remove(); anchor.style.display = ""; };
+      ok.onclick = async (e) => {
+        e.stopPropagation(); ok.disabled = true; msg.textContent = "옮기는 중…";
+        try {
+          const r = await api({ action: "addHolding", token: myToken, symbol: sym, avgPrice: inp.value });
+          if (r && r.ok) { try { await api({ action: "removeWatch", token: myToken, symbol: sym }); } catch (_) {} loadHoldings(); loadWatch(true); }
+          else { msg.textContent = (r && r.msg) || "옮기지 못했어요"; ok.disabled = false; }
+        } catch (err) { msg.textContent = "오류가 났어요"; ok.disabled = false; }
+      };
+      f.appendChild(inp); f.appendChild(ok); f.appendChild(no); host.appendChild(f); host.appendChild(msg); inp.focus();
+      f.addEventListener("click", (e) => e.stopPropagation());
+    }
+    const SORTS = [["def", "기본"], ["hi", "수익률 높은순"], ["lo", "수익률 낮은순"], ["name", "이름순"]];
+    function paintSortBtn() { const m = pref("sigSort", "def"); $("sortBtn").textContent = "정렬: " + (SORTS.find((x) => x[0] === m) || SORTS[0])[1]; }
+    $("sortBtn").onclick = () => {
+      const i = SORTS.findIndex((x) => x[0] === pref("sigSort", "def"));
+      try { localStorage.setItem("sigSort", SORTS[(i + 1) % SORTS.length][0]); } catch (e) {}
+      paintSortBtn();
+      const c = lsGet("sigHold"); if (c) { try { paintHoldings(c.r, c.sr, true); } catch (e) {} }
+    };
+    function updateSummary() {
+      const box = $("holdSum"); if (!box) return;
+      const rows = [...document.querySelectorAll("#list .frRow[data-avg]")];
+      let sum = 0, n = 0, up = 0, dn = 0;
+      rows.forEach((r) => { const a = +r.dataset.avg, c = +(r.dataset.cur || r.dataset.px); if (a > 0 && c > 0) { const p = (c / a - 1) * 100; sum += p; n++; if (p >= 0) up++; else dn++; } });
+      box.textContent = "";
+      if (!n) { box.style.display = "none"; return; }
+      box.style.display = "block";
+      const avg = sum / n;
+      box.appendChild(mkEl("div", "hsMain " + (avg >= 0 ? "up" : "down"), (avg >= 0 ? "+" : "") + avg.toFixed(1) + "%"));
+      box.appendChild(mkEl("div", "hsSub", "평균 수익률 · " + n + "종목 (수익 " + up + " · 손실 " + dn + ")"));
+    }
+    paintSortBtn();
 
     // 실시간 느낌: 화면이 보이는 동안 20초마다 현재가·수익률 갱신
     setInterval(() => {
@@ -2934,6 +3042,11 @@
     function paintWatch(r) {
       const box = $("wList"); box.textContent = "";
       if (!r || !r.ok) return;
+      if (!r.items.length) {
+        const em = mkEl("div", "emptyBox"); em.appendChild(mkEl("div", "emIco", "👀")); em.appendChild(mkEl("div", "emT", "관심 종목이 없어요")); em.appendChild(mkEl("div", "emS", "추천에서 골라 담거나 아래에 티커를 입력해요"));
+        const eb = mkEl("button", "emBtn", "🔎 추천 종목 보러 가기"); eb.onclick = () => { const b = document.querySelector("#pgNav button:nth-child(3)"); if (b) b.click(); }; em.appendChild(eb);
+        box.appendChild(em); return;
+      }
       r.items.forEach((x) => {
         const it = mkEl("div", "wItem"), l = mkEl("div");
         l.appendChild(mkEl("b", null, x.s + (x.px != null ? "  $" + fmt(x.px) : "")));
@@ -2941,10 +3054,18 @@
         else l.appendChild(mkEl("span", "sub", "목표가 없음 · 신호만 알림"));
         if (x.badge) l.appendChild(mkEl("span", "sub", x.badge));
         l.dataset.xsym = x.s; l.dataset.xin = "1";
+        const buy = mkEl("button", "buyPill", "✅ 샀어요");
+        buy.onclick = (e) => { e.stopPropagation(); openBuyForm(x.s, buy); };
+        l.appendChild(buy);
         it.appendChild(l);
         const del = mkEl("button", null, "✕"); del.title = "관심 종목에서 빼기";
         del.onclick = async () => { it.style.opacity = ".4"; try { await api({ action: "removeWatch", token: myToken, symbol: x.s }); } catch (e) {} loadWatch(true); };
         it.appendChild(del); box.appendChild(it);
+        onLong(it, () => openAct(x.s, [
+          ["📈 분석 보기", () => { symbolEl.value = x.s; analyze(x.s); const b = document.querySelector("#pgNav button:nth-child(1)"); if (b) b.click(); window.scrollTo({ top: 0, behavior: "smooth" }); }],
+          ["✅ 샀어요 (보유 종목으로)", () => openBuyForm(x.s, buy)],
+          ["🗑 관심에서 빼기", () => del.onclick(), true]
+        ]));
       });
       loadExt();
     }
