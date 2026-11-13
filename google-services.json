@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "224309937152",
+    "project_id": "mysignalpush",
+    "storage_bucket": "mysignalpush.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:224309937152:android:c9e0dbdb8e20cfe96dc4e5",
+        "android_client_info": {
+          "package_name": "io.github.limjaehyeok8.signal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqIuX9DKqMIbHAAw7KNWiWdf4Clh3bPZ4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
