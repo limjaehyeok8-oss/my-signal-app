@@ -595,7 +595,7 @@
 
     // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
     const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
-                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60 };
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getExtPrices: 60 };
     const apiMemo = {};
     async function api(body) {
       const ttl = API_TTL[body.action];
@@ -834,7 +834,7 @@
           nm.appendChild(mkEl("span", "frOn" + (f.on === false ? " off" : ""), f.on === false ? "🔕 알림 꺼짐" : "🔔 알림 켜짐"));
           card.appendChild(nm);
           f.holdings.forEach((x) => {
-            const row = mkEl("div", "frRow");
+            const row = mkEl("div", "frRow"); row.dataset.xsym = x.symbol;
             const sym = mkEl("span", "sym", x.symbol);
             sym.onclick = () => { symbolEl.value = x.symbol; analyze(x.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); };
             row.appendChild(sym);
@@ -855,6 +855,7 @@
           hold.querySelectorAll("[data-fsym]").forEach((el) => { el.textContent = m[el.dataset.fsym] || ""; });
         }).catch(() => {});
       }
+      loadExt();
     }
     async function loadFriends() {
       if (!myToken) return;
@@ -1151,7 +1152,7 @@
       card.appendChild(meNm);
       r.holdings.forEach((h) => {
         const wrap = mkEl("div");
-        const row = mkEl("div", "frRow");
+        const row = mkEl("div", "frRow"); row.dataset.xsym = h.symbol;
         const sym = mkEl("span", "sym", h.symbol);
         sym.onclick = (e) => { e.stopPropagation(); symbolEl.value = h.symbol; analyze(h.symbol); };
         row.appendChild(sym);
@@ -1187,6 +1188,7 @@
       const cb = lsGet("sigBadges");
       if (cb) document.querySelectorAll("#list [data-sym]").forEach((el) => { if (cb[el.dataset.sym]) el.textContent = cb[el.dataset.sym]; });
       if (!fromCache) loadHoldingBadges(hsSeq);
+      loadExt();
     }
 
     // ================= 포트폴리오 (표 + 종목별 차트) =================
@@ -2008,6 +2010,29 @@
 
 
 
+
+    // ===== 🌙 장외(프리·애프터·데이장) 가격: 정규장이 아닐 때만 종목 아래에 한 줄로 표시 =====
+    let extTimer = null;
+    function loadExt() {
+      clearTimeout(extTimer);
+      extTimer = setTimeout(() => {
+        if (!myToken) return;
+        const els = Array.from(document.querySelectorAll("[data-xsym]"));
+        const syms = Array.from(new Set(els.map((e) => e.dataset.xsym))).slice(0, 40);
+        if (!syms.length) return;
+        api({ action: "getExtPrices", token: myToken, symbols: syms }).then((r) => {
+          if (!r || !r.ok) return;
+          document.querySelectorAll("[data-xsym]").forEach((el) => {
+            const x = r.px[el.dataset.xsym];
+            let line = el.dataset.xin ? el.querySelector(".extLine") : (el.nextElementSibling && el.nextElementSibling.classList.contains("extLine") ? el.nextElementSibling : null);
+            if (!x || x.sess === "정규장") { if (line) line.remove(); return; }
+            if (!line) { line = mkEl(el.dataset.xin ? "span" : "div", el.dataset.xin ? "sub extLine" : "alertHint extLine"); if (el.dataset.xin) el.appendChild(line); else el.insertAdjacentElement("afterend", line); }
+            line.textContent = "🌙 " + x.sess + " $" + fmt(x.px) + (x.chg != null ? " (종가 대비 " + (x.chg >= 0 ? "+" : "") + x.chg.toFixed(1) + "%)" : "") + " · " + x.at;
+          });
+        }).catch(() => {});
+      }, 700);
+    }
+
     // ===== 👀 관심 종목 =====
     function paintWatch(r) {
       const box = $("wList"); box.textContent = "";
@@ -2018,11 +2043,13 @@
         if (x.target) l.appendChild(mkEl("span", "sub", x.fired ? "🎯 목표가 $" + x.target + " 도달 (알림 보냄)" : "🎯 목표 $" + x.target + (x.dir === "down" ? " 이하" : " 이상") + (x.gap != null ? " · 앞으로 " + (x.gap >= 0 ? "+" : "") + x.gap + "%" : "")));
         else l.appendChild(mkEl("span", "sub", "목표가 없음 · 신호만 알림"));
         if (x.badge) l.appendChild(mkEl("span", "sub", x.badge));
+        l.dataset.xsym = x.s; l.dataset.xin = "1";
         it.appendChild(l);
         const del = mkEl("button", null, "✕"); del.title = "관심 종목에서 빼기";
         del.onclick = async () => { it.style.opacity = ".4"; try { await api({ action: "removeWatch", token: myToken, symbol: x.s }); } catch (e) {} loadWatch(true); };
         it.appendChild(del); box.appendChild(it);
       });
+      loadExt();
     }
     function loadWatch(fresh) {
       if (!myToken) return;
