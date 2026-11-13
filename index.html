@@ -8,7 +8,17 @@
   <link rel="preconnect" href="https://script.google.com">
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
   <link rel="apple-touch-icon" href="icon-192.png">
-  <meta name="theme-color" content="#0f1419">
+  <meta name="theme-color" content="#0f1419" id="metaTheme">
+  <script>
+    (function () {
+      try {
+        var m = localStorage.getItem("sigTheme") || "dark";
+        var t = m === "auto" ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : m;
+        document.documentElement.setAttribute("data-theme", t);
+        document.getElementById("metaTheme").setAttribute("content", t === "light" ? "#f4f6f9" : "#0f1419");
+      } catch (e) {}
+    })();
+  </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <style>
     body { font-family: sans-serif; max-width: 520px; margin: 24px auto; padding: 0 16px; }
@@ -302,6 +312,28 @@
     #commView .cmFoot { border-top: none; padding-top: 0; }
     #commView .cmHead .cmCat { margin: 0 0 0 auto; }
     #commView .cmHead .cmDel { margin-left: 6px; }
+    html[data-theme="light"] { --bg: #f4f6f9; --card: #ffffff; --card2: #eef1f5; --line: #dde3ea; --txt: #191f28; --sub: #6b7684;
+                               --accent: #0fa56c; --accent2: #3a6df0; --up: #e0364a; --down: #2f7de1; color-scheme: light; }
+    html[data-theme="light"] input::placeholder, html[data-theme="light"] #commView textarea::placeholder { color: #9aa5b1; }
+    html[data-theme="light"] .pfBadge.buy { background: rgba(15,165,108,.12); color: #0a8f5b; }
+    html[data-theme="light"] .pfBadge.sell { background: rgba(224,54,74,.10); color: #d6303f; }
+    html[data-theme="light"] .pfTag.warn, html[data-theme="light"] .btRec .warn, html[data-theme="light"] .frOn.off { color: #b86a00; }
+    html[data-theme="light"] .pfTag.warn { background: rgba(255,170,60,.18); }
+    html[data-theme="light"] .pfTag.stop { color: #d6303f; }
+    html[data-theme="light"] .pfCta .pfT, html[data-theme="light"] #commView .cmTick { color: #3182f6; }
+    html[data-theme="light"] #commView .cmAv { background: #e3ecff; color: #3a6df0; }
+    html[data-theme="light"] #needRegMsg { color: #b86a00 !important; }
+    html[data-theme="light"] #commView textarea, html[data-theme="light"] .cmSheetBox textarea { color: var(--txt); }
+    .topBar > span:first-child { font-size: 20px; white-space: nowrap; }
+    .topR { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .mktChip { font-size: 11px; font-weight: 700; padding: 5px 9px; border-radius: 999px; background: var(--card2); color: var(--sub); white-space: nowrap; }
+    .mktChip.on { color: var(--accent); } .mktChip.ext { color: var(--accent2); }
+    .topBar #setBtn { width: 34px; height: 34px; padding: 0; margin: 0; border-radius: 50%; font-size: 16px; line-height: 1; flex-shrink: 0; }
+    .setRow { background: var(--card); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
+    .setRow h4 { margin: 0 0 10px; font-size: 14px; color: var(--sub); }
+    .setOpts { display: flex; gap: 8px; }
+    .setOpts button { flex: 1; padding: 12px 4px; font-size: 14px; border-radius: 12px; }
+    .setOpts button.on { background: var(--accent2); color: #fff; border-color: var(--accent2); font-weight: 700; }
     .topBar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .topBar #toggle { width: auto; margin: 0; padding: 8px 14px; font-size: 13px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
     .frName { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -311,7 +343,7 @@
     .botView > * { max-width: 640px; margin-left: auto; margin-right: auto; }
     .botTop { position: sticky; top: 0; background: var(--bg); display: flex; align-items: center; justify-content: space-between; padding: 14px 0 10px; z-index: 2; }
     .botTop b { font-size: 17px; }
-    #botBack { background: none; border: none; color: var(--sub); font-size: 15px; padding: 6px 0; width: 60px; text-align: left; }
+    #botBack, #setBack { background: none; border: none; color: var(--sub); font-size: 15px; padding: 6px 0; width: 60px; text-align: left; }
     .botNote { font-size: 12px; color: var(--sub); background: var(--card2); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; }
     .botCard { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
     .botCard h4 { margin: 0 0 10px; font-size: 15px; }
@@ -364,7 +396,7 @@
   </style>
 </head>
 <body>
-  <h2 class="topBar"><span>📈 <span class="gt">주식 알리미</span></span><button id="toggle">알림 받기</button></h2>
+  <h2 class="topBar"><span>📈 <span class="gt">주식 알리미</span></span><span class="topR"><span id="mktChip" class="mktChip"></span><button id="toggle">알림 받기</button><button id="setBtn" aria-label="설정">⚙️</button></span></h2>
   <div id="instBar" style="display:none">
     <span id="instTxt">📲 홈 화면에 앱으로 설치할 수 있어요</span>
     <span><button id="instGo">설치</button><button id="instX" aria-label="닫기">✕</button></span>
@@ -441,14 +473,6 @@
 
       <div id="frHold"></div>
 
-      <details id="frBox" class="alertBox">
-        <summary>⚙️ 설정 · 내 닉네임 <span id="frCnt"></span></summary>
-        <div class="alertHint">이 앱에 등록한 사람들끼리 서로의 종목·평단·수익률이 자동으로 공유돼요. 닉네임을 정하면 친구들에게 그 이름으로 보여요.</div>
-        <div id="frMe"></div>
-        <div id="frMsg" class="btApplyMsg"></div>
-        <div class="tinyRow"><button id="installApp" class="linkBtn">📲 앱으로 설치하기</button> <span id="installMsg" class="btApplyMsg"></span></div>
-        <div class="tinyRow"><button id="copyLink" class="linkBtn">🔗 앱 주소 복사 (친구에게 공유)</button> <span id="copyMsg" class="btApplyMsg"></span></div>
-      </details>
 
 
     </div>
@@ -486,6 +510,24 @@
     <div class="botTop"><button id="botBack">← 뒤로</button><b>🤖 시뮬봇</b><span style="width:60px"></span></div>
     <div class="botNote">가상 매매예요. 실제 거래가 아니에요.</div>
     <div id="botBody"></div>
+  </div>
+
+  <div id="setView" class="botView">
+    <div class="botTop"><button id="setBack">← 뒤로</button><b>⚙️ 설정</b><span style="width:60px"></span></div>
+    <div class="setRow"><h4>화면 모드</h4>
+      <div class="setOpts" id="themeOpts">
+        <button data-m="dark">🌙 다크</button><button data-m="light">☀️ 화이트</button><button data-m="auto">📱 기기 따라</button>
+      </div>
+    </div>
+      <details id="frBox" class="alertBox" open>
+        <summary>⚙️ 설정 · 내 닉네임 <span id="frCnt"></span></summary>
+        <div class="alertHint">이 앱에 등록한 사람들끼리 서로의 종목·평단·수익률이 자동으로 공유돼요. 닉네임을 정하면 친구들에게 그 이름으로 보여요.</div>
+        <div id="frMe"></div>
+        <div id="frMsg" class="btApplyMsg"></div>
+        <div class="tinyRow"><button id="installApp" class="linkBtn">📲 앱으로 설치하기</button> <span id="installMsg" class="btApplyMsg"></span></div>
+        <div class="tinyRow"><button id="copyLink" class="linkBtn">🔗 앱 주소 복사 (친구에게 공유)</button> <span id="copyMsg" class="btApplyMsg"></span></div>
+      </details>
+    <div class="alertHint">장 상태는 미국 시간 기준(프리·정규·애프터·데이장)이고, 공휴일은 반영하지 않아요.</div>
   </div>
 
   <!-- ===== 탭: 추천 ===== -->
@@ -1774,8 +1816,8 @@
         // 가로 눈금 (로그)
         for (let g = 0; g <= 3; g++) {
           const v = Math.exp(llo + (lhi - llo) * g / 3), y = Y(v);
-          add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#2c3745", "stroke-width": 0.5 });
-          add("text", { x: W - R + 3, y: y + 3, fill: "#93a1b1", "font-size": 9 }, v.toFixed(v >= 100 ? 0 : 1));
+          add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: cvar("--line"), "stroke-width": 0.5 });
+          add("text", { x: W - R + 3, y: y + 3, fill: cvar("--sub"), "font-size": 9 }, v.toFixed(v >= 100 ? 0 : 1));
         }
         // 세로 눈금 (연/월)
         let lastKey = null, lastX = -99;
@@ -1785,11 +1827,11 @@
           const key = win > 400 ? d.getUTCFullYear() : d.getUTCFullYear() * 100 + d.getUTCMonth();
           if (key !== lastKey) {
             lastKey = key;
-            if (i > from) add("line", { x1: X(i), x2: X(i), y1: T, y2: H - B, stroke: "#2c3745", "stroke-width": 0.5 });
+            if (i > from) add("line", { x1: X(i), x2: X(i), y1: T, y2: H - B, stroke: cvar("--line"), "stroke-width": 0.5 });
             if (X(i) - lastX >= 30) {
               lastX = X(i);
               const label = win > 400 ? String(d.getUTCFullYear()).slice(2) + "년" : (d.getUTCMonth() + 1) + "월";
-              add("text", { x: X(i) + 2, y: H - 6, fill: "#93a1b1", "font-size": 9 }, label);
+              add("text", { x: X(i) + 2, y: H - 6, fill: cvar("--sub"), "font-size": 9 }, label);
             }
           }
         });
@@ -1808,7 +1850,7 @@
         // 가격선
         const pts = [];
         for (let i = from; i < n; i++) pts.push(X(i).toFixed(1) + "," + Y(c[i]).toFixed(1));
-        add("polyline", { points: pts.join(" "), fill: "none", stroke: "#cfd8e3", "stroke-width": 1.2 });
+        add("polyline", { points: pts.join(" "), fill: "none", stroke: cvar("--txt"), "stroke-width": 1.2 });
         // 매수/매도 점
         const small = win <= 252;
         trades.forEach((t) => {
@@ -2270,7 +2312,7 @@
       body.appendChild(c5);
       body.appendChild(mkEl("div", "alertHint", "시작 " + won(b.startCash) + " · 최대 " + b.max + "종목(종목당 1/" + b.max + ") · 신호 다음 장 시가 체결 · 비용 " + b.fee + "%씩 · 환율 반영(원화 기준)"));
     }
-    function closeBot() { $("botView").style.display = "none"; }
+    function closeBot() { $("botView").style.display = "none"; $("setView").style.display = "none"; }
     $("botBtn").onclick = () => {
       if (!myToken) { alert("먼저 '알림 받기'로 등록하세요"); return; }
       $("botView").style.display = "block"; history.pushState({ bot: 1 }, "");
@@ -2278,6 +2320,35 @@
       api({ action: "getBot", token: myToken }).then((r) => { if (r && r.ok) lsSet("sigBot", r); paintBot(r); }).catch(() => { if (!cb) paintBot(null); });
     };
     $("botBack").onclick = () => history.back();
+    // ===== 설정 · 화면 모드 =====
+    function applyTheme(m) {
+      const t = m === "auto" ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : m;
+      document.documentElement.setAttribute("data-theme", t);
+      const mt = document.getElementById("metaTheme"); if (mt) mt.setAttribute("content", t === "light" ? "#f4f6f9" : "#0f1419");
+      document.querySelectorAll("#themeOpts button").forEach((b) => b.classList.toggle("on", b.dataset.m === m));
+    }
+    function cvar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim() || "#888"; }
+    function curTheme() { try { return localStorage.getItem("sigTheme") || "dark"; } catch (e) { return "dark"; } }
+    document.querySelectorAll("#themeOpts button").forEach((b) => b.onclick = () => {
+      try { localStorage.setItem("sigTheme", b.dataset.m); } catch (e) {}
+      applyTheme(b.dataset.m);
+    });
+    try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { if (curTheme() === "auto") applyTheme("auto"); }); } catch (e) {}
+    $("setBtn").onclick = () => { applyTheme(curTheme()); $("setView").style.display = "block"; history.pushState({ set: 1 }, ""); };
+    $("setBack").onclick = () => history.back();
+    // ===== 현재 장 상태 (미국 시간 기준) =====
+    function marketNow() {
+      const f = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" });
+      const o = {}; f.formatToParts(new Date()).forEach((x) => o[x.type] = x.value);
+      const dow = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[o.weekday], m = (+o.hour) * 60 + (+o.minute);
+      if (dow === 6 || (dow === 5 && m >= 1200) || (dow === 0 && m < 1200)) return ["휴장", ""];
+      if (m >= 240 && m < 570) return ["프리장", "ext"];
+      if (m >= 570 && m < 960) return ["정규장", "on"];
+      if (m >= 960 && m < 1200) return ["애프터장", "ext"];
+      return ["데이장", "ext"];
+    }
+    function paintMktChip() { const [t, c] = marketNow(); const e = $("mktChip"); e.textContent = t; e.className = "mktChip " + c; }
+    paintMktChip(); setInterval(paintMktChip, 60000);
     window.addEventListener("popstate", closeBot);
     window.addEventListener("hashchange", () => {            // 알림을 눌러 이미 열린 앱에서 화면 이동
       if (location.hash === "#comm") showComm();
