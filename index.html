@@ -728,6 +728,29 @@
     #homeView #wRow { margin-top: 6px; }
     html[data-theme="light"] #list .frCard > div:not(.frName), html[data-theme="light"] #wList .wItem { background: #f2f4f8; }
     html[data-theme="light"] #wList .wItem button { background: #fff; }
+
+    /* ===== 내 종목 화면: 옆으로 넘기는 4페이지 (내 종목 · 관심 · 추천 · 친구) ===== */
+    #pgNav { display: flex; gap: 8px; margin: 2px 0 12px; }
+    #pgNav button { flex: 1; padding: 10px 0; font-size: 14px; font-weight: 800; border: none; border-radius: 999px; background: var(--card2); color: var(--sub); }
+    #pgNav button.on { background: var(--accent); color: #06130d; }
+    html[data-theme="light"] #pgNav button { background: #fff; box-shadow: 0 1px 2px rgba(25,40,70,.12); color: #5b6b80; }
+    html[data-theme="light"] #pgNav button.on { background: #191f28; color: #fff; }
+    #pgSlider { display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; align-items: flex-start; margin: 0 -16px; scrollbar-width: none; transition: height .2s; -webkit-overflow-scrolling: touch; }
+    #pgSlider::-webkit-scrollbar { display: none; }
+    #pgSlider > .pg { flex: 0 0 100%; min-width: 0; box-sizing: border-box; padding: 0 16px; scroll-snap-align: start; scroll-snap-stop: always; }
+    #todayRec:empty { display: block !important; }
+    #todayRec:empty::before, #frHold:empty::before { display: block; background: var(--card); border-radius: 26px; padding: 40px 18px; margin: 0 -10px; text-align: center; color: var(--sub); font-size: 14px; position: static !important; height: auto; width: auto; left: auto; }
+    #todayRec:empty::before { content: "오늘 새로 추천할 종목이 없어요"; }
+    #frHold:empty::before { content: "아직 친구가 없어요"; }
+    #frHold:empty { padding: 0 !important; margin: 0 !important; }
+    #homeView .pg .blk, #homeView .pg #frHold:not(:empty), #homeView .pg #todayRec .recBox { margin-left: -10px !important; margin-right: -10px !important; }
+
+    @media (max-width: 420px) {
+      .topBar > span:first-child { font-size: 17px; }
+      .topBar > span:first-child .tIco { display: none; }
+      .mktChip { padding: 5px 7px; font-size: 10.5px; }
+      .topBar #toggle { padding: 8px 10px; font-size: 13px; }
+    }
 </style>
 </head>
 <body>
@@ -764,6 +787,9 @@
     </div>
 
     <div id="holdingsBox" style="display:none">
+      <div id="pgNav"><button class="on">내 종목</button><button>관심</button><button>추천</button><button>친구</button></div>
+      <div id="pgSlider">
+      <div class="pg">
       <div class="blk">
       <h3 class="srH">종목 검색</h3>
       <div class="row" id="srRow">
@@ -802,6 +828,8 @@
       <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
       </div>
 
+      </div>
+      <div class="pg">
       <div class="blk">
       <div class="secHead secDiv"><h3>👀 관심 종목</h3></div>
       <div class="alertHint" style="margin:0 0 8px">목표가·신호가 뜨면 알려드려요</div>
@@ -813,9 +841,10 @@
       </div>
       <div id="wMsg" class="alertHint"></div>
       </div>
-      <div id="todayRec"></div>
-
-      <div id="frHold"></div>
+      </div>
+      <div class="pg"><div id="todayRec"></div></div>
+      <div class="pg"><div id="frHold"></div></div>
+      </div>
 
 
 
@@ -2324,6 +2353,7 @@
         "포트폴리오 현황 읽기 쉽게 정리",
         "친구 종목을 옆으로 넘겨서 한 명씩 보기",
         "구역을 둥근 패널로 나눠서 구분이 확실해졌어요",
+        "내 종목 화면을 옆으로 넘겨서 내 종목·관심·추천·친구 보기",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
@@ -2385,6 +2415,20 @@
       document.addEventListener("click", (e) => { if (!menu.contains(e.target)) close(); });
       // 선택된 탭이 가려져 있으면 보이게 스크롤
       document.querySelector(".mainTabs").addEventListener("click", () => setTimeout(() => { const on = document.querySelector(".mainTabs button.on"); if (on) on.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); }, 0));
+    })();
+
+
+    // 내 종목 화면 페이지 넘기기: 위 버튼 ↔ 옆으로 밀기, 높이는 보이는 페이지에 맞춤
+    (function () {
+      const sl = $("pgSlider"), nav = $("pgNav"); if (!sl || !nav) return;
+      const pages = [...sl.querySelectorAll(".pg")], btns = [...nav.children];
+      let cur = 0;
+      const fit = () => { sl.style.height = pages[cur].offsetHeight + "px"; };
+      const ro = new ResizeObserver(fit); pages.forEach((p) => ro.observe(p));
+      const mark = () => { const i = Math.round(sl.scrollLeft / Math.max(1, sl.clientWidth)); if (i !== cur) { cur = i; btns.forEach((b, k) => b.classList.toggle("on", k === i)); fit(); } };
+      sl.addEventListener("scroll", mark, { passive: true });
+      btns.forEach((b, i) => { b.onclick = () => { sl.scrollTo({ left: sl.clientWidth * i, behavior: "smooth" }); }; });
+      window.addEventListener("resize", fit); fit();
     })();
 
     // ================= 백테스트 탭 =================
