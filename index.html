@@ -787,7 +787,7 @@
 
       <div class="blk">
       <div class="secHead secDiv"><h3>👀 관심 종목</h3></div>
-      <div class="alertHint" style="margin:0 0 8px">목표가에 닿으면 알림이 오고, 매수·매도·저점 신호가 뜨면 개장 전·마감 후에 같이 알려드려요.</div>
+      <div class="alertHint" style="margin:0 0 8px">목표가·신호가 뜨면 알려드려요</div>
       <div id="wList"></div>
       <div class="row" id="wRow">
         <input id="wSym" placeholder="티커 (예: NVDA)" style="text-transform:uppercase" autocomplete="off">
@@ -2735,7 +2735,6 @@
       if (!list.length) return;
       const wrap = mkEl("div", "recBox");
       wrap.appendChild(mkEl("h3", null, "💡 이 종목은 어떤가요?"));
-      wrap.appendChild(mkEl("div", "alertHint", "오늘 매수 신호가 뜬 종목 중 점수가 가장 높은 1개예요. 티커를 누르면 분석이 열려요."));
       list.forEach((x) => {
         const row = mkEl("div", "recRow");
         const sy = mkEl("span", "rs", x.s);
