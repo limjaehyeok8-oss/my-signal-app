@@ -519,6 +519,10 @@
     #tabMore.open .arr { transform: rotate(180deg); }
     #tabMenu { top: 62px; }
     html[data-theme="light"] #tabMore { background: #fff !important; box-shadow: 0 1px 2px rgba(25,40,70,.12) !important; }
+
+    .pkWatch { margin-left: auto; padding: 5px 10px; font-size: 12px; font-weight: 700; border: none; border-radius: 999px; background: var(--card2); color: var(--accent); width: auto; }
+    .pkWatch:disabled { color: var(--sub); }
+    html[data-theme="light"] .pkWatch { background: #eef1f6; color: #191f28; }
 </style>
 </head>
 <body>
@@ -1186,6 +1190,13 @@
       top.appendChild(mkEl("span", null, fmt(x.p)));
       top.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
       top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc + (x.cls ? " · " + x.cls : "")));
+      const wb = mkEl("button", "pkWatch", "👀 관심");
+      wb.onclick = async (e) => {
+        e.stopPropagation(); wb.disabled = true; wb.textContent = "추가 중…";
+        try { const r = await api({ action: "addWatch", token: myToken, symbol: x.s }); if (r && r.ok) { wb.textContent = "✓ 추가됨"; loadWatch(true); } else { wb.textContent = (r && r.msg) || "추가 실패"; setTimeout(() => { wb.textContent = "👀 관심"; wb.disabled = false; }, 1800); } }
+        catch (err) { wb.textContent = "👀 관심"; wb.disabled = false; }
+      };
+      top.appendChild(wb);
       c.appendChild(top);
       c.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ")));
       if (showGroup && x.g) c.appendChild(mkEl("div", "alertHint", x.g));
@@ -2040,6 +2051,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-14b", date: "11월 14일", title: "업데이트", items: [
+        "추천 탭에서 바로 👀 관심 추가",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
