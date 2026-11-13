@@ -1461,6 +1461,7 @@
       pFh.catch(() => {});
       const cachedFr = lsGet("sigFr");                                                  // 지난번 화면을 먼저 보여줌
       if (cachedFr && !hold.childElementCount) { try { paintFriendsAndMe(cachedFr.fh, cachedFr.sr0); } catch (e) {} }
+      skelFill(hold, 2, 110);
       try {
         const r = await api({ action: "getFriendInfo", token: myToken });
         if (!r || !r.ok) {
@@ -1631,6 +1632,7 @@
     let pickPoll = 0, pickTimer = null;
     async function loadPicks(force) {
       if (!myToken) { $("pickList").textContent = ""; $("pickList").appendChild(mkEl("div", "alertHint", "먼저 '내 종목' 탭에서 '알림 받기'를 눌러 등록하세요")); return; }
+      skelFill($("pickList"), 5, 64);
       try {
         const r = await api({ action: "getPicks", token: myToken, force: force === true });
         if (!r || !r.ok) { pickData = []; renderPicks(); $("pickList").appendChild(mkEl("div", "alertHint", "아직 불러올 수 없어요")); return; }
@@ -2477,6 +2479,7 @@
         "수익률·현재가를 실시간(20초마다) 갱신, 프리·애프터장은 그 시간 가격 기준",
         "설정에 등락 색상(한국/미국식)·글자 크기·자동 갱신 on/off 추가",
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
+        "관심·추천·친구 로딩 중 회색 틀 표시",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
@@ -3035,8 +3038,10 @@
       });
       box.appendChild(wrap);
     }
+    function skelFill(box, n, h) { if (!box || box.childElementCount) return; for (let i = 0; i < n; i++) { const d = mkEl("div", "skel"); if (h) d.style.height = h + "px"; box.appendChild(d); } }
     function loadTodayRec() {
       if (!myToken) return;
+      skelFill($("todayRec"), 1, 120);
       api({ action: "getPicks", token: myToken }).then((r) => { if (r && r.ok) { recData = r.items || []; paintTodayRec(); } }).catch(() => {});
     }
     function paintWatch(r) {
@@ -3071,7 +3076,7 @@
     }
     function loadWatch(fresh) {
       if (!myToken) return;
-      const cw = lsGet("sigWatch"); if (cw && !fresh) paintWatch(cw);
+      const cw = lsGet("sigWatch"); if (cw && !fresh) paintWatch(cw); else skelFill($("wList"), 2, 70);
       if (fresh) Object.keys(apiMemo).forEach((k) => { if (k.indexOf("getWatch") > -1) delete apiMemo[k]; });
       api({ action: "getWatch", token: myToken }).then((r) => { if (r && r.ok) { lsSet("sigWatch", r); paintWatch(r); } }).catch(() => {});
     }
