@@ -389,7 +389,7 @@
     .ctaRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 4px; }
     .ctaRow .pfCta { margin: 0; padding: 14px; min-width: 0; text-align: left; }
     .ctaRow .pfT { font-size: 15px; } .ctaRow .pfS { font-size: 12px; line-height: 1.4; }
-    #instBar { align-items: center; justify-content: space-between; gap: 10px; background: var(--card); border: 1px solid #3182f6; border-radius: 14px; padding: 10px 12px 10px 14px; margin: 0 0 12px; font-size: 13px; }
+    #instBar { flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; background: var(--card); border: 1px solid #3182f6; border-radius: 14px; padding: 10px 12px 10px 14px; margin: 0 0 12px; font-size: 13px; }
     #instBar span:last-child { display: flex; gap: 4px; flex-shrink: 0; }
     #instGo { background: #3182f6; color: #fff; border: none; border-radius: 10px; padding: 8px 14px; font-weight: 800; font-size: 13px; }
     #instX { background: none; border: none; color: var(--sub); padding: 8px; font-size: 14px; }
@@ -400,6 +400,7 @@
   <div id="instBar" style="display:none">
     <span id="instTxt">📲 홈 화면에 앱으로 설치할 수 있어요</span>
     <span><button id="instGo">설치</button><button id="instX" aria-label="닫기">✕</button></span>
+    <a id="instApk" href="https://github.com/limjaehyeok8-oss/my-signal-app/releases/download/apk/signal.apk" style="display:none;flex-basis:100%;color:var(--accent2);font-weight:700;text-decoration:none">📦 안드로이드는 APK 파일로 설치 (받은 뒤 열기 → '이 출처 허용')</a>
   </div>
 
   <div class="mainTabs">
@@ -527,6 +528,9 @@
         <div class="tinyRow"><button id="installApp" class="linkBtn">📲 앱으로 설치하기</button> <span id="installMsg" class="btApplyMsg"></span></div>
         <div class="tinyRow"><button id="copyLink" class="linkBtn">🔗 앱 주소 복사 (친구에게 공유)</button> <span id="copyMsg" class="btApplyMsg"></span></div>
       </details>
+    <div class="setRow" id="apkRow" style="display:none"><h4>안드로이드 앱 파일</h4>
+      <a href="https://github.com/limjaehyeok8-oss/my-signal-app/releases/download/apk/signal.apk" style="color:var(--accent2);font-weight:700;text-decoration:none">📦 APK 설치 파일 받기</a>
+      <div class="alertHint" style="margin-top:8px">받은 파일을 열고 '이 출처 허용'을 누르면 설치돼요.</div></div>
     <div class="alertHint">장 상태는 미국 시간 기준(프리·정규·애프터·데이장)이고, 공휴일은 반영하지 않아요.</div>
   </div>
 
@@ -1581,6 +1585,8 @@
         if (deferred) { deferred.prompt(); try { await deferred.userChoice; } catch (e) {} deferred = null; bar.style.display = "none"; return; }
         $("instTxt").textContent = isIOS ? "아래 공유 버튼(□↑) → '홈 화면에 추가'를 눌러주세요" : isAndroid ? "오른쪽 위 ⋮ 메뉴 → '앱 설치' 또는 '홈 화면에 추가'를 눌러주세요" : "주소창 오른쪽의 설치 아이콘(⊕)을 눌러주세요";
       };
+      const inApk = (document.referrer || "").indexOf("android-app://") === 0;      // APK 앱 안에서 열린 경우
+      if (isAndroid && !standalone && !inApk) { $("instApk").style.display = "block"; showBar(); }
       if (isIOS) showBar();                                   // 아이폰은 설치 신호가 따로 없어서 안내만
       window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; showBar(); });
       window.addEventListener("appinstalled", () => { deferred = null; bar.style.display = "none"; const m = $("installMsg"); if (m) m.textContent = "설치됐어요"; });
@@ -2336,6 +2342,7 @@
     try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { if (curTheme() === "auto") applyTheme("auto"); }); } catch (e) {}
     $("setBtn").onclick = () => { applyTheme(curTheme()); $("setView").style.display = "block"; history.pushState({ set: 1 }, ""); };
     $("setBack").onclick = () => history.back();
+    if (/Android/i.test(navigator.userAgent) && (document.referrer || "").indexOf("android-app://") !== 0) $("apkRow").style.display = "block";
     // ===== 현재 장 상태 (미국 시간 기준) =====
     function marketNow() {
       const f = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" });
