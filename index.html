@@ -392,6 +392,13 @@
     .coinVal { padding: 10px 0; border-top: 1px solid var(--card2); cursor: pointer; }
     .coinVal .mkTip { display: none; } .coinVal.open .mkTip { display: block; }
     #wRow { display: flex; gap: 8px; } #wRow input { flex: 1; min-width: 0; } #wRow button { white-space: nowrap; }
+    .recBox { margin-top: 18px; }
+    .recBox h3 { margin: 0 0 4px; font-size: 16px; }
+    .recRow { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 14px; padding: 11px 14px; margin-top: 8px; }
+    .recRow .rs { font-weight: 800; font-size: 16px; color: var(--accent2); cursor: pointer; min-width: 56px; }
+    .recRow .rm { flex: 1; min-width: 0; font-size: 12px; color: var(--sub); line-height: 1.45; }
+    .recRow .rm b { color: var(--txt); font-size: 13px; }
+    .recRow button { padding: 7px 10px; font-size: 12px; border-radius: 999px; white-space: nowrap; }
     .wItem { background: var(--card); border-radius: 14px; padding: 12px 14px; margin: 8px 0 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     .wItem b { font-size: 15px; } .wItem .sub { display: block; font-size: 12px; color: var(--sub); margin-top: 3px; line-height: 1.5; }
     .wItem button { background: none; border: none; color: var(--sub); font-size: 16px; padding: 6px 8px; }
@@ -402,7 +409,18 @@
     #instBar span:last-child { display: flex; gap: 4px; flex-shrink: 0; }
     #instGo { background: #3182f6; color: #fff; border: none; border-radius: 10px; padding: 8px 14px; font-weight: 800; font-size: 13px; }
     #instX { background: none; border: none; color: var(--sub); padding: 8px; font-size: 14px; }
-  </style>
+      /* ===== 친구·내 종목 카드 정리 ===== */
+    .frCard { border: none; border-radius: 18px; padding: 14px 16px 6px; margin-top: 10px; }
+    .frCard .frName { display: flex; align-items: center; justify-content: space-between; font-size: 16px; margin-bottom: 6px; }
+    .frOn { background: none; padding: 0; font-size: 12px; font-weight: 700; color: var(--accent); }
+    .frOn.off { color: #ffb44d; }
+    .frRow { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; row-gap: 2px; padding: 11px 0 2px; border-top: 1px solid var(--line); }
+    .frRow .sym { font-size: 17px; min-width: 0; grid-column: 1; grid-row: 1; }
+    .frRow .pnl { font-size: 18px; min-width: 0; grid-column: 2; grid-row: 1; }
+    .frRow .sub { grid-column: 1 / -1; grid-row: 2; margin-left: 0; font-size: 12px; }
+    .frCard .alertHint { margin: 0 0 8px; font-size: 12px; }
+    .frCard .alertHint:empty { display: none; }
+</style>
 </head>
 <body>
   <h2 class="topBar"><span>📈 <span class="gt">주식 알리미</span></span><span class="topR"><span id="mktChip" class="mktChip"></span><button id="toggle">알림 받기</button><button id="setBtn" aria-label="설정">⚙️</button></span></h2>
@@ -481,6 +499,7 @@
       </div>
       <div id="wMsg" class="alertHint"></div>
       <div id="wList"></div>
+      <div id="todayRec"></div>
 
       <div id="frHold"></div>
 
@@ -927,7 +946,7 @@
           const card = mkEl("div", "frCard");
           const nm = mkEl("div", "frName");
           nm.appendChild(document.createTextNode(f.name));
-          nm.appendChild(mkEl("span", "frOn" + (f.on === false ? " off" : ""), f.on === false ? "🔕 알림 꺼짐" : "🔔 알림 켜짐"));
+          nm.appendChild(mkEl("span", "frOn" + (f.on === false ? " off" : ""), f.on === false ? "○ 알림 꺼짐" : "● 알림 켜짐"));
           card.appendChild(nm);
           f.holdings.forEach((x) => {
             const row = mkEl("div", "frRow"); row.dataset.xsym = x.symbol;
@@ -1244,7 +1263,7 @@
       const card = mkEl("div", "frCard");                       // 친구들 종목과 같은 모양
       const meNm = mkEl("div", "frName");
       meNm.appendChild(document.createTextNode("나"));
-      meNm.appendChild(mkEl("span", "frOn" + (paused ? " off" : ""), paused ? "🔕 알림 꺼짐" : "🔔 알림 켜짐"));
+      meNm.appendChild(mkEl("span", "frOn" + (paused ? " off" : ""), paused ? "○ 알림 꺼짐" : "● 알림 켜짐"));
       card.appendChild(meNm);
       r.holdings.forEach((h) => {
         const wrap = mkEl("div");
@@ -1422,7 +1441,7 @@
       loadAlerts();
       loadFriends();
       setTimeout(loadWatch, 0);
-      api({ action: "getPicks", token: myToken }).catch(() => {});      // 추천·커뮤는 미리 받아둬서 탭을 열면 바로 뜸
+      loadTodayRec();                                                     // 추천(오늘 매수 신호)은 미리 받아서 관심 종목 아래에도 보여줌
       api({ action: "getPosts", token: myToken }).catch(() => {});
     }
     async function verifyToken(alreadyStarted) {
@@ -2151,6 +2170,41 @@
     }
 
     // ===== 👀 관심 종목 =====
+    // ===== 💡 오늘 매수 신호 종목 추천 (추천 탭 데이터 재사용) =====
+    let recData = null;
+    function paintTodayRec() {
+      const box = $("todayRec"); if (!box) return; box.textContent = "";
+      if (!recData) return;
+      const have = {};
+      try { ((lsGet("sigHold") || {}).holdings || []).forEach((h) => { have[String(h.symbol).toUpperCase()] = 1; }); } catch (e) {}
+      try { ((lsGet("sigWatch") || {}).items || []).forEach((h) => { have[String(h.s).toUpperCase()] = 1; }); } catch (e) {}
+      const list = recData.filter((x) => !x.lt && (x.tag || []).some((t) => t.indexOf("오늘") !== -1) && !have[String(x.s).toUpperCase()])
+        .sort((a, b) => b.sc - a.sc || b.ch - a.ch).slice(0, 5);
+      if (!list.length) return;
+      const wrap = mkEl("div", "recBox");
+      wrap.appendChild(mkEl("h3", null, "💡 이 종목은 어떤가요?"));
+      wrap.appendChild(mkEl("div", "alertHint", "오늘 매수 신호가 뜬 종목이에요. 티커를 누르면 분석이 열려요. 투자 판단은 본인 몫이에요."));
+      list.forEach((x) => {
+        const row = mkEl("div", "recRow");
+        const sy = mkEl("span", "rs", x.s);
+        sy.onclick = () => { symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+        const m = mkEl("div", "rm");
+        const b = mkEl("b", null, "$" + fmt(x.p) + " "); b.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
+        m.appendChild(b); m.appendChild(mkEl("div", null, (x.tag || []).join(" · ") + " · 점수 " + x.sc));
+        const bt = mkEl("button", null, "👀 관심");
+        bt.onclick = async () => {
+          bt.disabled = true; bt.textContent = "추가 중…";
+          try { const r = await api({ action: "addWatch", token: myToken, symbol: x.s }); if (r && r.ok) { bt.textContent = "추가됨"; loadWatch(true); } else { bt.textContent = "👀 관심"; bt.disabled = false; $("wMsg").textContent = (r && r.msg) || "추가하지 못했어요"; } }
+          catch (e) { bt.textContent = "👀 관심"; bt.disabled = false; }
+        };
+        row.appendChild(sy); row.appendChild(m); row.appendChild(bt); wrap.appendChild(row);
+      });
+      box.appendChild(wrap);
+    }
+    function loadTodayRec() {
+      if (!myToken) return;
+      api({ action: "getPicks", token: myToken }).then((r) => { if (r && r.ok) { recData = r.items || []; paintTodayRec(); } }).catch(() => {});
+    }
     function paintWatch(r) {
       const box = $("wList"); box.textContent = "";
       if (!r || !r.ok) return;
