@@ -794,6 +794,15 @@
     #analysis #analysisText .anStats > div:last-child { flex: 1.7; }
     #analysis #analysisText .anStats b { white-space: normal; font-size: 14.5px; line-height: 1.35; }
     #analysis #analysisText .anStats > div + div { padding-left: 12px; }
+
+    html[data-ud="us"] { --up: #3ddc97; --down: #ff5a6a; }
+    html[data-ud="us"][data-theme="light"] { --up: #0fa56c; --down: #e0364a; }
+    html[data-ud="us"] #list .frCard > div:not(.frName) .pnl.up { background: rgba(61,220,151,.16); }
+    html[data-ud="us"] #list .frCard > div:not(.frName) .pnl.down { background: rgba(255,90,106,.16); }
+    html[data-font="l"] body { zoom: 1.12; }
+    .setOpts button { line-height: 1.35; }
+    #stResetRow .tinyRow { margin: 0; text-align: left; }
+    #stResetRow .linkBtn, #stResetRow #stResetAll { margin: 0 !important; display: block; text-align: left; font-size: 14px; color: var(--txt); text-decoration: none; padding: 6px 0; }
 </style>
 </head>
 <body>
@@ -868,7 +877,6 @@
         <p id="pfInfo"></p>
         <div id="pfCharts"></div>
       </div>
-      <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
       </div>
 
       </div>
@@ -951,6 +959,16 @@
         <button data-m="dark">🌙 다크</button><button data-m="light">☀️ 화이트</button><button data-m="auto">📱 기기 따라</button>
       </div>
     </div>
+    <div class="setRow"><h4>등락 색상</h4>
+      <div class="setOpts" id="udOpts"><button data-v="kr">🇰🇷 상승 빨강 · 하락 파랑</button><button data-v="us">🇺🇸 상승 초록 · 하락 빨강</button></div>
+    </div>
+    <div class="setRow"><h4>글자 크기</h4>
+      <div class="setOpts" id="fontOpts"><button data-v="n">보통</button><button data-v="l">크게</button></div>
+    </div>
+    <div class="setRow"><h4>가격 자동 갱신</h4>
+      <div class="setOpts" id="liveOpts"><button data-v="1">켜기 (20초마다)</button><button data-v="0">끄기</button></div>
+    </div>
+    <div class="setRow" id="stResetRow"><h4>알림 전략</h4><div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div></div>
       <details id="frBox" class="alertBox" open>
         <summary>⚙️ 설정 · 내 닉네임 <span id="frCnt"></span></summary>
         <div class="alertHint">이 앱에 등록한 사람들끼리 서로의 종목·평단·수익률이 자동으로 공유돼요. 닉네임을 정하면 친구들에게 그 이름으로 보여요.</div>
@@ -2413,6 +2431,7 @@
         "내 종목 화면을 옆으로 넘겨서 내 종목·관심·추천·친구 보기",
         "종목 분석을 핵심만 요약 (나머지는 자세히 보기)",
         "수익률·현재가를 실시간(20초마다) 갱신, 프리·애프터장은 그 시간 가격 기준",
+        "설정에 등락 색상(한국/미국식)·글자 크기·자동 갱신 on/off 추가",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
@@ -2857,9 +2876,21 @@
     }
 
 
+
+    // ===== 설정: 등락 색상 / 글자 크기 / 자동 갱신 =====
+    function pref(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
+    function applyPrefs() {
+      const ud = pref("sigUd", "kr"), fo = pref("sigFont", "n"), lv = pref("sigLive", "1");
+      document.documentElement.setAttribute("data-ud", ud);
+      document.documentElement.setAttribute("data-font", fo);
+      [["udOpts", ud], ["fontOpts", fo], ["liveOpts", lv]].forEach(([id, v]) => document.querySelectorAll("#" + id + " button").forEach((b) => b.classList.toggle("on", b.dataset.v === v)));
+    }
+    [["udOpts", "sigUd"], ["fontOpts", "sigFont"], ["liveOpts", "sigLive"]].forEach(([id, key]) => document.querySelectorAll("#" + id + " button").forEach((b) => b.onclick = () => { try { localStorage.setItem(key, b.dataset.v); } catch (e) {} applyPrefs(); }));
+    applyPrefs();
+
     // 실시간 느낌: 화면이 보이는 동안 20초마다 현재가·수익률 갱신
     setInterval(() => {
-      if (document.visibilityState !== "visible" || !myToken) return;
+      if (document.visibilityState !== "visible" || !myToken || pref("sigLive", "1") === "0") return;
       const hv = $("homeView"); if (!hv || hv.style.display === "none") return;
       Object.keys(apiMemo).forEach((k) => { if (k.indexOf("getExtPrices") > -1) delete apiMemo[k]; });
       loadExt();
