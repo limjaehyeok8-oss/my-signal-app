@@ -555,6 +555,9 @@
 
     #commView .cmTabs.pkGrpBox { overflow: visible; display: block; }
     #commView #cmCats { flex-wrap: wrap !important; overflow-x: visible !important; }
+
+    .pkBadge.side { background: rgba(255,170,60,.18); color: #ffa63c; }
+    html[data-theme="light"] .pkBadge.side { background: #fff1de; color: #c46a00; }
 </style>
 </head>
 <body>
@@ -1235,6 +1238,8 @@
       const head = mkEl("div", "pkHead"); head.appendChild(sym);
       head.appendChild(mkEl("span", "pkBadge", "점수 " + x.sc));
       if (x.cls) head.appendChild(mkEl("span", "pkBadge cls", x.cls));
+      const side = (x.why || []).some((w) => /횡보장/.test(w));          // 서버 why 문구로 횡보장 판별 (서버 수정 불필요)
+      if (side) head.appendChild(mkEl("span", "pkBadge side", "횡보"));
       mid.appendChild(head);
       mid.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ") + (showGroup && x.g ? " · " + x.g : "")));
       main.appendChild(mid);
@@ -1245,7 +1250,7 @@
       c.appendChild(main);
       // 눌러서 펼치면: 점수·이유·관심 추가
       const more = mkEl("div", "pkMore"); more.style.display = "none";
-      const wl = (x.why || []).filter((w) => !/일반 매수 신호가 떴어요/.test(w));   // 태그와 겹치는 문구는 숨김
+      const wl = (x.why || []).filter((w) => !/일반 매수 신호가 떴어요|횡보장이라/.test(w));   // 태그와 겹치는 문구는 숨김
       if (wl.length) { const why = mkEl("div", "pkWhy", wl.map((w) => "• " + w).join("\n")); why.style.whiteSpace = "pre-wrap"; more.appendChild(why); }
       const wb = mkEl("button", "pkWatch", "👀 관심 종목에 추가");
       wb.onclick = async (e) => {
@@ -2121,7 +2126,7 @@
       { id: "2026-11-14b", date: "11월 14일", title: "업데이트", items: [
         "추천 탭에서 바로 👀 관심 추가",
         "추천 목록 간결화 (10개씩 더보기)",
-        "추천 티커 옆에 점수·장세(횡보장 등) 바로 표시",
+        "추천 티커 옆에 점수·유형·횡보 표시",
         "추천 분야 선택을 ▾ 목록으로 정리",
         "커뮤 게시판 선택도 ▾ 목록으로",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
