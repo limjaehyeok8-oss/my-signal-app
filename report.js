@@ -185,19 +185,18 @@
     if (!d.insider || !d.insider.length) none(box, "해당 없음");
     else d.insider.forEach((t) => box.appendChild(el("div", { className: "line", textContent: t })));
 
-    // 주봉 하이킨아시 (월요일만)
-    box = section("주봉 하이킨아시 양봉 전환");
-    if (d.weeklyHA == null) none(box, "월요일 리포트에서만 계산돼요");
-    else {
-      if (!d.weeklyHA.items.length) none(box, "조건 부합 종목 없음");
-      else { const c = el("div", { className: "chips" }); d.weeklyHA.items.forEach((t) => c.appendChild(el("span", { className: "chip", textContent: t }))); box.appendChild(c); }
+    // 주봉 하이킨아시 (월요일만) - 결과가 있을 때만 표시
+    if (d.weeklyHA && d.weeklyHA.items && d.weeklyHA.items.length) {
+      box = section("주봉 하이킨아시 양봉 전환");
+      const c = el("div", { className: "chips" }); d.weeklyHA.items.forEach((t) => c.appendChild(el("span", { className: "chip", textContent: t }))); box.appendChild(c);
       if (d.weeklyHA.failed) box.appendChild(el("div", { className: "note", textContent: "조회 실패 " + d.weeklyHA.failed + "종목 제외" }));
     }
 
-    // 오늘 실적 발표
-    box = section("오늘 실적 발표");
-    if (!d.earnings || !d.earnings.length) none(box, "일정 없음");
-    else { const c = el("div", { className: "chips" }); d.earnings.forEach((t) => c.appendChild(el("span", { className: "chip", textContent: t }))); box.appendChild(c); }
+    // 오늘 실적 발표 - 있을 때만 표시
+    if (d.earnings && d.earnings.length) {
+      box = section("오늘 실적 발표");
+      const c = el("div", { className: "chips" }); d.earnings.forEach((t) => c.appendChild(el("span", { className: "chip", textContent: t }))); box.appendChild(c);
+    }
 
     view.appendChild(el("div", { className: "note", textContent: "기준 " + (d.updated ? new Date(d.updated).toLocaleString("ko-KR") : "-") + " · 투자 판단의 참고용이며 스크립트가 실행될 때만 갱신돼요." }));
     const msg = document.getElementById("reportMsg");
