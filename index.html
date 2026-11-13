@@ -538,6 +538,15 @@
     .pkMore .pkWatch { display: block; width: 100%; margin: 10px 0 0; padding: 11px; font-size: 13px; }
     .pkMoreBtn { display: block; width: 100%; margin: 14px 0 4px; padding: 13px; font-size: 14px; font-weight: 700; border: none; border-radius: 14px; background: var(--card2); color: var(--txt); }
     html[data-theme="light"] .pkMore { background: #f2f4f8; }
+
+    .pkGrpBox { display: block !important; position: relative; margin: 8px 0 6px; }
+    .pkGrpBtn { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 16px; font-size: 14px; font-weight: 800; border: none; border-radius: 14px; background: var(--card); color: var(--txt); }
+    .pkGrpBtn .arr { color: var(--sub); transition: transform .2s; } .pkGrpBtn.open .arr { transform: rotate(180deg); }
+    .pkGrpMenu { margin-top: 6px; max-height: 52vh; overflow-y: auto; background: var(--card); border-radius: 14px; padding: 6px; }
+    .pkGrpMenu button { display: block; width: 100%; text-align: left; padding: 12px 12px; margin: 0; font-size: 14px; font-weight: 700; border: none; border-radius: 10px; background: none; color: var(--txt); }
+    .pkGrpMenu button.on { background: var(--card2); color: var(--accent); }
+    html[data-theme="light"] .pkGrpBtn, html[data-theme="light"] .pkGrpMenu { background: #fff; box-shadow: 0 1px 2px rgba(25,40,70,.12); }
+    html[data-theme="light"] .pkGrpMenu button.on { background: #eef1f6; color: #191f28; }
 </style>
 </head>
 <body>
@@ -1192,10 +1201,22 @@
       pickData.forEach((x) => { if (x.g && (x.tag || []).length) cnt[x.g] = (cnt[x.g] || 0) + 1; });
       pickGroupOrder = {}; pickGroupList.forEach((g) => { pickGroupOrder[g] = 1; });
       if (pickGroup && !cnt[pickGroup]) pickGroup = "";
-      const mk = (label, val) => { const b = mkEl("button", val === pickGroup ? "on" : "", label); b.onclick = () => { pickGroup = val; renderGroups(); renderPicks(); }; box.appendChild(b); };
-      mk("전체 분야", "");
-      (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => { if (cnt[g]) mk(g + " " + cnt[g], g); });
+      const items = [["전체 분야", ""]];
+      (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => { if (cnt[g]) items.push([g + " " + cnt[g], g]); });
+      const curLabel = (items.find((i) => i[1] === pickGroup) || items[0])[0];
+      box.className = "pkGrpBox";
+      const btn = mkEl("button", "pkGrpBtn"); btn.appendChild(mkEl("span", null, "분야 · " + curLabel)); btn.appendChild(mkEl("span", "arr", "▾"));
+      const menu = mkEl("div", "pkGrpMenu"); menu.style.display = pkGrpOpen ? "block" : "none";
+      if (pkGrpOpen) btn.classList.add("open");
+      items.forEach(([label, val]) => {
+        const b = mkEl("button", val === pickGroup ? "on" : "", label);
+        b.onclick = () => { pickGroup = val; pkGrpOpen = false; renderGroups(); renderPicks(); };
+        menu.appendChild(b);
+      });
+      btn.onclick = () => { pkGrpOpen = !pkGrpOpen; renderGroups(); };
+      box.appendChild(btn); box.appendChild(menu);
     }
+    let pkGrpOpen = false;
     function pickCard(x, showGroup, rank) {
       const c = mkEl("div", "pkCard pkRow");
       const main = mkEl("div", "pkMain");
@@ -2080,6 +2101,7 @@
       { id: "2026-11-14b", date: "11월 14일", title: "업데이트", items: [
         "추천 탭에서 바로 👀 관심 추가",
         "추천 목록 간결화 (10개씩 더보기)",
+        "추천 분야 선택을 ▾ 목록으로 정리",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
