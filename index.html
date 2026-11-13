@@ -621,6 +621,24 @@
     .ctaRow .pfS { grid-column: 2; font-size: 12px; }
     html[data-theme="light"] .ctaRow .pfI { background: #eef1f6; }
     html[data-theme="light"] .ctaRow .pfT { color: #191f28 !important; }
+
+    /* ===== 포트폴리오 현황: 박스 없이 읽기 쉬운 행 ===== */
+    #pfBox .secHead h3 { font-size: 18px; }
+    #pfCards { margin: 0 -16px; }
+    #pfCards .pfCard { background: none !important; border: none !important; border-radius: 0; padding: 20px 16px 16px; border-bottom: 8px solid var(--band); box-shadow: none !important; }
+    #pfCards .pfCard .top { align-items: center; }
+    #pfCards .pfCard .sym { font-size: 21px; font-weight: 800; color: var(--accent2); }
+    #pfCards .pfCard .px { font-size: 21px; font-weight: 800; }
+    #pfCards .pfBadge { display: inline-block; margin-top: 10px; font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
+    #pfCards .pfTags { margin-top: 8px; }
+    #pfCards .pfStats { gap: 0; margin-top: 16px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    #pfCards .pfStats div { background: none !important; padding: 0; text-align: left; border-radius: 0; }
+    #pfCards .pfStats div + div { border-left: 1px solid var(--line); padding-left: 16px; }
+    #pfCards .pfStats small { font-size: 12px; margin-bottom: 4px; }
+    #pfCards .pfStats b { font-size: 19px; font-weight: 800; }
+    #pfCards .pfMeta { margin-top: 12px; font-size: 13px; color: var(--sub); }
+    #pfInfo { font-size: 15px; font-weight: 800; margin: 14px 0 6px; }
+    html[data-theme="light"] #pfCards .pfCard { background: none !important; }
 </style>
 </head>
 <body>
@@ -1705,7 +1723,7 @@
 
           const dotUp = row.pnl != null ? row.pnl >= 0 : row.trendUp;
           card.appendChild(mk("div", "pfMeta",
-            "추세 " + (row.trendUp ? "UP" : "DOWN") + " " + (dotUp ? "🟢" : "🔴") +
+            "추세 " + (row.trendUp ? "상승" : "하락") +
             " · 추매구간 " + (row.buyZone ? fmt(row.buyZone) : "-")));
           body.appendChild(card);
         });
@@ -2192,6 +2210,7 @@
         "커뮤 게시판 선택도 ▾ 목록으로",
         "커뮤 피드 토스 스타일로",
         "내 종목·관심 종목 행 목록으로 정리",
+        "포트폴리오 현황 읽기 쉽게 정리",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
