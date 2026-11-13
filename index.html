@@ -661,6 +661,33 @@
     .pkMid .pkTag { margin-top: 8px; line-height: 1.5; }
     .pkRt .pkPx { margin-bottom: 4px; }
     .pkSlider .pkPage .pkRow:first-child { padding-top: 14px !important; }
+
+    /* ===== 구역을 "시트(패널)"로: 배경보다 밝은 둥근 면 + 사이 간격 ===== */
+    #homeView .blk, #frHold:not(:empty), #todayRec .recBox { background: var(--card); border-radius: 26px; margin: 0 -10px 14px !important; padding: 24px 18px 20px !important; border-top: none !important; position: relative; }
+    #homeView .blk::before, #frHold::before, #todayRec .recBox::before, .secDiv::before { display: none !important; }
+    #homeView .blk .secDiv { margin: 0 0 10px !important; padding: 0 !important; border: none !important; }
+    #homeView .blk .secDiv + .blk, #homeView .blk + .blk { margin-top: 0; }
+    #frHold .frSec { margin: 0 0 12px !important; }
+    #homeView .blk input, #homeView .blk select, #todayRec .recBox .recRow { background: var(--card2); }
+    #homeView .ctaRow .pfCta { background: var(--card2); }
+    #homeView .ctaRow .pfI { background: var(--card); }
+    #homeView #srRow #analyze { background: var(--card2); }
+    #homeView #srRow #symbol { background: var(--card2); border: none; }
+    #homeView .blk #wAdd { }
+    #pfCards { margin: 0 -18px; }
+    #pfCards .pfCard { border-bottom: 8px solid var(--bg) !important; }
+    #list .frRow { border-top-color: var(--line); }
+    #homeView .blk .frOn { background: var(--card2); }
+    #frHold .frCard { background: var(--card2) !important; }
+    html[data-theme="light"] #homeView .blk, html[data-theme="light"] #frHold:not(:empty), html[data-theme="light"] #todayRec .recBox { box-shadow: 0 1px 3px rgba(25,40,70,.08); }
+    html[data-theme="light"] #homeView .ctaRow .pfI { background: #fff; }
+
+    #homeView .ctaRow { gap: 8px; }
+    #homeView .ctaRow .pfCta { padding: 12px 10px; column-gap: 8px; }
+    #homeView .ctaRow .pfI { width: 36px; height: 36px; font-size: 20px; border-radius: 12px; }
+    #homeView .ctaRow .pfT { font-size: 14px; white-space: nowrap; }
+    #homeView .ctaRow .pfS { font-size: 11.5px; white-space: nowrap; }
+    #frHold .frSlider { margin: 4px -18px 0; padding: 0 18px 4px; scroll-padding: 0 18px; }
 </style>
 </head>
 <body>
@@ -697,6 +724,7 @@
     </div>
 
     <div id="holdingsBox" style="display:none">
+      <div class="blk">
       <h3 class="srH">종목 검색</h3>
       <div class="row" id="srRow">
         <input id="symbol" placeholder="🔍 이름 또는 티커 검색" autocomplete="off" autocapitalize="off">
@@ -724,13 +752,17 @@
         <p id="pfInfo"></p>
         <div id="pfCharts"></div>
       </div>
+      </div>
 
+      <div class="blk">
       <div class="secHead secDiv">
         <h3>내 보유 종목</h3>
       </div>
       <div id="list"></div>
       <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
+      </div>
 
+      <div class="blk">
       <div class="secHead secDiv"><h3>👀 관심 종목</h3></div>
       <div class="alertHint" style="margin:0 0 8px">목표가에 닿으면 알림이 오고, 매수·매도·저점 신호가 뜨면 개장 전·마감 후에 같이 알려드려요.</div>
       <div class="row" id="wRow">
@@ -740,6 +772,7 @@
       </div>
       <div id="wMsg" class="alertHint"></div>
       <div id="wList"></div>
+      </div>
       <div id="todayRec"></div>
 
       <div id="frHold"></div>
@@ -2250,6 +2283,7 @@
         "내 종목·관심 종목 행 목록으로 정리",
         "포트폴리오 현황 읽기 쉽게 정리",
         "친구 종목을 옆으로 넘겨서 한 명씩 보기",
+        "구역을 둥근 패널로 나눠서 구분이 확실해졌어요",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
