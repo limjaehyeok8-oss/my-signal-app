@@ -329,6 +329,13 @@
     .mktChip { font-size: 11px; font-weight: 700; padding: 5px 9px; border-radius: 999px; background: var(--card2); color: var(--sub); white-space: nowrap; }
     .mktChip.on { color: var(--accent); } .mktChip.ext { color: var(--accent2); }
     .topBar #setBtn { width: 34px; height: 34px; padding: 0; margin: 0; border-radius: 50%; font-size: 16px; line-height: 1; flex-shrink: 0; }
+    #apkPop { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.55); display: none; align-items: flex-end; justify-content: center; }
+    #apkPop .box { width: 100%; max-width: 520px; background: var(--card); border-radius: 24px 24px 0 0; padding: 22px 20px 26px; }
+    #apkPop h3 { margin: 0 0 8px; font-size: 18px; }
+    #apkPop p { margin: 0 0 16px; font-size: 14px; line-height: 1.55; color: var(--sub); }
+    #apkPop a.go { display: block; text-align: center; background: #3182f6; color: #fff; text-decoration: none; font-weight: 800; font-size: 16px; padding: 14px; border-radius: 14px; }
+    #apkPop .sub { display: flex; justify-content: space-between; margin-top: 12px; }
+    #apkPop .sub button { background: none; border: none; color: var(--sub); font-size: 13px; padding: 6px 2px; }
     .setRow { background: var(--card); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
     .setRow h4 { margin: 0 0 10px; font-size: 14px; color: var(--sub); }
     .setOpts { display: flex; gap: 8px; }
@@ -511,6 +518,15 @@
     <div class="botTop"><button id="botBack">← 뒤로</button><b>🤖 시뮬봇</b><span style="width:60px"></span></div>
     <div class="botNote">가상 매매예요. 실제 거래가 아니에요.</div>
     <div id="botBody"></div>
+  </div>
+
+  <div id="apkPop">
+    <div class="box">
+      <h3>📲 앱으로 설치하세요</h3>
+      <p>설치하면 홈 화면에서 바로 열 수 있어요.<br>받은 파일을 열고 <b>'이 출처 허용'</b>을 누르면 설치돼요.</p>
+      <a class="go" id="apkGo" href="https://github.com/limjaehyeok8-oss/my-signal-app/releases/download/apk/signal.apk">APK 받기</a>
+      <div class="sub"><button id="apkLater">나중에</button><button id="apkNever">다시 안 보기</button></div>
+    </div>
   </div>
 
   <div id="setView" class="botView">
@@ -708,7 +724,9 @@
         log("등록 중… 알림 허용 창이 뜨면 '허용'을 눌러 주세요");
         let permission;
         try { permission = await Notification.requestPermission(); } catch (e) { return log("알림 권한을 물어보지 못했어요: " + e.message + " — 크롬(Chrome)으로 열어주세요."); }
-        if (permission === "denied") return log("알림이 '차단'으로 돼 있어요. 주소창 왼쪽 자물쇠(또는 ⋮ → 설정 → 사이트 및 다운로드 → 알림)에서 이 사이트 알림을 '허용'으로 바꾸고 새로고침하세요.");
+        if (permission === "denied") return log(/Android/i.test(navigator.userAgent)
+          ? "알림이 '차단'으로 돼 있어요. 오른쪽 위 ⋮ → 'Chrome에서 열기'를 누른 뒤, 주소창 왼쪽 자물쇠 → 권한 → 알림을 '허용'으로 바꾸고 새로고침하세요. (한 번 허용하면 이 앱에서도 적용돼요)"
+          : "알림이 '차단'으로 돼 있어요. 주소창 왼쪽 자물쇠에서 이 사이트 알림을 '허용'으로 바꾸고 새로고침하세요.");
         if (permission !== "granted") return log("알림 허용 창을 그냥 닫으셨어요. 다시 눌러서 '허용'을 선택해 주세요. (비밀 모드에서는 안 돼요)");
         log("등록 중… (10초쯤 걸릴 수 있어요)");
         return init();
@@ -1587,6 +1605,14 @@
       };
       const inApk = (document.referrer || "").indexOf("android-app://") === 0;      // APK 앱 안에서 열린 경우
       if (isAndroid && !standalone && !inApk) { $("instApk").style.display = "block"; showBar(); }
+      // 안드로이드 브라우저로 처음 들어오면 APK 받기 창을 바로 띄움 (설정 안 들어가도 됨)
+      if (isAndroid && !standalone && !inApk && !lsGet("sigApkNo") && !sessionStorage.getItem("apkLater")) {
+        const pop = $("apkPop"); pop.style.display = "flex";
+        const close = () => { pop.style.display = "none"; };
+        $("apkGo").onclick = () => { lsSet("sigApkNo", true); setTimeout(close, 300); };
+        $("apkLater").onclick = () => { try { sessionStorage.setItem("apkLater", "1"); } catch (e) {} close(); };
+        $("apkNever").onclick = () => { lsSet("sigApkNo", true); close(); };
+      }
       if (isIOS) showBar();                                   // 아이폰은 설치 신호가 따로 없어서 안내만
       window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; showBar(); });
       window.addEventListener("appinstalled", () => { deferred = null; bar.style.display = "none"; const m = $("installMsg"); if (m) m.textContent = "설치됐어요"; });
