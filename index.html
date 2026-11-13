@@ -420,6 +420,18 @@
     .frRow .sub { grid-column: 1 / -1; grid-row: 2; margin-left: 0; font-size: 12px; }
     .frCard .alertHint { margin: 0 0 8px; font-size: 12px; }
     .frCard .alertHint:empty { display: none; }
+    #frHold { margin-top: 30px; padding-top: 4px; border-top: 1px solid var(--line); }
+    #frHold .frSec { margin-top: 18px; }
+    #frHold .frSec h3 { font-size: 17px; }
+    #frHold .frCard { background: var(--card2); padding-top: 12px; }
+    #frHold .frCard .frRow { border-top-color: rgba(128,128,128,.22); }
+    .frWho { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .frAv { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0; }
+    .frR { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .frArr { color: var(--sub); font-size: 14px; transition: transform .15s; }
+    .frCard.closed .frArr { transform: rotate(180deg); }
+    .frCard.closed > :not(.frName) { display: none; }
+    #frHold .frName { cursor: pointer; margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -941,12 +953,20 @@
       }
       hold.textContent = "";
       if (fh && fh.ok && fh.friends.length) {
-        hold.appendChild(mkEl("div", "secHead")).appendChild(mkEl("h3", null, "👥 친구들의 종목"));
+        hold.appendChild(mkEl("div", "secHead frSec")).appendChild(mkEl("h3", null, "👥 친구들의 종목 · " + fh.friends.length + "명"));
         fh.friends.forEach((f) => {
           const card = mkEl("div", "frCard");
           const nm = mkEl("div", "frName");
-          nm.appendChild(document.createTextNode(f.name));
-          nm.appendChild(mkEl("span", "frOn" + (f.on === false ? " off" : ""), f.on === false ? "○ 알림 꺼짐" : "● 알림 켜짐"));
+          const nmL = mkEl("span", "frWho");
+          let hh = 0; for (const ch of String(f.name)) hh = (hh * 31 + ch.charCodeAt(0)) % 360;
+          const av = mkEl("span", "frAv", String(f.name).trim().slice(-1)); av.style.background = "hsl(" + hh + ",45%,38%)";
+          nmL.appendChild(av); nmL.appendChild(mkEl("span", null, f.name));
+          nm.appendChild(nmL);
+          const nmR = mkEl("span", "frR");
+          nmR.appendChild(mkEl("span", "frOn" + (f.on === false ? " off" : ""), f.on === false ? "○ 알림 꺼짐" : "● 알림 켜짐"));
+          nmR.appendChild(mkEl("span", "frArr", "⌃"));
+          nm.appendChild(nmR);
+          nm.onclick = () => card.classList.toggle("closed");
           card.appendChild(nm);
           f.holdings.forEach((x) => {
             const row = mkEl("div", "frRow"); row.dataset.xsym = x.symbol;
