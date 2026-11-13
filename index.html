@@ -1235,7 +1235,8 @@
       // 눌러서 펼치면: 점수·이유·관심 추가
       const more = mkEl("div", "pkMore"); more.style.display = "none";
       more.appendChild(mkEl("div", "pkSc", "점수 " + x.sc + (x.cls ? " · " + x.cls : "")));
-      const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n")); why.style.whiteSpace = "pre-wrap"; more.appendChild(why);
+      const wl = (x.why || []).filter((w) => !/일반 매수 신호가 떴어요/.test(w));   // 태그와 겹치는 문구는 숨김
+      if (wl.length) { const why = mkEl("div", "pkWhy", wl.map((w) => "• " + w).join("\n")); why.style.whiteSpace = "pre-wrap"; more.appendChild(why); }
       const wb = mkEl("button", "pkWatch", "👀 관심 종목에 추가");
       wb.onclick = async (e) => {
         e.stopPropagation(); wb.disabled = true; wb.textContent = "추가 중…";
