@@ -653,7 +653,7 @@
     function renderToggle() {
       if (!myToken) { toggleBtn.textContent = "알림 받기"; return; }
       toggleBtn.textContent = paused ? "알림 켜기" : "알림 끄기";
-      log(paused ? "알림이 꺼져 있어요 (보유 종목은 그대로 남아 있어요)" : "알림이 켜져 있어요");
+      log(paused ? "알림이 꺼져 있어요 (보유 종목은 그대로 남아 있어요)" : "");
     }
 
     toggleBtn.onclick = async () => {
