@@ -499,6 +499,18 @@
     .noteTitle { font-size: 17px; font-weight: 800; margin: 4px 0 8px; }
     .noteUl { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.7; color: var(--txt); }
     #noteView h3 { margin: 4px 0 12px; font-size: 18px; }
+
+    .tabWrap { position: relative; }
+    .tabWrap .mainTabs { padding-right: 46px; }
+    #tabMore { position: absolute; right: 0; top: 2px; width: 40px; height: 40px; padding: 0; border: none; border-radius: 50%; font-size: 16px; background: var(--card2); color: var(--txt); box-shadow: -14px 0 12px 2px var(--bg); }
+    #tabMore.open { transform: rotate(180deg); }
+    #tabMenu { display: none; position: absolute; left: 0; right: 0; top: 48px; z-index: 30; background: var(--card); border-radius: 18px; padding: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+    #tabMenu.open { display: block; }
+    #tabMenu button { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 14px 14px; margin: 0; font-size: 15px; font-weight: 700; text-align: left; border: none; border-radius: 12px; background: none; color: var(--txt); }
+    #tabMenu button.on { background: var(--card2); color: var(--accent); }
+    html[data-theme="light"] #tabMore { background: #fff; box-shadow: -14px 0 12px 2px var(--bg), 0 1px 2px rgba(25,40,70,.12); }
+    html[data-theme="light"] #tabMenu { background: #fff; box-shadow: 0 12px 32px rgba(25,40,70,.2); }
+    html[data-theme="light"] #tabMenu button.on { background: #eef1f6; color: #191f28; }
 </style>
 </head>
 <body>
@@ -509,6 +521,7 @@
     <a id="instApk" href="https://github.com/limjaehyeok8-oss/my-signal-app/releases/download/apk/signal.apk" style="display:none;flex-basis:100%;color:var(--accent2);font-weight:700;text-decoration:none">📦 안드로이드는 APK 파일로 설치 (받은 뒤 열기 → '이 출처 허용')</a>
   </div>
 
+  <div class="tabWrap">
   <div class="mainTabs">
     <button id="tabHome" class="on">📈 내 종목</button>
     <button id="tabPick">🔎 추천</button>
@@ -517,6 +530,9 @@
     <button id="tabCoin">🪙 코인</button>
     <button id="tabBt">🧪 백테스트</button>
     <button id="tabNote">📢 공지<i id="noteDot"></i></button>
+  </div>
+  <button id="tabMore" aria-label="전체 탭 보기">▾</button>
+  <div id="tabMenu"></div>
   </div>
 
   <!-- ===== 탭 1: 내 종목 ===== -->
@@ -2015,6 +2031,9 @@
     // ================= 공지 탭 (업데이트 내역) =================
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
+      { id: "2026-11-14b", date: "11월 14일", title: "탭 전체 보기", items: [
+        "탭 오른쪽 ▾ 버튼을 누르면 모든 탭이 아래로 펼쳐져요",
+        "📢 공지 탭이 생겼어요 (업데이트 내역)" ] },
       { id: "2026-11-14", date: "11월 14일", title: "화면이 더 깔끔해졌어요", items: [
         "🔔 받은 알림은 상단 종 버튼을 누르면 별도 화면으로 열려요",
         "🔄 상단에 새로고침 버튼이 생겼어요",
@@ -2053,6 +2072,25 @@
       renderNotes(); try { localStorage.setItem("sigNoteSeen", NOTES[0].id); } catch (e) {} noteUnread();
     }
     $("tabNote").onclick = showNote; noteUnread();
+
+
+    // 탭 전체 보기 드롭다운 (▾)
+    (function () {
+      const menu = $("tabMenu"), more = $("tabMore");
+      function build() {
+        menu.textContent = "";
+        document.querySelectorAll(".mainTabs button").forEach((b) => {
+          const m = mkEl("button", b.classList.contains("on") ? "on" : "", b.textContent.trim());
+          m.onclick = () => { close(); b.click(); };
+          menu.appendChild(m);
+        });
+      }
+      function close() { menu.classList.remove("open"); more.classList.remove("open"); }
+      more.onclick = (e) => { e.stopPropagation(); if (menu.classList.contains("open")) return close(); build(); menu.classList.add("open"); more.classList.add("open"); };
+      document.addEventListener("click", (e) => { if (!menu.contains(e.target)) close(); });
+      // 선택된 탭이 가려져 있으면 보이게 스크롤
+      document.querySelector(".mainTabs").addEventListener("click", () => setTimeout(() => { const on = document.querySelector(".mainTabs button.on"); if (on) on.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); }, 0));
+    })();
 
     // ================= 백테스트 탭 =================
     function showBt() {
