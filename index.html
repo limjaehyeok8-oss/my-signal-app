@@ -1375,7 +1375,7 @@
           nm.appendChild(nmR);
           card.appendChild(nm);
           f.holdings.forEach((x) => {
-            const row = mkEl("div", "frRow"); row.dataset.xsym = x.symbol;
+            const row = mkEl("div", "frRow"); row.dataset.xsym = x.symbol; if (x.avgPrice != null) row.dataset.avg = x.avgPrice; row.dataset.px = x.price;
             const sym = mkEl("span", "sym", x.symbol);
             sym.onclick = () => { symbolEl.value = x.symbol; analyze(x.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); };
             row.appendChild(sym);
@@ -1813,7 +1813,7 @@
       card.appendChild(meNm);
       r.holdings.forEach((h) => {
         const wrap = mkEl("div");
-        const row = mkEl("div", "frRow"); row.dataset.xsym = h.symbol;
+        const row = mkEl("div", "frRow"); row.dataset.xsym = h.symbol; if (h.avgPrice != null) row.dataset.avg = h.avgPrice; row.dataset.px = h.price;
         const sym = mkEl("span", "sym", h.symbol);
         sym.onclick = (e) => { e.stopPropagation(); symbolEl.value = h.symbol; analyze(h.symbol); };
         row.appendChild(sym);
@@ -2412,6 +2412,7 @@
         "구역을 둥근 패널로 나눠서 구분이 확실해졌어요",
         "내 종목 화면을 옆으로 넘겨서 내 종목·관심·추천·친구 보기",
         "종목 분석을 핵심만 요약 (나머지는 자세히 보기)",
+        "프리·애프터장엔 수익률을 현재 장 가격 기준으로 표시",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
@@ -2820,6 +2821,19 @@
 
     // ===== 🌙 장외(프리·애프터·데이장) 가격: 정규장이 아닐 때만 종목 아래에 한 줄로 표시 =====
     var extTimer = null;   // var: 시작하자마자 불릴 수 있어서
+    // 정규장이 아닐 땐 수익률·현재가를 종가 대신 현재(프리/애프터) 가격으로 보여줌
+    function applyExtPnl(el, x) {
+      if (!el.classList.contains("frRow") || !el.dataset.avg) return;
+      const avg = +el.dataset.avg, base = +el.dataset.px;
+      const pnl = el.querySelector(".pnl"), sub = el.querySelector(".sub:not(.extLine)");
+      if (!pnl || !sub) return;
+      const px = x && x.px ? +x.px : base;
+      const p = avg > 0 ? (px / avg - 1) * 100 : null;
+      if (p == null) return;
+      pnl.textContent = (p >= 0 ? "+" : "") + p.toFixed(1) + "%";
+      pnl.className = "pnl " + (p >= 0 ? "up" : "down");
+      sub.textContent = "평단 " + fmt(avg) + " · 현재 " + fmt(px) + (x ? " (" + x.sess + ")" : "");
+    }
     function loadExt() {
       clearTimeout(extTimer);
       extTimer = setTimeout(() => {
@@ -2832,6 +2846,7 @@
           document.querySelectorAll("[data-xsym]").forEach((el) => {
             const x = r.px[el.dataset.xsym];
             let line = el.dataset.xin ? el.querySelector(".extLine") : (el.nextElementSibling && el.nextElementSibling.classList.contains("extLine") ? el.nextElementSibling : null);
+            applyExtPnl(el, x && x.sess !== "정규장" ? x : null);
             if (!x || x.sess === "정규장") { if (line) line.remove(); return; }
             if (!line) { line = mkEl(el.dataset.xin ? "span" : "div", el.dataset.xin ? "sub extLine" : "alertHint extLine"); if (el.dataset.xin) el.appendChild(line); else el.insertAdjacentElement("afterend", line); }
             line.textContent = "🌙 " + x.sess + " $" + fmt(x.px) + (x.chg != null ? " (종가 대비 " + (x.chg >= 0 ? "+" : "") + x.chg.toFixed(1) + "%)" : "") + " · " + x.at;
