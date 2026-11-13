@@ -711,6 +711,23 @@
     #frHold .frCard .alertHint { margin: 4px 0 10px; line-height: 1.6; }
     #todayRec .recRow { padding: 16px 0; }
     #todayRec .recBox .alertHint { margin-bottom: 14px; line-height: 1.65; }
+
+    /* ===== 묶음 카드: 종목 하나 = 둥근 카드 하나 (나열 느낌 제거) ===== */
+    #list .frCard > div:not(.frName) { background: var(--card2); border-radius: 18px; padding: 16px 16px 14px; margin: 0 0 10px; }
+    #list .frRow { border-top: none !important; padding: 0 !important; row-gap: 6px; }
+    #list .frRow .pnl, #list .frRow .pnl.up, #list .frRow .pnl.down { }
+    #list .frCard .alertHint { margin: 8px 0 0; }
+    #list .frCard .alertHint:empty { display: none; }
+    #list .frCard .frName { margin-bottom: 12px; }
+    #wList .wItem { background: var(--card2); border-radius: 18px; padding: 16px 16px 14px !important; margin: 0 0 10px !important; border: none !important; align-items: flex-start; }
+    #wList .wItem:first-child { border-top: none !important; }
+    #wList .wItem button { background: var(--card); }
+    #list .frCard > div:not(.frName) .pnl { background: var(--card); }
+    #list .frCard > div:not(.frName) .pnl.up { background: rgba(255,90,106,.16); }
+    #list .frCard > div:not(.frName) .pnl.down { background: rgba(91,168,255,.16); }
+    #homeView #wRow { margin-top: 6px; }
+    html[data-theme="light"] #list .frCard > div:not(.frName), html[data-theme="light"] #wList .wItem { background: #f2f4f8; }
+    html[data-theme="light"] #wList .wItem button { background: #fff; }
 </style>
 </head>
 <body>
