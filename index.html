@@ -1287,9 +1287,9 @@
       return c;
     }
     // 목록: 처음엔 10개만, "더보기"로 10개씩 늘림
-    function appendLimited(list, arr, showGroup, key) {
+    function appendLimited(list, arr, showGroup, key, noRank) {
       const n = pickShown[key] || 10;
-      arr.slice(0, n).forEach((x, i) => list.appendChild(pickCard(x, showGroup, i + 1)));
+      arr.slice(0, n).forEach((x, i) => list.appendChild(pickCard(x, showGroup, noRank ? 0 : i + 1)));
       if (arr.length > n) {
         const mb = mkEl("button", "pkMoreBtn", "더보기 (" + (arr.length - n) + "개 남음)");
         mb.onclick = () => { pickShown[key] = n + 10; renderPicks(); };
@@ -1322,11 +1322,9 @@
       const lt2 = pickGroup ? lts.filter((x) => x.g === pickGroup) : lts;
       if (lt2.length) {
         const hr = document.createElement("div");
-        hr.style.cssText = "border-top:2px solid #3c4256;margin:22px 0 14px";
+        hr.style.cssText = "border-top:8px solid var(--band);margin:18px -16px 4px";
         list.appendChild(hr);
-        list.appendChild(mkEl("h3", null, "🌱 장기 저점 후보"));
-        list.appendChild(mkEl("div", "alertHint", "하락장에서 ☘️ 저점매수가 여러 번 뜬 종목이에요. 3번째 이상이면 큰 저점이었던 적이 많지만, 검증된 규칙은 아니에요."));
-        appendLimited(list, lt2, false, "lt" + pickGroup);
+        appendLimited(list, lt2, false, "lt" + pickGroup, true);
       }
     }
     let pickPoll = 0, pickTimer = null;
