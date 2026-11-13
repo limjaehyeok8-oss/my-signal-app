@@ -486,6 +486,8 @@
     .mainTabs button.on { background: var(--accent) !important; color: #06130d !important; }
     html[data-theme="light"] .mainTabs button { background: #fff !important; box-shadow: 0 1px 2px rgba(25,40,70,.12); color: #5b6b80 !important; }
     html[data-theme="light"] .mainTabs button.on { background: #191f28 !important; color: #fff !important; }
+
+    #anaClose { display: block; margin: 0 0 8px auto; padding: 6px 12px; font-size: 12px; font-weight: 700; border-radius: 999px; border: none; background: var(--card2); color: var(--sub); width: auto; }
 </style>
 </head>
 <body>
@@ -527,6 +529,7 @@
       <div id="results"></div>
 
       <div id="analysis">
+        <button id="anaClose" aria-label="분석 닫기">✕ 닫기</button>
         <img id="chartImg" alt="차트">
         <pre id="analysisText"></pre>
         <div id="anaStrat" class="btRec" style="display:none"></div>
@@ -1230,6 +1233,7 @@
     $("tabPick").onclick = showPick;
 
     let analyzeSeq = 0;
+    $("anaClose").onclick = () => { analyzeSeq++; $("analysis").style.display = "none"; };
     async function analyze(symbol) {
       symbol = String(symbol || "").trim().toUpperCase();
       if (!symbol) return log("종목을 입력하거나 검색해서 선택하세요");
