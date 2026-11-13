@@ -471,9 +471,9 @@
     .btAll > summary { padding: 14px 16px; background: var(--card); border-radius: 14px; font-weight: 700; font-size: 14px; cursor: pointer; list-style: none; }
     .btAll[open] > summary { margin-bottom: 4px; }
     #btOut .btRec { margin-top: 10px; }
-    .topBar .topR { gap: 5px; }
+    .topBar .topR { gap: 4px; } .topBar #refBtn, .topBar #bellBtn, .topBar #setBtn { width: 32px; height: 32px; }
     .topBar #toggle { padding: 7px 11px; }
-    .topBar #bellBtn { position: relative; width: 34px; height: 34px; padding: 0; margin: 0; border-radius: 50%; font-size: 15px; line-height: 1; flex-shrink: 0; }
+    .topBar #refBtn, .topBar #bellBtn { position: relative; width: 34px; height: 34px; padding: 0; margin: 0; border-radius: 50%; font-size: 15px; line-height: 1; flex-shrink: 0; }
     #alertCnt { display: none; position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 99px;
                 background: #ff4d5e; color: #fff; font: 700 10px/16px sans-serif; align-items: center; justify-content: center; font-style: normal; }
     .topBar > span:first-child { font-size: 18px; }
@@ -481,7 +481,7 @@
 </style>
 </head>
 <body>
-  <h2 class="topBar"><span><span class="tIco">📈 </span><span class="gt">주식 알리미</span></span><span class="topR"><span id="mktChip" class="mktChip"></span><button id="toggle">알림 받기</button><button id="bellBtn" aria-label="받은 알림">🔔<i id="alertCnt"></i></button><button id="setBtn" aria-label="설정">⚙️</button></span></h2>
+  <h2 class="topBar"><span><span class="tIco">📈 </span><span class="gt">주식 알리미</span></span><span class="topR"><button id="refBtn" aria-label="새로고침">🔄</button><span id="mktChip" class="mktChip"></span><button id="toggle">알림 받기</button><button id="bellBtn" aria-label="받은 알림">🔔<i id="alertCnt"></i></button><button id="setBtn" aria-label="설정">⚙️</button></span></h2>
   <div id="instBar" style="display:none">
     <span id="instTxt">📲 홈 화면에 앱으로 설치할 수 있어요</span>
     <span><button id="instGo">설치</button><button id="instX" aria-label="닫기">✕</button></span>
@@ -992,6 +992,7 @@
       } catch (e) { none(); }
     }
     $("alertRefresh").onclick = loadAlerts;
+    $("refBtn").onclick = () => { $("refBtn").style.opacity = ".5"; location.reload(); };
     $("bellBtn").onclick = () => {
       alViewOpen = true; $("alertView").style.display = "block"; history.pushState({ al: 1 }, "");
       if (alLatest) lsSet("sigAlSeen", alLatest); setBadge(0); loadAlerts();
