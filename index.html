@@ -639,6 +639,16 @@
     #pfCards .pfMeta { margin-top: 12px; font-size: 13px; color: var(--sub); }
     #pfInfo { font-size: 15px; font-weight: 800; margin: 14px 0 6px; }
     html[data-theme="light"] #pfCards .pfCard { background: none !important; }
+
+    /* 친구 종목: 한 명씩 옆으로 넘겨 보기 */
+    .frSlider { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; align-items: flex-start; margin: 4px -16px 0; padding: 0 16px 4px; scroll-padding: 0 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    .frSlider::-webkit-scrollbar { display: none; }
+    .frSlider .frCard { flex: 0 0 100%; box-sizing: border-box; scroll-snap-align: center; margin-top: 0; }
+    .frDots { display: flex; justify-content: center; gap: 6px; margin: 10px 0 2px; }
+    .frDots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); display: block; cursor: pointer; transition: all .15s; }
+    .frDots i.on { width: 18px; border-radius: 3px; background: var(--accent); }
+    .frSwipeHint { text-align: center; margin: 4px 0 0; font-size: 11px; }
+    #frHold .frName { cursor: default; }
 </style>
 </head>
 <body>
@@ -1180,6 +1190,7 @@
       hold.textContent = "";
       if (fh && fh.ok && fh.friends.length) {
         hold.appendChild(mkEl("div", "secHead frSec")).appendChild(mkEl("h3", null, "👥 친구들의 종목 · " + fh.friends.length + "명"));
+        const slider = mkEl("div", "frSlider");
         fh.friends.forEach((f) => {
           const card = mkEl("div", "frCard");
           const nm = mkEl("div", "frName");
@@ -1190,9 +1201,7 @@
           nm.appendChild(nmL);
           const nmR = mkEl("span", "frR");
           nmR.appendChild(mkEl("span", "frOn" + (f.on === false ? " off" : ""), f.on === false ? "○ 알림 꺼짐" : "● 알림 켜짐"));
-          nmR.appendChild(mkEl("span", "frArr", "⌃"));
           nm.appendChild(nmR);
-          nm.onclick = () => card.classList.toggle("closed");
           card.appendChild(nm);
           f.holdings.forEach((x) => {
             const row = mkEl("div", "frRow"); row.dataset.xsym = x.symbol;
@@ -1206,8 +1215,16 @@
             bd.dataset.fsym = x.symbol;
             card.appendChild(bd);
           });
-          hold.appendChild(card);
+          slider.appendChild(card);
         });
+        hold.appendChild(slider);
+        if (fh.friends.length > 1) {                                  // 점 표시 + 옆으로 넘기기 안내
+          const dots = mkEl("div", "frDots");
+          fh.friends.forEach((f, i) => { const d = mkEl("i", i === 0 ? "on" : ""); d.onclick = () => slider.scrollTo({ left: slider.clientWidth * i, behavior: "smooth" }); dots.appendChild(d); });
+          hold.appendChild(dots);
+          slider.addEventListener("scroll", () => { const i = Math.round(slider.scrollLeft / Math.max(1, slider.clientWidth)); [...dots.children].forEach((d, k) => d.classList.toggle("on", k === i)); }, { passive: true });
+          hold.appendChild(mkEl("div", "alertHint frSwipeHint", "← 옆으로 넘겨서 다음 친구 보기 →"));
+        }
         const cb = lsGet("sigFBadges");
         if (cb) hold.querySelectorAll("[data-fsym]").forEach((el) => { el.textContent = cb[el.dataset.fsym] || ""; });
         api({ action: "friendStates", token: myToken }).then((sr) => {
@@ -2211,6 +2228,7 @@
         "커뮤 피드 토스 스타일로",
         "내 종목·관심 종목 행 목록으로 정리",
         "포트폴리오 현황 읽기 쉽게 정리",
+        "친구 종목을 옆으로 넘겨서 한 명씩 보기",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
