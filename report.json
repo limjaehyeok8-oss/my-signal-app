@@ -1,7 +1,7 @@
 {
-  "updated": "2026-11-13T08:14:44+09:00",
+  "updated": "2026-11-14T08:11:45+09:00",
   "sentiment": {
-    "score": 39,
+    "score": 38,
     "rating": "fear",
     "label": "😨 공포"
   },
@@ -21,50 +21,50 @@
     },
     "base": {
       "20": {
-        "mean": 0.0114,
-        "win": 0.684
+        "mean": 0.0113,
+        "win": 0.6838
       },
       "60": {
         "mean": 0.034,
-        "win": 0.7706
+        "win": 0.7704
       }
     },
     "text": "과거 공포 22일째 도달 26회: 20일 후 +3.2%(승률 85%) · 60일 후 +4.9%(승률 73%)\n전체 평균 20일 +1.1% / 60일 +3.4% → 평균보다 좋았던 구간"
   },
   "macro": {
     "lines": [
-      "10년물 금리 5.10% (+10bp) · ⚠️ 위험 구간",
-      "VIX 18.7 · 안정",
-      "WTI $88.81 (+2.63%) · ⚠️ 인플레 우려",
-      "금 $3,884 (-2.92%) / 달러인덱스 103.17 (+0.25%)",
-      "🚨 종합: 위험자산 비우호적 (경계 4개)"
+      "10년물 금리 5.15% (+5bp) · ⚠️ 위험 구간",
+      "VIX 19.3 · 안정",
+      "WTI $88.92 (+0.20%) · ⚠️ 인플레 우려",
+      "금 $3,888 (+0.06%) / 달러인덱스 103.41 (+0.23%)",
+      "🚨 종합: 위험자산 비우호적 (경계 3개)"
     ],
-    "score": 4
+    "score": 3
   },
   "strong": [
     {
       "symbol": "LLY",
-      "text": "LLY  3개월 +20.9%"
+      "text": "LLY  3개월 +22.0%"
     },
     {
       "symbol": "TMO",
-      "text": "TMO  3개월 +19.0%"
+      "text": "TMO  3개월 +19.7%"
     },
     {
-      "symbol": "ABBV",
-      "text": "ABBV  3개월 +18.8%"
+      "symbol": "PG",
+      "text": "PG  3개월 +19.4%"
     },
     {
       "symbol": "CME",
-      "text": "CME  3개월 +17.5%"
+      "text": "CME  3개월 +19.3%"
     },
     {
       "symbol": "BRK-B",
-      "text": "BRK-B  3개월 +17.0%"
+      "text": "BRK-B  3개월 +19.0%"
     }
   ],
   "value": {
-    "total": 29,
+    "total": 28,
     "items": [
       {
         "symbol": "SNDK",
@@ -75,11 +75,11 @@
         "star": false
       },
       {
-        "symbol": "TPL",
+        "symbol": "SMCI",
         "star": true
       },
       {
-        "symbol": "SMCI",
+        "symbol": "TPL",
         "star": true
       },
       {
@@ -87,11 +87,11 @@
         "star": true
       },
       {
-        "symbol": "FSLR",
+        "symbol": "WDC",
         "star": true
       },
       {
-        "symbol": "WDC",
+        "symbol": "FSLR",
         "star": true
       }
     ]
