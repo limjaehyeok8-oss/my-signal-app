@@ -523,6 +523,21 @@
     .pkWatch { margin-left: auto; padding: 5px 10px; font-size: 12px; font-weight: 700; border: none; border-radius: 999px; background: var(--card2); color: var(--accent); width: auto; }
     .pkWatch:disabled { color: var(--sub); }
     html[data-theme="light"] .pkWatch { background: #eef1f6; color: #191f28; }
+
+    /* 추천 목록: 한 줄 요약 행(토스 순위 목록 스타일) */
+    .pkCard.pkRow { background: none; border-radius: 0; padding: 14px 2px; margin: 0; border-bottom: 1px solid var(--line); }
+    .pkMain { display: flex; align-items: center; gap: 12px; }
+    .pkRank { width: 18px; font-weight: 800; color: var(--accent); font-size: 15px; text-align: center; flex: none; }
+    .pkMid { flex: 1; min-width: 0; }
+    .pkMid .sym { font-size: 16px; font-weight: 800; }
+    .pkMid .pkTag { font-size: 12px; color: var(--sub); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pkRt { text-align: right; flex: none; font-size: 13px; font-weight: 700; }
+    .pkRt .pkPx { font-size: 15px; font-weight: 800; }
+    .pkMore { margin-top: 10px; padding: 12px 14px; background: var(--card); border-radius: 14px; font-size: 13px; }
+    .pkMore .pkSc { color: var(--sub); font-weight: 700; margin-bottom: 6px; }
+    .pkMore .pkWatch { display: block; width: 100%; margin: 10px 0 0; padding: 11px; font-size: 13px; }
+    .pkMoreBtn { display: block; width: 100%; margin: 14px 0 4px; padding: 13px; font-size: 14px; font-weight: 700; border: none; border-radius: 14px; background: var(--card2); color: var(--txt); }
+    html[data-theme="light"] .pkMore { background: #f2f4f8; }
 </style>
 </head>
 <body>
@@ -1181,33 +1196,46 @@
       mk("전체 분야", "");
       (pickGroupList.length ? pickGroupList : Object.keys(cnt)).forEach((g) => { if (cnt[g]) mk(g + " " + cnt[g], g); });
     }
-    function pickCard(x, showGroup) {
-      const c = mkEl("div", "pkCard");
-      const top = mkEl("div", "pkTop");
+    function pickCard(x, showGroup, rank) {
+      const c = mkEl("div", "pkCard pkRow");
+      const main = mkEl("div", "pkMain");
+      if (rank) main.appendChild(mkEl("span", "pkRank", String(rank)));
+      const mid = mkEl("div", "pkMid");
       const sym = mkEl("span", "sym", x.s);
       sym.onclick = (e) => { e.stopPropagation(); showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
-      top.appendChild(sym);
-      top.appendChild(mkEl("span", null, fmt(x.p)));
-      top.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
-      top.appendChild(mkEl("span", "pkSc", "점수 " + x.sc + (x.cls ? " · " + x.cls : "")));
-      const wb = mkEl("button", "pkWatch", "👀 관심");
+      mid.appendChild(sym);
+      mid.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ") + (showGroup && x.g ? " · " + x.g : "")));
+      main.appendChild(mid);
+      const rt = mkEl("div", "pkRt");
+      rt.appendChild(mkEl("div", "pkPx", fmt(x.p)));
+      rt.appendChild(mkEl("div", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
+      main.appendChild(rt);
+      c.appendChild(main);
+      // 눌러서 펼치면: 점수·이유·관심 추가
+      const more = mkEl("div", "pkMore"); more.style.display = "none";
+      more.appendChild(mkEl("div", "pkSc", "점수 " + x.sc + (x.cls ? " · " + x.cls : "")));
+      const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n")); why.style.whiteSpace = "pre-wrap"; more.appendChild(why);
+      const wb = mkEl("button", "pkWatch", "👀 관심 종목에 추가");
       wb.onclick = async (e) => {
         e.stopPropagation(); wb.disabled = true; wb.textContent = "추가 중…";
-        try { const r = await api({ action: "addWatch", token: myToken, symbol: x.s }); if (r && r.ok) { wb.textContent = "✓ 추가됨"; loadWatch(true); } else { wb.textContent = (r && r.msg) || "추가 실패"; setTimeout(() => { wb.textContent = "👀 관심"; wb.disabled = false; }, 1800); } }
-        catch (err) { wb.textContent = "👀 관심"; wb.disabled = false; }
+        try { const r = await api({ action: "addWatch", token: myToken, symbol: x.s }); if (r && r.ok) { wb.textContent = "✓ 추가됨"; loadWatch(true); } else { wb.textContent = (r && r.msg) || "추가 실패"; setTimeout(() => { wb.textContent = "👀 관심 종목에 추가"; wb.disabled = false; }, 1800); } }
+        catch (err) { wb.textContent = "👀 관심 종목에 추가"; wb.disabled = false; }
       };
-      top.appendChild(wb);
-      c.appendChild(top);
-      c.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ")));
-      if (showGroup && x.g) c.appendChild(mkEl("div", "alertHint", x.g));
-      const why = mkEl("div", "pkWhy", (x.why || []).map((w) => "• " + w).join("\n"));
-      why.style.whiteSpace = "pre-wrap";
-      why.style.display = "none";
-      c.appendChild(why);
-      c.style.cursor = "pointer";
-      c.onclick = () => { why.style.display = why.style.display === "none" ? "block" : "none"; };
+      more.appendChild(wb); c.appendChild(more);
+      c.onclick = () => { more.style.display = more.style.display === "none" ? "block" : "none"; };
       return c;
     }
+    // 목록: 처음엔 10개만, "더보기"로 10개씩 늘림
+    function appendLimited(list, arr, showGroup, key) {
+      const n = pickShown[key] || 10;
+      arr.slice(0, n).forEach((x, i) => list.appendChild(pickCard(x, showGroup, i + 1)));
+      if (arr.length > n) {
+        const mb = mkEl("button", "pkMoreBtn", "더보기 (" + (arr.length - n) + "개 남음)");
+        mb.onclick = () => { pickShown[key] = n + 10; renderPicks(); };
+        list.appendChild(mb);
+      }
+    }
+    const pickShown = {};
     function renderPicks() {
       const list = $("pickList");
       list.textContent = "";
@@ -1222,12 +1250,11 @@
       if (pickFilter === "strong") items = items.filter((x) => x.sc >= 3);
       if (pickGroup) {
         const gi = items.filter((x) => x.g === pickGroup).sort((a, b) => b.sc - a.sc || b.ch - a.ch);
-        gi.slice(0, 15).forEach((x) => list.appendChild(pickCard(x)));
+        appendLimited(list, gi, false, "g:" + pickGroup + pickFilter);
       } else {                                                  // 전체 분야: 분야별 5개씩 고른 뒤 점수 높은 순으로 한 줄 정렬
         const c5 = {};
         items.sort((a, b) => b.sc - a.sc || b.ch - a.ch);
-        items.filter((x) => { c5[x.g] = (c5[x.g] || 0) + 1; return c5[x.g] <= 5; })
-          .forEach((x) => list.appendChild(pickCard(x, true)));
+        appendLimited(list, items.filter((x) => { c5[x.g] = (c5[x.g] || 0) + 1; return c5[x.g] <= 5; }), true, "all" + pickFilter);
       }
 
       // ===== 아래 칸: 장기 저점 후보 (☘️가 하락장에서 여러 번 뜬 종목) =====
@@ -1238,7 +1265,7 @@
         list.appendChild(hr);
         list.appendChild(mkEl("h3", null, "🌱 장기 저점 후보"));
         list.appendChild(mkEl("div", "alertHint", "하락장에서 ☘️ 저점매수가 여러 번 뜬 종목이에요. 3번째 이상이면 큰 저점이었던 적이 많지만, 검증된 규칙은 아니에요."));
-        lt2.forEach((x) => list.appendChild(pickCard(x)));
+        appendLimited(list, lt2, false, "lt" + pickGroup);
       }
     }
     let pickPoll = 0, pickTimer = null;
@@ -2052,6 +2079,7 @@
     const NOTES = [
       { id: "2026-11-14b", date: "11월 14일", title: "업데이트", items: [
         "추천 탭에서 바로 👀 관심 추가",
+        "추천 목록 간결화 (10개씩 더보기)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
