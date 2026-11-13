@@ -352,7 +352,7 @@
     .botView > * { max-width: 640px; margin-left: auto; margin-right: auto; }
     .botTop { position: sticky; top: 0; background: var(--bg); display: flex; align-items: center; justify-content: space-between; padding: 14px 0 10px; z-index: 2; }
     .botTop b { font-size: 17px; }
-    #botBack, #setBack { background: none; border: none; color: var(--sub); font-size: 15px; padding: 6px 0; width: 60px; text-align: left; }
+    #botBack, #setBack, #alertBack { background: none; border: none; color: var(--sub); font-size: 15px; padding: 6px 0; width: 60px; text-align: left; }
     .botNote { font-size: 12px; color: var(--sub); background: var(--card2); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; }
     .botCard { background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
     .botCard h4 { margin: 0 0 10px; font-size: 15px; }
@@ -471,10 +471,17 @@
     .btAll > summary { padding: 14px 16px; background: var(--card); border-radius: 14px; font-weight: 700; font-size: 14px; cursor: pointer; list-style: none; }
     .btAll[open] > summary { margin-bottom: 4px; }
     #btOut .btRec { margin-top: 10px; }
+    .topBar .topR { gap: 5px; }
+    .topBar #toggle { padding: 7px 11px; }
+    .topBar #bellBtn { position: relative; width: 34px; height: 34px; padding: 0; margin: 0; border-radius: 50%; font-size: 15px; line-height: 1; flex-shrink: 0; }
+    #alertCnt { display: none; position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 99px;
+                background: #ff4d5e; color: #fff; font: 700 10px/16px sans-serif; align-items: center; justify-content: center; font-style: normal; }
+    .topBar > span:first-child { font-size: 18px; }
+    @media (max-width: 370px) { .topBar > span:first-child .tIco { display: none; } }
 </style>
 </head>
 <body>
-  <h2 class="topBar"><span>📈 <span class="gt">주식 알리미</span></span><span class="topR"><span id="mktChip" class="mktChip"></span><button id="toggle">알림 받기</button><button id="setBtn" aria-label="설정">⚙️</button></span></h2>
+  <h2 class="topBar"><span><span class="tIco">📈 </span><span class="gt">주식 알리미</span></span><span class="topR"><span id="mktChip" class="mktChip"></span><button id="toggle">알림 받기</button><button id="bellBtn" aria-label="받은 알림">🔔<i id="alertCnt"></i></button><button id="setBtn" aria-label="설정">⚙️</button></span></h2>
   <div id="instBar" style="display:none">
     <span id="instTxt">📲 홈 화면에 앱으로 설치할 수 있어요</span>
     <span><button id="instGo">설치</button><button id="instX" aria-label="닫기">✕</button></span>
@@ -502,12 +509,6 @@
     </div>
 
     <div id="holdingsBox" style="display:none">
-      <details id="alertBox" class="alertBox">
-        <summary>🔔 최근 받은 알림 <span id="alertCnt"></span></summary>
-        <div class="alertHint">알림을 실수로 지워도 여기서 다시 볼 수 있어요.</div>
-        <div id="alertList"><div class="alertHint">현재는 알림이 없어요</div></div>
-        <button id="alertRefresh" style="font-size:12px;padding:8px 10px;margin-top:8px">새로고침</button>
-      </details>
       <h3>종목 검색 · 분석 · 등록</h3>
       <div class="row" id="srRow">
         <input id="symbol" placeholder="이름 또는 티커" autocomplete="off" autocapitalize="off" style="flex:1;min-width:0">
@@ -600,6 +601,13 @@
       <a class="go" id="apkGo" style="background:var(--card2);color:var(--txt)" href="https://github.com/limjaehyeok8-oss/my-signal-app/releases/download/apk/signal.apk">APK 받기</a>
       <div class="sub"><button id="apkLater">나중에</button><button id="apkNever">다시 안 보기</button></div>
     </div>
+  </div>
+
+  <div id="alertView" class="botView">
+    <div class="botTop"><button id="alertBack">← 뒤로</button><b>🔔 받은 알림</b><span style="width:60px"></span></div>
+    <div class="alertHint" style="margin:0 0 10px">알림을 실수로 지워도 여기서 다시 볼 수 있어요. 최근 20개까지 보여줘요.</div>
+    <div id="alertList"><div class="alertHint">현재는 알림이 없어요</div></div>
+    <button id="alertRefresh" style="font-size:13px;padding:10px 14px;margin-top:12px">새로고침</button>
   </div>
 
   <div id="setView" class="botView">
@@ -959,16 +967,21 @@
     };
 
     // ===== 최근 받은 알림 (서버에 저장된 기록) =====
+    let alLatest = "", alViewOpen = false;
+    function setBadge(n) { const b = $("alertCnt"); b.textContent = n > 9 ? "9+" : String(n); b.style.display = n > 0 ? "flex" : "none"; }
     async function loadAlerts() {
       const list = $("alertList");
       if (!myToken) return;
-      const none = () => { list.textContent = ""; $("alertCnt").textContent = ""; list.appendChild(mkEl("div", "alertHint", "현재는 알림이 없어요")); };
+      const none = () => { list.textContent = ""; setBadge(0); list.appendChild(mkEl("div", "alertHint", "현재는 알림이 없어요")); };
       try {
         const r = await api({ action: "getAlerts", token: myToken, limit: 20 });
         // 서버가 아직 이 기능을 모르거나(알 수 없는 action) 실패해도, 오류 대신 '알림 없음'으로 보여줌
         if (!r || !r.ok || !r.alerts || !r.alerts.length) { none(); return; }
         list.textContent = "";
-        $("alertCnt").textContent = "(" + r.alerts.length + ")";
+        alLatest = r.alerts.map((a) => String(a.t)).sort().pop() || "";
+        const seen = lsGet("sigAlSeen") || "";
+        setBadge(alViewOpen ? 0 : r.alerts.filter((a) => String(a.t) > seen).length);
+        if (alViewOpen) lsSet("sigAlSeen", alLatest);
         r.alerts.forEach((a) => {
           const d = mkEl("div", "alItem");
           d.appendChild(mkEl("div", "alT", a.t));
@@ -979,7 +992,12 @@
       } catch (e) { none(); }
     }
     $("alertRefresh").onclick = loadAlerts;
-    $("alertBox").addEventListener("toggle", () => { if ($("alertBox").open) loadAlerts(); });
+    $("bellBtn").onclick = () => {
+      alViewOpen = true; $("alertView").style.display = "block"; history.pushState({ al: 1 }, "");
+      if (alLatest) lsSet("sigAlSeen", alLatest); setBadge(0); loadAlerts();
+    };
+    $("alertBack").onclick = () => history.back();
+    window.addEventListener("popstate", () => { alViewOpen = false; });
 
     // ===== 친구: 종목·평단 보기 =====
     function paintFriendsAndMe(fh, sr0) {
@@ -2570,7 +2588,7 @@
       body.appendChild(c5);
       body.appendChild(mkEl("div", "alertHint", "시작 " + won(b.startCash) + " · 최대 " + b.max + "종목(종목당 1/" + b.max + ") · 신호 다음 장 시가 체결 · 비용 " + b.fee + "%씩 · 환율 반영(원화 기준)"));
     }
-    function closeBot() { $("botView").style.display = "none"; $("setView").style.display = "none"; }
+    function closeBot() { $("botView").style.display = "none"; $("setView").style.display = "none"; $("alertView").style.display = "none"; }
     $("botBtn").onclick = () => {
       if (!myToken) { alert("먼저 '알림 받기'로 등록하세요"); return; }
       $("botView").style.display = "block"; history.pushState({ bot: 1 }, "");
