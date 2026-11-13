@@ -345,6 +345,15 @@
     .coinTop b { font-size: 16px; }
     .coinPx { font-size: 22px; font-weight: 800; margin-top: 4px; }
     .coinSub { font-size: 12px; color: var(--sub); margin-top: 4px; line-height: 1.6; }
+    .coinSug { display: none; position: absolute; left: 0; right: 0; top: 100%; z-index: 6; background: var(--card2); border-radius: 12px; margin-top: 4px; max-height: 260px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+    .coinSug div { padding: 11px 14px; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+    .coinSug div span { color: var(--sub); font-size: 12px; }
+    .coinVal { padding: 10px 0; border-top: 1px solid var(--card2); cursor: pointer; }
+    .coinVal .mkTip { display: none; } .coinVal.open .mkTip { display: block; }
+    #wRow { display: flex; gap: 8px; } #wRow input { flex: 1; min-width: 0; } #wRow button { white-space: nowrap; }
+    .wItem { background: var(--card); border-radius: 14px; padding: 12px 14px; margin: 8px 0 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .wItem b { font-size: 15px; } .wItem .sub { display: block; font-size: 12px; color: var(--sub); margin-top: 3px; line-height: 1.5; }
+    .wItem button { background: none; border: none; color: var(--sub); font-size: 16px; padding: 6px 8px; }
   </style>
 </head>
 <body>
@@ -405,6 +414,16 @@
       </div>
       <div id="list"></div>
       <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
+
+      <div class="secHead"><h3>👀 관심 종목</h3></div>
+      <div class="alertHint" style="margin:0 0 8px">목표가에 닿으면 알림이 오고, 매수·매도·저점 신호가 뜨면 개장 전·마감 후에 같이 알려드려요.</div>
+      <div class="row" id="wRow">
+        <input id="wSym" placeholder="티커 (예: NVDA)" style="text-transform:uppercase" autocomplete="off">
+        <input id="wTgt" type="number" step="any" inputmode="decimal" placeholder="목표가 $ (선택)">
+        <button id="wAdd">추가</button>
+      </div>
+      <div id="wMsg" class="alertHint"></div>
+      <div id="wList"></div>
 
       <div id="frHold"></div>
       <button id="botBtn" class="pfCta"><span class="pfT">🤖 시뮬봇 보러가기</span><span class="pfS" id="botBtnS">신호대로 가상 매매하는 봇의 성적을 확인하세요</span></button>
@@ -487,7 +506,24 @@
   <!-- ===== 탭 2: 공포탐욕지수 ===== -->
   <div id="coinView" style="display:none">
     <div class="secHead"><h3>🪙 코인</h3><span class="sub" id="coinUpd"></span></div>
+    <div style="position:relative;margin:0 0 10px">
+      <input id="coinQ" placeholder="🔎 코인 검색 (업비트·빗썸) — 이름이나 심볼" autocomplete="off" style="width:100%;box-sizing:border-box">
+      <div id="coinSug" class="coinSug"></div>
+    </div>
+    <div class="pkChips" id="coinFav" style="margin:0 0 10px"></div>
+    <div id="coinDet"></div>
     <div id="coinList"></div>
+    <details class="mkCard" id="coinGuide">
+      <summary style="font-weight:700;font-size:15px;cursor:pointer">📏 코인은 PER이 없는데, 뭘 보고 판단하나요?</summary>
+      <div class="mkP">주식은 회사가 버는 이익이 있어서 PER(주가÷이익)로 싼지 비싼지 봐요. 코인은 대부분 이익이 없어서 아래 기준들을 섞어서 봐요. 코인을 검색하면 계산할 수 있는 건 자동으로 계산해 보여줘요.</div>
+      <div class="mkP"><b>① 코인판 PER (시가총액 ÷ 1년 수수료)</b><br>사람들이 그 네트워크를 쓰면서 내는 수수료가 '매출'이에요. 배수가 낮을수록 쓰임새에 비해 싸요. 수수료가 거의 없는 코인(밈코인 등)은 이 기준으로는 값을 매길 수 없어요.</div>
+      <div class="mkP"><b>② 유통률 (풀린 물량 ÷ 전체 물량)</b><br>아직 안 풀린 물량이 많으면 앞으로 계속 시장에 나와 가격을 눌러요. 80% 이상이면 부담이 적고, 50% 아래면 주의해요.</div>
+      <div class="mkP"><b>③ 추세 배수 (현재가 ÷ 200일 평균)</b><br>0.8배 아래는 역사적으로 싼 구간, 2.4배 위는 과열로 보는 경험칙이에요. 비트코인에서 잘 맞았고 알트는 참고만 하세요.</div>
+      <div class="mkP"><b>④ 회전율 (하루 거래대금 ÷ 시가총액)</b><br>너무 낮으면 팔 때 안 팔리고, 너무 높으면 단타가 몰린 상태예요.</div>
+      <div class="mkP"><b>⑤ 비트코인만 보는 것</b><br>반감기(4년마다 새로 나오는 양이 절반), 온체인 지표(MVRV: 지금 가격 ÷ 사람들이 산 평균 가격) 등이 있어요. 이건 이 앱에서 아직 계산하지 않아요.</div>
+      <div class="mkP"><b>미래 가치를 볼 때 질문</b><br>· 실제로 쓰는 사람이 늘고 있나 (수수료·거래 수가 늘어나나)<br>· 물량이 앞으로 얼마나 더 풀리나<br>· 비슷한 일을 하는 경쟁 코인보다 왜 나은가<br>· 시가총액이 이미 너무 크지 않나 (10배 오르려면 시총이 얼마가 돼야 하나)</div>
+      <div class="mkP">이 숫자들은 참고용이에요. 코인은 주식보다 '심리와 유동성'에 훨씬 크게 움직여서, 지표가 좋아도 떨어질 수 있어요.</div>
+    </details>
   </div>
 
   <div id="fgView" style="display:none">
@@ -554,7 +590,7 @@
 
     // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
     const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
-                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120 };
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60 };
     const apiMemo = {};
     async function api(body) {
       const ttl = API_TTL[body.action];
@@ -1282,6 +1318,7 @@
       loadHoldings();
       loadAlerts();
       loadFriends();
+      loadWatch();
       api({ action: "getPicks", token: myToken }).catch(() => {});      // 추천·커뮤는 미리 받아둬서 탭을 열면 바로 뜸
       api({ action: "getPosts", token: myToken }).catch(() => {});
     }
@@ -1965,6 +2002,41 @@
     if (location.hash === "#comm") showComm();
 
 
+
+    // ===== 👀 관심 종목 =====
+    function paintWatch(r) {
+      const box = $("wList"); box.textContent = "";
+      if (!r || !r.ok) return;
+      r.items.forEach((x) => {
+        const it = mkEl("div", "wItem"), l = mkEl("div");
+        l.appendChild(mkEl("b", null, x.s + (x.px != null ? "  $" + fmt(x.px) : "")));
+        if (x.target) l.appendChild(mkEl("span", "sub", x.fired ? "🎯 목표가 $" + x.target + " 도달 (알림 보냄)" : "🎯 목표 $" + x.target + (x.dir === "down" ? " 이하" : " 이상") + (x.gap != null ? " · 앞으로 " + (x.gap >= 0 ? "+" : "") + x.gap + "%" : "")));
+        else l.appendChild(mkEl("span", "sub", "목표가 없음 · 신호만 알림"));
+        if (x.badge) l.appendChild(mkEl("span", "sub", x.badge));
+        it.appendChild(l);
+        const del = mkEl("button", null, "✕"); del.title = "관심 종목에서 빼기";
+        del.onclick = async () => { it.style.opacity = ".4"; try { await api({ action: "removeWatch", token: myToken, symbol: x.s }); } catch (e) {} loadWatch(true); };
+        it.appendChild(del); box.appendChild(it);
+      });
+    }
+    function loadWatch(fresh) {
+      if (!myToken) return;
+      const cw = lsGet("sigWatch"); if (cw && !fresh) paintWatch(cw);
+      if (fresh) Object.keys(apiMemo).forEach((k) => { if (k.indexOf("getWatch") > -1) delete apiMemo[k]; });
+      api({ action: "getWatch", token: myToken }).then((r) => { if (r && r.ok) { lsSet("sigWatch", r); paintWatch(r); } }).catch(() => {});
+    }
+    $("wAdd").onclick = async () => {
+      const s = $("wSym").value.trim().toUpperCase(), t = $("wTgt").value;
+      if (!s) { $("wMsg").textContent = "티커를 입력하세요 (예: NVDA)"; return; }
+      $("wAdd").disabled = true; $("wMsg").textContent = "추가하는 중…";
+      try {
+        const r = await api({ action: "addWatch", token: myToken, symbol: s, target: t });
+        $("wMsg").textContent = (r && r.msg) || (r && r.ok ? "추가됨" : "추가하지 못했어요");
+        if (r && r.ok) { $("wSym").value = ""; $("wTgt").value = ""; loadWatch(true); }
+      } catch (e) { $("wMsg").textContent = "오류: " + e.message; }
+      $("wAdd").disabled = false;
+    };
+
     // ===== 🌡️ 시장 점수 + PPI =====
     function paintMarket(r) {
       const box = $("mkBox"); box.textContent = "";
@@ -2028,6 +2100,68 @@
       const cc = lsGet("sigCoin"); if (cc && !$("coinList").childElementCount) paintCoins(cc);
       api({ action: "getCoins", token: myToken }).then((r) => { if (r && r.ok) lsSet("sigCoin", r); if ((r && r.ok) || !cc) paintCoins(r); }).catch(() => { if (!cc) paintCoins(null); });
     }
+
+    // ----- 알트코인 검색 (업비트·빗썸) -----
+    let coinMk = lsGet("sigCoinMk") || null, coinSel = "";
+    function loadCoinMarkets() {
+      if (!myToken) return;
+      api({ action: "getCoinMarkets", token: myToken }).then((r) => { if (r && r.ok) { coinMk = r.list; lsSet("sigCoinMk", r.list); } }).catch(() => {});
+    }
+    function coinFavs() { return lsGet("sigCoinFav") || []; }
+    function renderCoinFav() {
+      const box = $("coinFav"); box.textContent = "";
+      coinFavs().forEach((s) => { const b = mkEl("button", s === coinSel ? "on" : "", s); b.onclick = () => openCoin(s); box.appendChild(b); });
+    }
+    const krwFmt = (v) => v >= 100 ? Math.round(v).toLocaleString("ko-KR") : v >= 1 ? v.toFixed(2) : v.toPrecision(4);
+    function paintCoinDet(r, sym) {
+      const box = $("coinDet"); box.textContent = "";
+      const c = mkEl("div", "coinCard"); c.style.border = "1px solid #3182f6";
+      if (!r || !r.ok) { c.appendChild(mkEl("div", "alertHint", (r && r.msg) || sym + " 정보를 불러오지 못했어요.")); box.appendChild(c); return; }
+      const top = mkEl("div", "coinTop"); top.appendChild(mkEl("b", null, (r.name ? r.name + " " : "") + r.sym + " · " + r.ex)); top.appendChild(mkEl("b", null, "하루 " + cPct(r.d1))); c.appendChild(top);
+      c.appendChild(mkEl("div", "coinPx", krwFmt(r.krw) + "원"));
+      if (r.spark && r.spark.length > 1) {
+        const lo = Math.min(...r.spark), hi = Math.max(...r.spark), sp = (hi - lo) || 1, W = 320, H = 46;
+        const pts = r.spark.map((v, i) => (i * W / (r.spark.length - 1)).toFixed(1) + "," + (H - 3 - (v - lo) / sp * (H - 6)).toFixed(1)).join(" ");
+        const s = mkEl("div"); s.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:46px;display:block;margin-top:8px"><polyline points="' + pts + '" fill="none" stroke="#3182f6" stroke-width="2"/></svg>'; c.appendChild(s);
+      }
+      const bits = ["7일 " + cPct(r.d7), "30일 " + cPct(r.d30)];
+      if (r.vol24) bits.push("하루 거래대금 " + Math.round(r.vol24 / 1e8).toLocaleString("ko-KR") + "억원");
+      c.appendChild(mkEl("div", "coinSub", bits.join(" · ")));
+      const b2 = [];
+      if (r.rank) b2.push("시가총액 " + r.rank + "위" + (r.mcap ? " (" + (r.mcap >= 1e12 ? (r.mcap / 1e12).toFixed(1) + "조원" : Math.round(r.mcap / 1e8).toLocaleString("ko-KR") + "억원") + ")" : ""));
+      if (r.kimchi != null) b2.push("김치 프리미엄 " + (r.kimchi >= 0 ? "+" : "") + r.kimchi.toFixed(1) + "%");
+      if (r.other) b2.push(r.other.ex + " " + krwFmt(r.other.krw) + "원");
+      if (b2.length) c.appendChild(mkEl("div", "coinSub", b2.join(" · ")));
+      if (r.dayGreen != null) c.appendChild(mkEl("div", "coinSub", "평균 캔들: 일봉 " + (r.dayGreen ? "▲ 양봉" : "❗ 음봉") + (r.weekGreen != null ? " · 주봉 " + (r.weekGreen ? "▲ 양봉" : "❗ 음봉") : "")));
+      if (r.vals && r.vals.length) {
+        const hd = mkEl("div", "coinSub", "📏 가치 판단 지표 (누르면 설명)"); hd.style.cssText = "margin-top:12px;font-weight:700;color:inherit;font-size:13px"; c.appendChild(hd);
+        r.vals.forEach((v) => {
+          const row = mkEl("div", "coinVal");
+          const t = mkEl("div", "mkTop"); t.appendChild(mkEl("span", null, v.name)); t.appendChild(mkEl("span", null, v.val + (v.tag ? " (" + v.tag + ")" : ""))); row.appendChild(t);
+          row.appendChild(mkEl("div", "mkTip", v.tip)); row.onclick = () => row.classList.toggle("open"); c.appendChild(row);
+        });
+      } else c.appendChild(mkEl("div", "coinSub", "가치 지표는 지금 불러오지 못했어요 (시가총액 정보 없음)."));
+      const fav = coinFavs(), isFav = fav.indexOf(r.sym) > -1;
+      const fb = mkEl("button", null, isFav ? "★ 관심 코인에서 빼기" : "☆ 관심 코인에 추가"); fb.style.cssText = "margin-top:12px;font-size:13px;padding:9px 12px;width:100%";
+      fb.onclick = () => { const f = coinFavs().filter((x) => x !== r.sym); if (!isFav) f.unshift(r.sym); lsSet("sigCoinFav", f.slice(0, 12)); renderCoinFav(); paintCoinDet(r, sym); };
+      c.appendChild(fb);
+      box.appendChild(c);
+    }
+    function openCoin(sym) {
+      coinSel = sym; $("coinQ").value = ""; $("coinSug").style.display = "none"; renderCoinFav();
+      const box = $("coinDet"); box.textContent = ""; box.appendChild(mkEl("div", "alertHint", sym + " 불러오는 중…"));
+      api({ action: "getCoinDetail", token: myToken, sym }).then((r) => { if (coinSel === sym) paintCoinDet(r, sym); }).catch(() => { if (coinSel === sym) paintCoinDet(null, sym); });
+    }
+    $("coinQ").addEventListener("input", () => {
+      const q = $("coinQ").value.trim().toLowerCase(), sug = $("coinSug"); sug.textContent = "";
+      if (!q) { sug.style.display = "none"; return; }
+      const hits = (coinMk || []).filter((m) => m[0].toLowerCase().indexOf(q) === 0 || m[1].toLowerCase().indexOf(q) > -1 || m[2].toLowerCase().indexOf(q) > -1)
+        .sort((a, b) => (a[0].toLowerCase() === q ? -1 : 0) - (b[0].toLowerCase() === q ? -1 : 0)).slice(0, 12);
+      hits.forEach((m) => { const d = mkEl("div"); d.appendChild(document.createTextNode(m[1] + " " + m[0])); d.appendChild(mkEl("span", null, m[3] === "UB" ? "업비트·빗썸" : m[3] === "U" ? "업비트" : "빗썸")); d.onclick = () => openCoin(m[0]); sug.appendChild(d); });
+      if (!hits.length) { const d = mkEl("div"); d.textContent = /^[a-z0-9]{2,15}$/.test(q) ? q.toUpperCase() + " 로 바로 찾기" : "찾는 코인이 없어요"; if (/^[a-z0-9]{2,15}$/.test(q)) d.onclick = () => openCoin(q.toUpperCase()); sug.appendChild(d); }
+      sug.style.display = "block";
+    });
+    $("coinQ").addEventListener("keydown", (e) => { if (e.key === "Enter") { const f = $("coinSug").firstChild; if (f && f.onclick) f.onclick(); } });
     function showCoin() {
       ["homeView", "fgView", "btView", "pickView", "commView"].forEach((id) => { $(id).style.display = "none"; });
       const rv = document.getElementById("reportView"); if (rv) rv.style.display = "none";
@@ -2035,7 +2169,7 @@
       $("tabCoin").className = "on";
       $("coinView").style.display = "block";
       history.replaceState(null, "", "#coin");
-      loadCoins();
+      loadCoins(); loadCoinMarkets(); renderCoinFav();
       clearInterval(coinTimer);
       coinTimer = setInterval(() => { if ($("coinView").style.display === "block" && !document.hidden) loadCoins(); }, 45000);
     }
