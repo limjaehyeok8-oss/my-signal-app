@@ -2412,7 +2412,7 @@
         "구역을 둥근 패널로 나눠서 구분이 확실해졌어요",
         "내 종목 화면을 옆으로 넘겨서 내 종목·관심·추천·친구 보기",
         "종목 분석을 핵심만 요약 (나머지는 자세히 보기)",
-        "프리·애프터장엔 수익률을 현재 장 가격 기준으로 표시",
+        "수익률·현재가를 실시간(20초마다) 갱신, 프리·애프터장은 그 시간 가격 기준",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
@@ -2832,7 +2832,7 @@
       if (p == null) return;
       pnl.textContent = (p >= 0 ? "+" : "") + p.toFixed(1) + "%";
       pnl.className = "pnl " + (p >= 0 ? "up" : "down");
-      sub.textContent = "평단 " + fmt(avg) + " · 현재 " + fmt(px) + (x ? " (" + x.sess + ")" : "");
+      sub.textContent = "평단 " + fmt(avg) + " · 현재 " + fmt(px) + (x && x.sess !== "정규장" ? " (" + x.sess + ")" : "");
     }
     function loadExt() {
       clearTimeout(extTimer);
@@ -2846,7 +2846,8 @@
           document.querySelectorAll("[data-xsym]").forEach((el) => {
             const x = r.px[el.dataset.xsym];
             let line = el.dataset.xin ? el.querySelector(".extLine") : (el.nextElementSibling && el.nextElementSibling.classList.contains("extLine") ? el.nextElementSibling : null);
-            applyExtPnl(el, x && x.sess !== "정규장" ? x : null);
+            applyExtPnl(el, x || null);
+            if (x && el.dataset.xin) { const bb = el.querySelector("b"); if (bb) bb.textContent = el.dataset.xsym + "  $" + fmt(x.px); }
             if (!x || x.sess === "정규장") { if (line) line.remove(); return; }
             if (!line) { line = mkEl(el.dataset.xin ? "span" : "div", el.dataset.xin ? "sub extLine" : "alertHint extLine"); if (el.dataset.xin) el.appendChild(line); else el.insertAdjacentElement("afterend", line); }
             line.textContent = "🌙 " + x.sess + " $" + fmt(x.px) + (x.chg != null ? " (종가 대비 " + (x.chg >= 0 ? "+" : "") + x.chg.toFixed(1) + "%)" : "") + " · " + x.at;
@@ -2854,6 +2855,15 @@
         }).catch(() => {});
       }, 700);
     }
+
+
+    // 실시간 느낌: 화면이 보이는 동안 20초마다 현재가·수익률 갱신
+    setInterval(() => {
+      if (document.visibilityState !== "visible" || !myToken) return;
+      const hv = $("homeView"); if (!hv || hv.style.display === "none") return;
+      Object.keys(apiMemo).forEach((k) => { if (k.indexOf("getExtPrices") > -1) delete apiMemo[k]; });
+      loadExt();
+    }, 20000);
 
     // ===== 👀 관심 종목 =====
     // ===== 💡 오늘 매수 신호 종목 추천 (추천 탭 데이터 재사용) =====
