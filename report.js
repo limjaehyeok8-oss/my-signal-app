@@ -82,14 +82,17 @@
   const pctTxt = (v) => v == null ? "-" : (v >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
   const winTxt = (v) => v == null ? "-" : (v * 100).toFixed(0) + "%";
 
+  // 종목을 누르면 내 종목 탭에서 바로 분석을 열어요
+  function openAnalysis(symbol) {
+    const th = document.getElementById("tabHome"); if (th) th.click();
+    const inp = document.getElementById("symbol"); if (inp) inp.value = symbol;
+    if (typeof analyze === "function") analyze(symbol);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   function chip(symbol, text) {
     const ok = /^[A-Z0-9.\-]{1,10}$/.test(symbol);
-    const a = el(ok ? "a" : "span", { className: "chip", textContent: text });
-    if (ok) {
-      a.href = "https://finviz.com/quote.ashx?t=" + encodeURIComponent(symbol);
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-    }
+    const a = el("span", { className: "chip", textContent: text });
+    if (ok) { a.style.cursor = "pointer"; a.onclick = () => openAnalysis(symbol); }
     return a;
   }
 
@@ -161,8 +164,8 @@
     else if (!d.strong.length) none(box, "조건 부합 종목 없음");
     else d.strong.forEach((s) => {
       const row = el("div", { className: "rRow" });
-      const l = el("a", { className: "rL", textContent: s.symbol }); l.style.color = "var(--accent2)"; l.style.textDecoration = "none";
-      if (/^[A-Z0-9.\-]{1,10}$/.test(s.symbol)) { l.href = "https://finviz.com/quote.ashx?t=" + encodeURIComponent(s.symbol); l.target = "_blank"; l.rel = "noopener noreferrer"; }
+      const l = el("span", { className: "rL", textContent: s.symbol }); l.style.color = "var(--accent2)";
+      if (/^[A-Z0-9.\-]{1,10}$/.test(s.symbol)) { l.style.cursor = "pointer"; row.style.cursor = "pointer"; row.onclick = () => openAnalysis(s.symbol); }
       const m = /(\d+개월)\s*([+\-][\d.]+%)/.exec(s.text || "");
       const rr = el("div", { className: "rR " + (m && m[2][0] === "-" ? "down" : "up"), textContent: m ? m[2] : s.text });
       if (m) rr.appendChild(el("small", { textContent: m[1] + " 수익률" }));
