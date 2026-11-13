@@ -420,7 +420,6 @@
     .frRow .sub { grid-column: 1 / -1; grid-row: 2; margin-left: 0; font-size: 12px; }
     .frCard .alertHint { margin: 0 0 8px; font-size: 12px; }
     .frCard .alertHint:empty { display: none; }
-    #frHold { margin-top: 30px; padding-top: 4px; border-top: 1px solid var(--line); }
     #frHold .frSec { margin-top: 18px; }
     #frHold .frSec h3 { font-size: 17px; }
     #frHold .frCard { background: var(--card2); padding-top: 12px; }
@@ -434,11 +433,6 @@
     #frHold .frName { cursor: pointer; margin-bottom: 4px; }
     .frAv, .cmAv { background-repeat: no-repeat; }
     #frMe .frAv { width: 48px; height: 48px; }
-    /* 구역 사이 구분선 (친구 구역과 같은 스타일) */
-    .secDiv { margin-top: 30px !important; padding-top: 18px; border-top: 1px solid var(--line); }
-    #todayRec .recBox { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); }
-    #todayRec:empty { display: none; }
-    #holdingsBox > h3:first-of-type { margin-top: 6px; }
     /* 화이트 모드: 배경은 살짝 어둡게, 카드는 흰색 + 옅은 그림자로 구분 */
     html[data-theme="light"] .frCard, html[data-theme="light"] .pfCta, html[data-theme="light"] .recRow, html[data-theme="light"] .wItem,
     html[data-theme="light"] .mkCard, html[data-theme="light"] .cmCard, html[data-theme="light"] .cmBox, html[data-theme="light"] .setRow,
@@ -448,7 +442,6 @@
     html[data-theme="light"] #frHold .frCard { background: #ffffff; }
     html[data-theme="light"] #frHold .frCard .frRow { border-top-color: #e3e8ef; }
     html[data-theme="light"] .mainTabs { border-bottom-color: #cfd6e0; }
-    html[data-theme="light"] .secDiv, html[data-theme="light"] #frHold, html[data-theme="light"] #todayRec .recBox { border-top-color: #c9d1dc; }
     html[data-theme="light"] .mktChip { background: #fff; box-shadow: 0 1px 2px rgba(25,40,70,.12); }
     html[data-theme="light"] input, html[data-theme="light"] select, html[data-theme="light"] textarea { border-color: #c9d1dc; }
     /* 공포·탐욕 그래프: 어두운 화면에서도 보이게 */
@@ -458,6 +451,19 @@
     html[data-theme="light"] .fgBand { opacity: .16; }
     .ind .track { background: rgba(128,128,128,.30); }
     svg#fgSpark { height: 140px; }
+    /* ===== 토스 스타일 구역 구분: 구역 사이에 화면 폭 전체 굵은 띠 ===== */
+    :root { --band: #070a0d; }
+    html[data-theme="light"] { --band: #cdd4de; }
+    .secDiv, #frHold, #todayRec .recBox {
+      margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px;
+      border-top: 10px solid var(--band); }
+    .secDiv { margin-top: 30px !important; padding-top: 22px; }
+    #frHold { margin-top: 30px; padding-top: 22px; }
+    #frHold .frSec { margin-top: 0; }
+    #todayRec .recBox { margin-top: 30px; padding-top: 22px; }
+    #todayRec:empty { display: none; }
+    .secDiv h3, #frHold .frSec h3, .recBox h3 { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
+    .secDiv + .alertHint, .recBox > .alertHint { font-size: 13px; margin: 2px 0 12px !important; }
 </style>
 </head>
 <body>
