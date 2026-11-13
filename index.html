@@ -492,6 +492,13 @@
     body { overflow-x: clip; }
     #stResetAll { display: block; margin: 8px 0 0 auto; font-size: 11px; color: var(--sub); text-decoration: none; background: none; border: none; padding: 4px 0; width: auto; }
     .tinyRow { text-align: right; }
+
+    #noteDot { display: none; width: 7px; height: 7px; border-radius: 50%; background: #ff4d5e; margin-left: 4px; vertical-align: super; }
+    .noteCard { background: var(--card); border-radius: 18px; padding: 16px 18px; margin: 0 0 12px; }
+    .noteDate { font-size: 12px; color: var(--sub); font-weight: 700; }
+    .noteTitle { font-size: 17px; font-weight: 800; margin: 4px 0 8px; }
+    .noteUl { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.7; color: var(--txt); }
+    #noteView h3 { margin: 4px 0 12px; font-size: 18px; }
 </style>
 </head>
 <body>
@@ -509,6 +516,7 @@
     <button id="tabFg">🌡️ 시장</button>
     <button id="tabCoin">🪙 코인</button>
     <button id="tabBt">🧪 백테스트</button>
+    <button id="tabNote">📢 공지<i id="noteDot"></i></button>
   </div>
 
   <!-- ===== 탭 1: 내 종목 ===== -->
@@ -663,6 +671,8 @@
   </div>
 
   <!-- ===== 탭: 백테스트 ===== -->
+  <div id="noteView" style="display:none"><div id="noteList"></div></div>
+
   <div id="btView" style="display:none">
     <div class="row">
       <input id="btSymbol" placeholder="티커 (예: SOXL, NVDA)" autocomplete="off" autocapitalize="characters" style="flex:1;min-width:0">
@@ -2001,6 +2011,49 @@
       } catch (e) { restore("올리지 못했어요"); }
     };
 
+
+    // ================= 공지 탭 (업데이트 내역) =================
+    // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
+    const NOTES = [
+      { id: "2026-11-14", date: "11월 14일", title: "화면이 더 깔끔해졌어요", items: [
+        "🔔 받은 알림은 상단 종 버튼을 누르면 별도 화면으로 열려요",
+        "🔄 상단에 새로고침 버튼이 생겼어요",
+        "탭이 토스처럼 알약 모양으로 바뀌었어요",
+        "종목 분석 결과에 ✕ 닫기 버튼이 생겼어요",
+        "구역 사이 구분 띠가 화면 전체 폭으로 이어져요",
+        "용어·이모지 설명은 ⚙️ 설정으로 옮겼어요",
+        "백테스트는 상위 5개 전략만 먼저 보여주고 나머지는 펼쳐 볼 수 있어요" ] },
+      { id: "2026-11-13", date: "11월 13일", title: "새 기능", items: [
+        "내 프로필 사진을 넣을 수 있어요 (친구 목록·커뮤에 표시)",
+        "화이트 / 다크 모드 (⚙️ 설정)",
+        "상단에 현재 장 상태(정규장·프리장 등) 표시",
+        "내 종목 탭에 오늘의 매수 신호 추천이 나와요",
+        "추천 탭에 중소형·테마주 79종목 추가",
+        "종목 분석 글이 먼저 뜨고 차트는 뒤따라 붙어요 (더 빨라짐)",
+        "안드로이드 앱(APK) 설치 안내 팝업" ] },
+    ];
+    function renderNotes() {
+      const box = $("noteList"); box.textContent = "";
+      box.appendChild(mkEl("h3", "", "📢 업데이트 소식"));
+      NOTES.forEach((n, i) => {
+        const c = mkEl("div", "noteCard");
+        c.appendChild(mkEl("div", "noteDate", n.date + (i === 0 ? "  · 최신" : "")));
+        c.appendChild(mkEl("div", "noteTitle", n.title));
+        const ul = mkEl("ul", "noteUl"); n.items.forEach((t) => ul.appendChild(mkEl("li", "", t))); c.appendChild(ul);
+        box.appendChild(c);
+      });
+    }
+    function noteUnread() { let seen = ""; try { seen = localStorage.getItem("sigNoteSeen") || ""; } catch (e) {} $("noteDot").style.display = (seen !== NOTES[0].id) ? "inline-block" : "none"; }
+    function showNote() {
+      ["homeView", "fgView", "pickView", "btView", "commView", "coinView"].forEach((id) => { const e = document.getElementById(id); if (e) e.style.display = "none"; });
+      const rv = document.getElementById("reportView"); if (rv) rv.style.display = "none";
+      document.querySelectorAll(".mainTabs button").forEach((b) => b.className = "");
+      $("tabNote").className = "on"; $("noteView").style.display = "block";
+      history.replaceState(null, "", "#note");
+      renderNotes(); try { localStorage.setItem("sigNoteSeen", NOTES[0].id); } catch (e) {} noteUnread();
+    }
+    $("tabNote").onclick = showNote; noteUnread();
+
     // ================= 백테스트 탭 =================
     function showBt() {
       $("homeView").style.display = "none";
@@ -2017,6 +2070,7 @@
     // 다른 탭(리포트 포함)을 누르면 백테스트 화면 숨기기
     document.querySelector(".mainTabs").addEventListener("click", (e) => {
       const b = e.target.closest("button");
+      if (b && b.id !== "tabNote") { $("noteView").style.display = "none"; $("tabNote").className = ""; }
       if (b && b.id !== "tabBt") { $("btView").style.display = "none"; $("tabBt").className = ""; }
       if (b && b.id !== "tabComm") { $("commView").style.display = "none"; $("tabComm").className = ""; }
       if (b && b.id !== "tabPick") { $("pickView").style.display = "none"; $("tabPick").className = ""; }
@@ -2321,6 +2375,7 @@
       }
     };
     buildGlossary($("setGlos"));
+    if (location.hash === "#note") showNote();
     if (location.hash === "#bt") showBt();
     if (location.hash === "#pick") showPick();
     if (location.hash === "#comm") showComm();
