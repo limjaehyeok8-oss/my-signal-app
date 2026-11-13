@@ -312,7 +312,7 @@
     #commView .cmFoot { border-top: none; padding-top: 0; }
     #commView .cmHead .cmCat { margin: 0 0 0 auto; }
     #commView .cmHead .cmDel { margin-left: 6px; }
-    html[data-theme="light"] { --bg: #f4f6f9; --card: #ffffff; --card2: #eef1f5; --line: #dde3ea; --txt: #191f28; --sub: #6b7684;
+    html[data-theme="light"] { --bg: #e4e9f0; --card: #ffffff; --card2: #eff2f7; --line: #d3dae4; --txt: #191f28; --sub: #5b6573;
                                --accent: #0fa56c; --accent2: #3a6df0; --up: #e0364a; --down: #2f7de1; color-scheme: light; }
     html[data-theme="light"] input::placeholder, html[data-theme="light"] #commView textarea::placeholder { color: #9aa5b1; }
     html[data-theme="light"] .pfBadge.buy { background: rgba(15,165,108,.12); color: #0a8f5b; }
@@ -439,6 +439,18 @@
     #todayRec .recBox { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); }
     #todayRec:empty { display: none; }
     #holdingsBox > h3:first-of-type { margin-top: 6px; }
+    /* 화이트 모드: 배경은 살짝 어둡게, 카드는 흰색 + 옅은 그림자로 구분 */
+    html[data-theme="light"] .frCard, html[data-theme="light"] .pfCta, html[data-theme="light"] .recRow, html[data-theme="light"] .wItem,
+    html[data-theme="light"] .mkCard, html[data-theme="light"] .cmCard, html[data-theme="light"] .cmBox, html[data-theme="light"] .setRow,
+    html[data-theme="light"] .alertBox, html[data-theme="light"] .hold, html[data-theme="light"] .btCard, html[data-theme="light"] .pfCard,
+    html[data-theme="light"] .coinCard, html[data-theme="light"] .glos, html[data-theme="light"] .botCard, html[data-theme="light"] #instBar {
+      box-shadow: 0 1px 3px rgba(25,40,70,.10), 0 0 0 1px rgba(25,40,70,.04); }
+    html[data-theme="light"] #frHold .frCard { background: #ffffff; }
+    html[data-theme="light"] #frHold .frCard .frRow { border-top-color: #e3e8ef; }
+    html[data-theme="light"] .mainTabs { border-bottom-color: #cfd6e0; }
+    html[data-theme="light"] .secDiv, html[data-theme="light"] #frHold, html[data-theme="light"] #todayRec .recBox { border-top-color: #c9d1dc; }
+    html[data-theme="light"] .mktChip { background: #fff; box-shadow: 0 1px 2px rgba(25,40,70,.12); }
+    html[data-theme="light"] input, html[data-theme="light"] select, html[data-theme="light"] textarea { border-color: #c9d1dc; }
 </style>
 </head>
 <body>
