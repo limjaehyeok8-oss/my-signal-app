@@ -333,6 +333,8 @@
     #apkPop .box { width: 100%; max-width: 520px; background: var(--card); border-radius: 24px 24px 0 0; padding: 22px 20px 26px; }
     #apkPop h3 { margin: 0 0 8px; font-size: 18px; }
     #apkPop p { margin: 0 0 16px; font-size: 14px; line-height: 1.55; color: var(--sub); }
+    #apkPop .go { font-family: inherit; }
+    #apkPop button.go { display: block; text-align: center; background: #3182f6; color: #fff; font-weight: 800; font-size: 16px; padding: 14px; border-radius: 14px; }
     #apkPop a.go { display: block; text-align: center; background: #3182f6; color: #fff; text-decoration: none; font-weight: 800; font-size: 16px; padding: 14px; border-radius: 14px; }
     #apkPop .sub { display: flex; justify-content: space-between; margin-top: 12px; }
     #apkPop .sub button { background: none; border: none; color: var(--sub); font-size: 13px; padding: 6px 2px; }
@@ -525,7 +527,8 @@
     <div class="box">
       <h3>📲 앱으로 설치하세요</h3>
       <p>설치하면 홈 화면에서 바로 열 수 있어요.<br>받은 파일을 열고 <b>'이 출처 허용'</b>을 누르면 설치돼요.</p>
-      <a class="go" id="apkGo" href="https://github.com/limjaehyeok8-oss/my-signal-app/releases/download/apk/signal.apk">APK 받기</a>
+      <button class="go" id="apkInst" style="display:none;width:100%;border:none;margin-bottom:10px">앱 설치 (추천 · 알림도 바로 돼요)</button>
+      <a class="go" id="apkGo" style="background:var(--card2);color:var(--txt)" href="https://github.com/limjaehyeok8-oss/my-signal-app/releases/download/apk/signal.apk">APK 받기</a>
       <div class="sub"><button id="apkLater">나중에</button><button id="apkNever">다시 안 보기</button></div>
     </div>
   </div>
@@ -685,7 +688,12 @@
       return p;
     }
 
+    const NATIVE = !!window.AndroidApp;                     // 안드로이드 앱(APK) 안에서 열렸는지
     async function getMyToken() {
+      if (NATIVE) {                                          // 앱이 직접 받은 알림 주소를 가져옴
+        for (let i = 0; i < 40; i++) { const t = AndroidApp.getToken(); if (t) return t; await new Promise((r) => setTimeout(r, 500)); }
+        throw new Error("앱이 알림 주소를 아직 못 받았어요. 인터넷 연결을 확인하고 앱을 다시 열어 주세요");
+      }
       await fbReady;
       if (!messaging) throw new Error("이 브라우저는 푸시 알림을 지원하지 않아요 (아이폰은 홈 화면에 추가 후 열어주세요)");
       const reg = await navigator.serviceWorker.register("firebase-messaging-sw.js");
@@ -720,6 +728,16 @@
     }
 
     toggleBtn.onclick = async () => {
+      if (!myToken && NATIVE) {
+        if (!AndroidApp.notifGranted()) {
+          log("알림 허용 창이 뜨면 '허용'을 눌러 주세요");
+          AndroidApp.askNotif();
+          for (let i = 0; i < 40 && !AndroidApp.notifGranted(); i++) await new Promise((r) => setTimeout(r, 500));
+        }
+        if (!AndroidApp.notifGranted()) { log("알림이 꺼져 있어요. 열리는 설정에서 '알림 허용'을 켜고 돌아와 다시 눌러 주세요."); AndroidApp.openSettings(); return; }
+        log("등록 중… (10초쯤 걸릴 수 있어요)");
+        return init();
+      }
       if (!myToken) {
         if (typeof Notification === "undefined" || !("serviceWorker" in navigator)) return log("이 브라우저는 알림을 지원하지 않아요. 크롬(Chrome)으로 열어주세요. (아이폰은 홈 화면에 추가 후 열기)");
         log("등록 중… 알림 허용 창이 뜨면 '허용'을 눌러 주세요");
@@ -1608,12 +1626,15 @@
         if (deferred) { deferred.prompt(); try { await deferred.userChoice; } catch (e) {} deferred = null; bar.style.display = "none"; return; }
         $("instTxt").textContent = isIOS ? "아래 공유 버튼(□↑) → '홈 화면에 추가'를 눌러주세요" : isAndroid ? "오른쪽 위 ⋮ 메뉴 → '앱 설치' 또는 '홈 화면에 추가'를 눌러주세요" : "주소창 오른쪽의 설치 아이콘(⊕)을 눌러주세요";
       };
-      const inApk = (document.referrer || "").indexOf("android-app://") === 0;      // APK 앱 안에서 열린 경우
+      const inApk = (document.referrer || "").indexOf("android-app://") === 0 || /SignalApp/.test(ua);      // APK 앱 안에서 열린 경우
       if (isAndroid && !standalone && !inApk) { $("instApk").style.display = "block"; showBar(); }
       // 안드로이드 브라우저로 처음 들어오면 APK 받기 창을 바로 띄움 (설정 안 들어가도 됨)
       if (isAndroid && !standalone && !inApk && !lsGet("sigApkNo") && !sessionStorage.getItem("apkLater")) {
         const pop = $("apkPop"); pop.style.display = "flex";
         const close = () => { pop.style.display = "none"; };
+        const syncInst = () => { $("apkInst").style.display = "block"; };
+        syncInst(); window.addEventListener("beforeinstallprompt", () => setTimeout(syncInst, 0));
+        $("apkInst").onclick = async () => { if (!deferred) { $("apkInst").textContent = "오른쪽 위 ⋮ → '앱 설치' 또는 '홈 화면에 추가'를 눌러 주세요"; $("apkInst").style.fontSize = "14px"; return; } deferred.prompt(); try { await deferred.userChoice; } catch (e) {} deferred = null; close(); };
         $("apkGo").onclick = () => { lsSet("sigApkNo", true); setTimeout(close, 300); };
         $("apkLater").onclick = () => { try { sessionStorage.setItem("apkLater", "1"); } catch (e) {} close(); };
         $("apkNever").onclick = () => { lsSet("sigApkNo", true); close(); };
@@ -2373,7 +2394,7 @@
     try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { if (curTheme() === "auto") applyTheme("auto"); }); } catch (e) {}
     $("setBtn").onclick = () => { applyTheme(curTheme()); $("setView").style.display = "block"; history.pushState({ set: 1 }, ""); };
     $("setBack").onclick = () => history.back();
-    if (/Android/i.test(navigator.userAgent) && (document.referrer || "").indexOf("android-app://") !== 0) $("apkRow").style.display = "block";
+    if (/Android/i.test(navigator.userAgent) && !/SignalApp/.test(navigator.userAgent) && (document.referrer || "").indexOf("android-app://") !== 0) $("apkRow").style.display = "block";
     // ===== 현재 장 상태 (미국 시간 기준) =====
     function marketNow() {
       const f = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" });
