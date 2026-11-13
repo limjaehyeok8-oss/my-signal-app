@@ -653,6 +653,14 @@
     .pkSlider { margin: 0; padding: 0; scroll-padding: 0; gap: 0; }
     .pkSlider .pkPage { flex: 0 0 100%; box-sizing: border-box; scroll-snap-align: center; min-width: 0; }
     .pkSlider .pkPage .pkRow:last-child { border-bottom: none; }
+
+    /* 추천 행: 여백을 넉넉하게, 구분선은 얇고 연하게 */
+    .pkCard.pkRow { padding: 22px 2px !important; border-bottom: 1px solid var(--line); }
+    .pkMain { gap: 14px; }
+    .pkMid .pkHead { gap: 8px; row-gap: 6px; }
+    .pkMid .pkTag { margin-top: 8px; line-height: 1.5; }
+    .pkRt .pkPx { margin-bottom: 4px; }
+    .pkSlider .pkPage .pkRow:first-child { padding-top: 14px !important; }
 </style>
 </head>
 <body>
