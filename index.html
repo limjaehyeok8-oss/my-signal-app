@@ -552,6 +552,9 @@
     .pkBadge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--card2); color: var(--sub); white-space: nowrap; }
     .pkBadge.cls { color: var(--accent2); }
     html[data-theme="light"] .pkBadge { background: #eef1f6; }
+
+    #commView .cmTabs.pkGrpBox { overflow: visible; display: block; }
+    #commView #cmCats { flex-wrap: wrap !important; overflow-x: visible !important; }
 </style>
 </head>
 <body>
@@ -1944,12 +1947,21 @@
     // ================= 커뮤 탭 =================
     const CM_CATS = [["free", "💬 자유"], ["chart", "📈 차트분석"], ["pick", "🎯 종목추천"], ["ask", "❓ 질문"], ["info", "📰 정보·뉴스"], ["log", "📓 매매일지"]];
     const CM_LABEL = {}; CM_CATS.forEach(([k, l]) => { CM_LABEL[k] = l; });
-    let cmTab = "all", cmPickCat = "free";
+    let cmTab = "all", cmPickCat = "free", cmMenuOpen = false;
     function renderCmChips() {
       const tabs = $("cmTabs"); tabs.textContent = "";
-      [["all", "전체"], ["pop", "🔥 인기"]].concat(CM_CATS).forEach(([k, l]) => {
-        const b = mkEl("button", k === cmTab ? "on" : "", l); b.onclick = () => { cmTab = k; renderCmChips(); loadPosts(); }; tabs.appendChild(b);
+      const all = [["all", "전체"], ["pop", "🔥 인기"]].concat(CM_CATS);
+      const curL = (all.find((i) => i[0] === cmTab) || all[0])[1];
+      tabs.classList.add("pkGrpBox");
+      const btn = mkEl("button", "pkGrpBtn" + (cmMenuOpen ? " open" : "")); btn.appendChild(mkEl("span", null, "게시판 · " + curL)); btn.appendChild(mkEl("span", "arr", "▾"));
+      const menu = mkEl("div", "pkGrpMenu"); menu.style.display = cmMenuOpen ? "block" : "none";
+      all.forEach(([k, l]) => {
+        const b = mkEl("button", k === cmTab ? "on" : "", l);
+        b.onclick = () => { cmTab = k; cmMenuOpen = false; renderCmChips(); loadPosts(); };
+        menu.appendChild(b);
       });
+      btn.onclick = () => { cmMenuOpen = !cmMenuOpen; renderCmChips(); };
+      tabs.appendChild(btn); tabs.appendChild(menu);
       const cats = $("cmCats"); cats.textContent = "";
       CM_CATS.forEach(([k, l]) => { const b = mkEl("button", k === cmPickCat ? "on" : "", l); b.onclick = () => { cmPickCat = k; renderCmChips(); }; cats.appendChild(b); });
     }
@@ -2111,6 +2123,7 @@
         "추천 목록 간결화 (10개씩 더보기)",
         "추천 티커 옆에 점수·장세(횡보장 등) 바로 표시",
         "추천 분야 선택을 ▾ 목록으로 정리",
+        "커뮤 게시판 선택도 ▾ 목록으로",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
