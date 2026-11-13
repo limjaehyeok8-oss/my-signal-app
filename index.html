@@ -454,13 +454,13 @@
     /* ===== 토스 스타일 구역 구분: 구역 사이에 화면 폭 전체 굵은 띠 ===== */
     :root { --band: #070a0d; }
     html[data-theme="light"] { --band: #cdd4de; }
-    .secDiv, #frHold, #todayRec .recBox {
-      margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px;
-      border-top: 10px solid var(--band); }
-    .secDiv { margin-top: 30px !important; padding-top: 22px; }
-    #frHold { margin-top: 30px; padding-top: 22px; }
+    .secDiv, #frHold, #todayRec .recBox { position: relative; }
+    .secDiv::before, #frHold::before, #todayRec .recBox::before {
+      content: ""; position: absolute; top: 0; left: 50%; width: 100vw; margin-left: -50vw; height: 10px; background: var(--band); }
+    .secDiv { margin-top: 30px !important; padding-top: 32px; }
+    #frHold { margin-top: 30px; padding-top: 32px; }
     #frHold .frSec { margin-top: 0; }
-    #todayRec .recBox { margin-top: 30px; padding-top: 22px; }
+    #todayRec .recBox { margin-top: 30px; padding-top: 32px; }
     #todayRec:empty { display: none; }
     .secDiv h3, #frHold .frSec h3, .recBox h3 { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
     .secDiv + .alertHint, .recBox > .alertHint { font-size: 13px; margin: 2px 0 12px !important; }
@@ -488,6 +488,10 @@
     html[data-theme="light"] .mainTabs button.on { background: #191f28 !important; color: #fff !important; }
 
     #anaClose { display: block; margin: 0 0 8px auto; padding: 6px 12px; font-size: 12px; font-weight: 700; border-radius: 999px; border: none; background: var(--card2); color: var(--sub); width: auto; }
+
+    body { overflow-x: clip; }
+    #stResetAll { display: block; margin: 8px 0 0 auto; font-size: 11px; color: var(--sub); text-decoration: none; background: none; border: none; padding: 4px 0; width: auto; }
+    .tinyRow { text-align: right; }
 </style>
 </head>
 <body>
