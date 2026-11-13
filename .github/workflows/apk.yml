@@ -113,8 +113,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp twa/app/build/outputs/apk/debug/app-debug.apk signal.apk
-          FP=$(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep -m1 "SHA256:" | sed 's/.*SHA256: *//')
+          # APK 파일 자체에서 서명 지문을 읽어요 (키 파일 위치와 상관없이 동작)
+          FP=$(keytool -printcert -jarfile signal.apk 2>&1 | grep -m1 "SHA256:" | sed 's/.*SHA256: *//' | tr -d '[:space:]' || true)
+          if [ -z "$FP" ]; then
+            FP=$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey -storepass android 2>&1 | grep -m1 "SHA256:" | sed 's/.*SHA256: *//' | tr -d '[:space:]' || true)
+          fi
           echo "서명 지문: $FP"
+          if [ -z "$FP" ]; then echo "지문을 못 읽었어요"; keytool -printcert -jarfile signal.apk || true; exit 1; fi
           cat > assetlinks.json <<EOT
           [{
             "relation": ["delegate_permission/common.handle_all_urls"],
