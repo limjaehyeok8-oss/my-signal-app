@@ -547,6 +547,11 @@
     .pkGrpMenu button.on { background: var(--card2); color: var(--accent); }
     html[data-theme="light"] .pkGrpBtn, html[data-theme="light"] .pkGrpMenu { background: #fff; box-shadow: 0 1px 2px rgba(25,40,70,.12); }
     html[data-theme="light"] .pkGrpMenu button.on { background: #eef1f6; color: #191f28; }
+
+    .pkHead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .pkBadge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--card2); color: var(--sub); white-space: nowrap; }
+    .pkBadge.cls { color: var(--accent2); }
+    html[data-theme="light"] .pkBadge { background: #eef1f6; }
 </style>
 </head>
 <body>
@@ -1224,7 +1229,10 @@
       const mid = mkEl("div", "pkMid");
       const sym = mkEl("span", "sym", x.s);
       sym.onclick = (e) => { e.stopPropagation(); showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
-      mid.appendChild(sym);
+      const head = mkEl("div", "pkHead"); head.appendChild(sym);
+      head.appendChild(mkEl("span", "pkBadge", "점수 " + x.sc));
+      if (x.cls) head.appendChild(mkEl("span", "pkBadge cls", x.cls));
+      mid.appendChild(head);
       mid.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ") + (showGroup && x.g ? " · " + x.g : "")));
       main.appendChild(mid);
       const rt = mkEl("div", "pkRt");
@@ -1234,7 +1242,6 @@
       c.appendChild(main);
       // 눌러서 펼치면: 점수·이유·관심 추가
       const more = mkEl("div", "pkMore"); more.style.display = "none";
-      more.appendChild(mkEl("div", "pkSc", "점수 " + x.sc + (x.cls ? " · " + x.cls : "")));
       const wl = (x.why || []).filter((w) => !/일반 매수 신호가 떴어요/.test(w));   // 태그와 겹치는 문구는 숨김
       if (wl.length) { const why = mkEl("div", "pkWhy", wl.map((w) => "• " + w).join("\n")); why.style.whiteSpace = "pre-wrap"; more.appendChild(why); }
       const wb = mkEl("button", "pkWatch", "👀 관심 종목에 추가");
@@ -2102,6 +2109,7 @@
       { id: "2026-11-14b", date: "11월 14일", title: "업데이트", items: [
         "추천 탭에서 바로 👀 관심 추가",
         "추천 목록 간결화 (10개씩 더보기)",
+        "추천 티커 옆에 점수·장세(횡보장 등) 바로 표시",
         "추천 분야 선택을 ▾ 목록으로 정리",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
