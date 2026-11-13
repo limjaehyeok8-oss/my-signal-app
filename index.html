@@ -357,10 +357,18 @@
     .ctaRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 4px; }
     .ctaRow .pfCta { margin: 0; padding: 14px; min-width: 0; text-align: left; }
     .ctaRow .pfT { font-size: 15px; } .ctaRow .pfS { font-size: 12px; line-height: 1.4; }
+    #instBar { align-items: center; justify-content: space-between; gap: 10px; background: var(--card); border: 1px solid #3182f6; border-radius: 14px; padding: 10px 12px 10px 14px; margin: 0 0 12px; font-size: 13px; }
+    #instBar span:last-child { display: flex; gap: 4px; flex-shrink: 0; }
+    #instGo { background: #3182f6; color: #fff; border: none; border-radius: 10px; padding: 8px 14px; font-weight: 800; font-size: 13px; }
+    #instX { background: none; border: none; color: var(--sub); padding: 8px; font-size: 14px; }
   </style>
 </head>
 <body>
   <h2 class="topBar"><span>📈 <span class="gt">주식 알리미</span></span><button id="toggle">알림 받기</button></h2>
+  <div id="instBar" style="display:none">
+    <span id="instTxt">📲 홈 화면에 앱으로 설치할 수 있어요</span>
+    <span><button id="instGo">설치</button><button id="instX" aria-label="닫기">✕</button></span>
+  </div>
 
   <div class="mainTabs">
     <button id="tabHome" class="on">📈 내 종목</button>
@@ -589,6 +597,7 @@
     const $ = (id) => document.getElementById(id);
     const statusEl = $("status");
     const toggleBtn = $("toggle");
+    const mkEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
     const log = (m) => { statusEl.textContent = m; const nm = document.getElementById("needRegMsg"); if (nm) nm.textContent = m; };
     let myToken = null;
     let paused = false;
@@ -1325,7 +1334,7 @@
       loadHoldings();
       loadAlerts();
       loadFriends();
-      loadWatch();
+      setTimeout(loadWatch, 0);
       api({ action: "getPicks", token: myToken }).catch(() => {});      // 추천·커뮤는 미리 받아둬서 탭을 열면 바로 뜸
       api({ action: "getPosts", token: myToken }).catch(() => {});
     }
@@ -1522,8 +1531,17 @@
         location.href = "intent://" + location.host + location.pathname + location.search + "#Intent;scheme=https;package=com.android.chrome;end";
       }
       let deferred = null;
-      window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; });
-      window.addEventListener("appinstalled", () => { deferred = null; const m = $("installMsg"); if (m) m.textContent = "설치됐어요"; });
+      // 맨 위 설치 띠: 설치할 수 있을 때만 보이고, ✕ 누르면 다시 안 뜸
+      const bar = $("instBar");
+      const showBar = () => { if (!standalone && !lsGet("sigNoInst")) bar.style.display = "flex"; };
+      $("instX").onclick = () => { bar.style.display = "none"; lsSet("sigNoInst", true); };
+      $("instGo").onclick = async () => {
+        if (deferred) { deferred.prompt(); try { await deferred.userChoice; } catch (e) {} deferred = null; bar.style.display = "none"; return; }
+        $("instTxt").textContent = isIOS ? "아래 공유 버튼(□↑) → '홈 화면에 추가'를 눌러주세요" : isAndroid ? "오른쪽 위 ⋮ 메뉴 → '앱 설치' 또는 '홈 화면에 추가'를 눌러주세요" : "주소창 오른쪽의 설치 아이콘(⊕)을 눌러주세요";
+      };
+      if (isIOS) showBar();                                   // 아이폰은 설치 신호가 따로 없어서 안내만
+      window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; showBar(); });
+      window.addEventListener("appinstalled", () => { deferred = null; bar.style.display = "none"; const m = $("installMsg"); if (m) m.textContent = "설치됐어요"; });
       const btn = $("installApp"); if (!btn) return;
       if (standalone) { btn.parentElement.style.display = "none"; return; }       // 이미 앱으로 쓰는 중이면 숨김
       btn.onclick = async () => {
@@ -1720,7 +1738,6 @@
 
     const pct = (v, d = 1) => v == null ? "-" : (v >= 0 ? "+" : "") + v.toFixed(d) + "%";
     const cls2 = (v) => v == null ? "" : (v >= 0 ? "up" : "down");
-    const mkEl = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 
     // 가격 흐름 + 보유 기간(색 띠) 차트 (SVG, 로그 눈금, 기간 확대 버튼)
@@ -2012,7 +2029,7 @@
 
 
     // ===== 🌙 장외(프리·애프터·데이장) 가격: 정규장이 아닐 때만 종목 아래에 한 줄로 표시 =====
-    let extTimer = null;
+    var extTimer = null;   // var: 시작하자마자 불릴 수 있어서
     function loadExt() {
       clearTimeout(extTimer);
       extTimer = setTimeout(() => {
