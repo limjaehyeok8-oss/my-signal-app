@@ -2615,11 +2615,11 @@
       try { ((lsGet("sigHold") || {}).holdings || []).forEach((h) => { have[String(h.symbol).toUpperCase()] = 1; }); } catch (e) {}
       try { ((lsGet("sigWatch") || {}).items || []).forEach((h) => { have[String(h.s).toUpperCase()] = 1; }); } catch (e) {}
       const list = recData.filter((x) => !x.lt && (x.tag || []).some((t) => t.indexOf("오늘") !== -1) && !have[String(x.s).toUpperCase()])
-        .sort((a, b) => b.sc - a.sc || b.ch - a.ch).slice(0, 5);
+        .sort((a, b) => b.sc - a.sc || b.ch - a.ch).slice(0, 1);
       if (!list.length) return;
       const wrap = mkEl("div", "recBox");
       wrap.appendChild(mkEl("h3", null, "💡 이 종목은 어떤가요?"));
-      wrap.appendChild(mkEl("div", "alertHint", "오늘 매수 신호가 뜬 종목이에요. 티커를 누르면 분석이 열려요. 투자 판단은 본인 몫이에요."));
+      wrap.appendChild(mkEl("div", "alertHint", "오늘 매수 신호가 뜬 종목 중 점수가 가장 높은 1개예요. 티커를 누르면 분석이 열려요."));
       list.forEach((x) => {
         const row = mkEl("div", "recRow");
         const sy = mkEl("span", "rs", x.s);
