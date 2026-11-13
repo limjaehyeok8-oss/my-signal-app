@@ -751,6 +751,20 @@
       .mktChip { padding: 5px 7px; font-size: 10.5px; }
       .topBar #toggle { padding: 8px 10px; font-size: 13px; }
     }
+
+    /* ===== 종목 분석: 핵심만 요약, 나머지는 자세히 보기 ===== */
+    #analysisText .anTop { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; }
+    #analysisText .anSym { font-size: 22px; font-weight: 800; color: var(--accent2); }
+    #analysisText .anPx { font-size: 22px; font-weight: 800; }
+    #analysisText .anSig { display: inline-block; margin-top: 10px; padding: 7px 14px; border-radius: 999px; font-size: 14px; font-weight: 800; background: var(--card2); }
+    #analysisText .anSig.buy { background: rgba(61,220,151,.15); color: var(--accent); }
+    #analysisText .anSig.sell { background: rgba(255,90,106,.15); color: #ff7a88; }
+    #analysisText .anStats { display: flex; gap: 0; margin-top: 16px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    #analysisText .anStats > div { flex: 1; min-width: 0; }
+    #analysisText .anStats > div + div { border-left: 1px solid var(--line); padding-left: 14px; }
+    #analysisText .anStats small { display: block; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
+    #analysisText .anStats b { font-size: 16px; font-weight: 800; white-space: nowrap; }
+    #analysisText .anOne { margin-top: 14px; font-size: 14px; line-height: 1.6; color: var(--txt); }
 </style>
 </head>
 <body>
@@ -1138,31 +1152,42 @@
     function renderAnalysis(pre, text) {
       const blocks = String(text || "").split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
       const pick = (kw) => blocks.find((b) => b.indexOf(kw) !== -1);
-      const head = blocks[0];
-      const keyList = [head, pick("[봇 상태]"), pick("[종목 성격"), pick("[AI 전략 요약]"), pick("[AI 지표 스코어보드]")]
-        .filter((b, i, a) => b && a.indexOf(b) === i);
-      const rest = blocks.filter((b) => keyList.indexOf(b) === -1);
-
+      const head = blocks[0] || "", bot = pick("[봇 상태]") || "", chr = pick("[종목 성격") || "", ai = pick("[AI 전략 요약]") || "", sc = pick("[AI 지표 스코어보드]") || "";
       pre.textContent = "";
-      keyList.forEach((b) => {
-        const d = document.createElement("div");
-        d.className = "anBlock";
-        d.textContent = b;
-        pre.appendChild(d);
-      });
+      const mk = (cls, t) => { const d = document.createElement("div"); d.className = cls; if (t != null) d.textContent = t; return d; };
+      let ok = !!head;
+      try {
+        const sym = (/\[([^\]]+?)\s*\]/.exec(head) || [])[1] || "", px = (/현재가:\s*([^\n]+)/.exec(head) || [])[1] || "";
+        const botL = bot.split("\n").map((x) => x.trim());
+        const sig = (/마지막 신호:\s*([^\n]+)/.exec(bot) || [])[1] || "";
+        const sigIcon = (/(🟢|🔴|☘️|🟡)/.exec(botL[0] || "") || [])[1] || "";
+        const ago = (/(\d+일 전|오늘)/.exec(botL[1] || "") || [])[1] || "";
+        const ret = (/\(([+\-][\d.]+%)\)/.exec(botL[2] || "") || [])[1] || "";
+        const score = (/종합 점수:\s*([+\-]?\d+)/.exec(sc) || [])[1];
+        const kind = (/성격:\s*([^\(\n]+)/.exec(chr) || [])[1] || "", mood = (/상태:\s*([^\(\n]+)/.exec(chr) || [])[1] || "";
+        const aiLine = (ai.split("\n")[1] || "").trim();
+        const one = aiLine;
+        const top = mk("anTop"); top.appendChild(mk("anSym", sym)); top.appendChild(mk("anPx", px)); pre.appendChild(top);
+        if (sig) pre.appendChild(mk("anSig " + (/매수/.test(sig) ? "buy" : /매도/.test(sig) ? "sell" : ""), (sigIcon ? sigIcon + " " : "") + "마지막 신호 " + sig + (ago ? " · " + ago : "")));
+        const st = mk("anStats");
+        const cell = (l, v, c) => { const d = document.createElement("div"); d.appendChild(Object.assign(document.createElement("small"), { textContent: l })); d.appendChild(Object.assign(document.createElement("b"), { textContent: v, className: c || "" })); st.appendChild(d); };
+        if (ret) cell("신호 후", ret, ret[0] === "-" ? "down" : "up");
+        if (score != null) cell("종합 점수", (+score > 0 ? "+" : "") + score);
+        if (kind || mood) cell("성격·장세", (kind.trim() + " · " + mood.trim()).replace(/^ · | · $/g, ""));
+        if (st.childElementCount) pre.appendChild(st);
+        if (one) pre.appendChild(mk("anOne", one.replace(/\s*\(-?\d+점\)/, "")));
+        if (!sym && !px && !sig) ok = false;
+      } catch (e) { ok = false; }
+      const rest = blocks.filter((b, i) => i > 0 || !ok);
       if (rest.length) {
         const det = document.createElement("details");
         det.className = "anMore";
         const sm = document.createElement("summary");
-        sm.textContent = "📄 자세한 분석 보기";
+        sm.textContent = "📄 자세히 보기";
         det.appendChild(sm);
-        rest.forEach((b) => {
-          const d = document.createElement("div");
-          d.className = "anBlock";
-          d.textContent = b;
-          det.appendChild(d);
-        });
+        rest.forEach((b) => det.appendChild(mk("anBlock", b)));
         pre.appendChild(det);
+        if (!ok) det.open = true;
       }
     }
 
@@ -1186,7 +1211,6 @@
       row.appendChild(sel); row.appendChild(save);
       box.appendChild(row);
       const nm = (STRATS.find((x) => x[0] === cur) || [])[1];
-      box.appendChild(mkEl("div", "btApplyMsg", cur === "default" ? "차트 🟢🔴는 기본 신호 기준이에요" : "차트 🟢🔴는 '" + nm + "' 기준이에요"));
 
       const acts = mkEl("div", "stActs");
       const rec = mkEl("button", null, "🏆 맞는 전략 찾기");
@@ -2354,6 +2378,7 @@
         "친구 종목을 옆으로 넘겨서 한 명씩 보기",
         "구역을 둥근 패널로 나눠서 구분이 확실해졌어요",
         "내 종목 화면을 옆으로 넘겨서 내 종목·관심·추천·친구 보기",
+        "종목 분석을 핵심만 요약 (나머지는 자세히 보기)",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
