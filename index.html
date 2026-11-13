@@ -649,6 +649,10 @@
     .frDots i.on { width: 18px; border-radius: 3px; background: var(--accent); }
     .frSwipeHint { text-align: center; margin: 4px 0 0; font-size: 11px; }
     #frHold .frName { cursor: default; }
+
+    .pkSlider { margin: 0; padding: 0; scroll-padding: 0; gap: 0; }
+    .pkSlider .pkPage { flex: 0 0 100%; box-sizing: border-box; scroll-snap-align: center; min-width: 0; }
+    .pkSlider .pkPage .pkRow:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -1360,14 +1364,23 @@
       c.onclick = () => { more.style.display = more.style.display === "none" ? "block" : "none"; };
       return c;
     }
-    // 목록: 처음엔 10개만, "더보기"로 10개씩 늘림
+    // 목록: 5개씩 한 페이지, 옆으로 넘겨서 보기 (점으로 위치 표시)
     function appendLimited(list, arr, showGroup, key, noRank) {
-      const n = pickShown[key] || 10;
-      arr.slice(0, n).forEach((x, i) => list.appendChild(pickCard(x, showGroup, noRank ? 0 : i + 1)));
-      if (arr.length > n) {
-        const mb = mkEl("button", "pkMoreBtn", "더보기 (" + (arr.length - n) + "개 남음)");
-        mb.onclick = () => { pickShown[key] = n + 10; renderPicks(); };
-        list.appendChild(mb);
+      if (!arr.length) return;
+      const PER = 5, pages = Math.ceil(arr.length / PER);
+      const slider = mkEl("div", "frSlider pkSlider");
+      for (let p = 0; p < pages; p++) {
+        const pg = mkEl("div", "pkPage");
+        arr.slice(p * PER, (p + 1) * PER).forEach((x, i) => pg.appendChild(pickCard(x, showGroup, noRank ? 0 : p * PER + i + 1)));
+        slider.appendChild(pg);
+      }
+      list.appendChild(slider);
+      if (pages > 1) {
+        const dots = mkEl("div", "frDots");
+        for (let p = 0; p < pages; p++) { const d = mkEl("i", p === 0 ? "on" : ""); d.onclick = () => slider.scrollTo({ left: slider.clientWidth * p, behavior: "smooth" }); dots.appendChild(d); }
+        list.appendChild(dots);
+        slider.addEventListener("scroll", () => { const i = Math.round(slider.scrollLeft / Math.max(1, slider.clientWidth)); [...dots.children].forEach((d, k) => d.classList.toggle("on", k === i)); }, { passive: true });
+        list.appendChild(mkEl("div", "alertHint frSwipeHint", "← 옆으로 넘겨서 더 보기 (" + arr.length + "개) →"));
       }
     }
     const pickShown = {};
@@ -2221,7 +2234,7 @@
     const NOTES = [
       { id: "2026-11-14b", date: "11월 14일", title: "업데이트", items: [
         "추천 탭에서 바로 👀 관심 추가",
-        "추천 목록 간결화 (10개씩 더보기)",
+        "추천 목록 간결화 (5개씩 옆으로 넘기기)",
         "추천 티커 옆에 점수·유형·횡보 표시",
         "추천 분야 선택을 ▾ 목록으로 정리",
         "커뮤 게시판 선택도 ▾ 목록으로",
