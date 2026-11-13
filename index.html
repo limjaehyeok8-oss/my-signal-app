@@ -362,6 +362,12 @@
   <!-- ===== 탭 1: 내 종목 ===== -->
   <div id="homeView">
     <p id="status"></p>
+    <div id="needReg" class="mkCard" style="display:none">
+      <h4>👋 처음 오셨나요?</h4>
+      <div class="mkP" style="margin:0 0 12px">이 기기에서 한 번 등록해야 종목·친구·커뮤가 보여요. 아래 버튼을 누르고, 알림 허용 창이 뜨면 <b>허용</b>을 눌러 주세요.<br>카카오톡·인스타 안에서 열었다면 오른쪽 위 ⋮ → <b>다른 브라우저(Chrome)로 열기</b>를 먼저 해주세요.</div>
+      <div id="needRegMsg" style="font-size:13px;color:#ffb44d;margin:0 0 10px;line-height:1.5"></div>
+      <button id="needRegBtn" style="width:100%;background:#3182f6;color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;font-size:15px">알림 받기로 시작하기</button>
+    </div>
 
     <div id="holdingsBox" style="display:none">
       <details id="alertBox" class="alertBox">
@@ -542,7 +548,7 @@
     const $ = (id) => document.getElementById(id);
     const statusEl = $("status");
     const toggleBtn = $("toggle");
-    const log = (m) => statusEl.textContent = m;
+    const log = (m) => { statusEl.textContent = m; const nm = document.getElementById("needRegMsg"); if (nm) nm.textContent = m; };
     let myToken = null;
     let paused = false;
 
@@ -602,9 +608,13 @@
 
     toggleBtn.onclick = async () => {
       if (!myToken) {
-        if (typeof Notification === "undefined") return log("이 브라우저는 알림을 지원하지 않아요 (아이폰은 홈 화면에 추가 후 열어주세요)");
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") return log("알림 권한이 거부됐어요. 브라우저 설정에서 허용해 주세요.");
+        if (typeof Notification === "undefined" || !("serviceWorker" in navigator)) return log("이 브라우저는 알림을 지원하지 않아요. 크롬(Chrome)으로 열어주세요. (아이폰은 홈 화면에 추가 후 열기)");
+        log("등록 중… 알림 허용 창이 뜨면 '허용'을 눌러 주세요");
+        let permission;
+        try { permission = await Notification.requestPermission(); } catch (e) { return log("알림 권한을 물어보지 못했어요: " + e.message + " — 크롬(Chrome)으로 열어주세요."); }
+        if (permission === "denied") return log("알림이 '차단'으로 돼 있어요. 주소창 왼쪽 자물쇠(또는 ⋮ → 설정 → 사이트 및 다운로드 → 알림)에서 이 사이트 알림을 '허용'으로 바꾸고 새로고침하세요.");
+        if (permission !== "granted") return log("알림 허용 창을 그냥 닫으셨어요. 다시 눌러서 '허용'을 선택해 주세요. (비밀 모드에서는 안 돼요)");
+        log("등록 중… (10초쯤 걸릴 수 있어요)");
         return init();
       }
       toggleBtn.disabled = true;
@@ -1251,6 +1261,7 @@
     $("pfClose").onclick = () => { pfSeq++; $("pfBox").style.display = "none"; pfBtn.disabled = false; };
 
     // ================= 알림 등록 초기화 =================
+    $("needRegBtn").onclick = () => toggleBtn.click();
     async function init() {
       try {
         const cachedTok = lsGet("sigTok");
@@ -1258,10 +1269,11 @@
           myToken = cachedTok;
           paused = lsGet("sigPaused") === true;
           renderToggle();
-          $("holdingsBox").style.display = "block";
+          $("holdingsBox").style.display = "block"; $("needReg").style.display = "none";
           startLoads();
           verifyToken(true);
         } else {
+          $("needReg").style.display = "block";              // 처음 온 기기: 등록 안내를 먼저 보여줌
           await verifyToken(false);
         }
       } catch (e) { log("오류: " + e.message); }
@@ -1275,15 +1287,15 @@
     }
     async function verifyToken(alreadyStarted) {
       try {
-        const t = await getMyToken();
-        if (!t) { if (!alreadyStarted) log("토큰 발급 실패"); return; }
+        const t = await Promise.race([getMyToken(), new Promise((_, rej) => setTimeout(() => rej(new Error("등록이 너무 오래 걸려요. 새로고침하거나 크롬(Chrome)으로 열어주세요")), 20000))]);
+        if (!t) { if (!alreadyStarted) log("등록 실패(토큰을 못 받았어요). 크롬(Chrome)으로 열어서 다시 눌러 주세요."); return; }
         const changed = t !== myToken;
         myToken = t; lsSet("sigTok", t);
         const r = await api({ action: "register", token: myToken });
         if (!r.ok) { if (!alreadyStarted) log(r.msg); return; }
         paused = r.paused === true; lsSet("sigPaused", paused);
         renderToggle();
-        $("holdingsBox").style.display = "block";
+        $("holdingsBox").style.display = "block"; $("needReg").style.display = "none";
         if (!alreadyStarted || changed) startLoads();       // 토큰이 바뀐 경우에만 다시 불러옴
       } catch (e) { if (!alreadyStarted) log("오류: " + e.message); }
     }
@@ -1300,6 +1312,7 @@
     };
 
     if (typeof Notification !== "undefined" && Notification.permission === "granted") init();
+    else if (!lsGet("sigTok")) $("needReg").style.display = "block";   // 처음 온 기기: 등록 안내
 
     fbReady.then(() => { if (messaging) {
       messaging.onMessage(async (payload) => {
@@ -1959,11 +1972,11 @@
       const c = mkEl("div", "mkCard");
       c.appendChild(mkEl("h4", null, "🌡️ 시장 점수"));
       const big = mkEl("div", "mkBig"); big.appendChild(document.createTextNode(r.total + " ")); big.appendChild(mkEl("small", null, "/ 100점")); c.appendChild(big);
-      c.appendChild(mkEl("div", "mkP", r.label + " · 평균(50점)보다 " + (r.diff >= 0 ? "+" : "") + r.diff + "점"));
-      c.appendChild(mkEl("div", "mkVal", "지난 5년과 비교해 지금이 얼마나 좋은지예요. 세로선이 평균(50점). 항목을 누르면 설명이 나와요. · " + r.updated + " 기준"));
+      c.appendChild(mkEl("div", "mkP", (r.total >= 60 ? "▲ 좋음" : r.total >= 40 ? "● 중립" : "❗ 나쁨") + " · " + r.label + " · 평균(50점)보다 " + (r.diff >= 0 ? "+" : "") + r.diff + "점"));
+      c.appendChild(mkEl("div", "mkVal", "지난 5년과 비교해 지금이 얼마나 좋은지예요. 세로선이 평균(50점). 60점 이상 좋음 · 40~59 중립 · 39 이하 나쁨. 항목을 누르면 설명이 나와요. · " + r.updated + " 기준"));
       r.items.forEach((x) => {
         const row = mkEl("div", "mkRow");
-        const top = mkEl("div", "mkTop"); top.appendChild(mkEl("span", null, x.name)); top.appendChild(mkEl("span", null, x.score + "점")); row.appendChild(top);
+        const top = mkEl("div", "mkTop"); top.appendChild(mkEl("span", null, x.name)); top.appendChild(mkEl("span", null, x.score + "점 (" + (x.score >= 60 ? "▲ 좋음" : x.score >= 40 ? "● 중립" : "❗ 나쁨") + ")")); row.appendChild(top);
         row.appendChild(mkEl("div", "mkVal", x.val));
         const bar = mkEl("div", "mkBar"); const fill = document.createElement("i"); fill.style.width = x.score + "%"; bar.appendChild(fill); bar.appendChild(document.createElement("u")); row.appendChild(bar);
         row.appendChild(mkEl("div", "mkTip", x.tip + " (" + x.good + ")"));
