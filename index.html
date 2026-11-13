@@ -511,6 +511,14 @@
     html[data-theme="light"] #tabMore { background: #fff; box-shadow: -14px 0 12px 2px var(--bg), 0 1px 2px rgba(25,40,70,.12); }
     html[data-theme="light"] #tabMenu { background: #fff; box-shadow: 0 12px 32px rgba(25,40,70,.2); }
     html[data-theme="light"] #tabMenu button.on { background: #eef1f6; color: #191f28; }
+
+    /* 가로 스크롤 탭 제거: 현재 탭 + ▾ 드롭다운만 */
+    .tabWrap .mainTabs { display: none !important; }
+    #tabMore { position: static !important; display: flex; align-items: center; justify-content: space-between; width: 100%; height: auto; padding: 12px 18px !important; margin: 6px 0 8px; border-radius: 16px !important; font-size: 16px; font-weight: 800; background: var(--card) !important; box-shadow: none !important; transform: none !important; }
+    #tabMore .arr { transition: transform .2s; color: var(--sub); }
+    #tabMore.open .arr { transform: rotate(180deg); }
+    #tabMenu { top: 62px; }
+    html[data-theme="light"] #tabMore { background: #fff !important; box-shadow: 0 1px 2px rgba(25,40,70,.12) !important; }
 </style>
 </head>
 <body>
@@ -531,7 +539,7 @@
     <button id="tabBt">🧪 백테스트</button>
     <button id="tabNote">📢 공지<i id="noteDot"></i></button>
   </div>
-  <button id="tabMore" aria-label="전체 탭 보기">▾</button>
+  <button id="tabMore" aria-label="전체 탭 보기"><span id="tabCur">📈 내 종목</span><span class="arr">▾</span></button>
   <div id="tabMenu"></div>
   </div>
 
@@ -2032,7 +2040,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-14b", date: "11월 14일", title: "업데이트", items: [
-        "탭 오른쪽 ▾ 전체 보기",
+        "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
         "🔔 받은 알림 별도 화면",
@@ -2084,6 +2092,9 @@
           menu.appendChild(m);
         });
       }
+      function cur() { const on = document.querySelector(".mainTabs button.on"); if (on) $("tabCur").textContent = on.textContent.trim(); }
+      new MutationObserver(cur).observe(document.querySelector(".mainTabs"), { subtree: true, attributes: true, attributeFilter: ["class"] });
+      cur();
       function close() { menu.classList.remove("open"); more.classList.remove("open"); }
       more.onclick = (e) => { e.stopPropagation(); if (menu.classList.contains("open")) return close(); build(); menu.classList.add("open"); more.classList.add("open"); };
       document.addEventListener("click", (e) => { if (!menu.contains(e.target)) close(); });
