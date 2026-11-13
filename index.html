@@ -582,6 +582,29 @@
     html[data-theme="light"] #commView .cmCard { background: #fff !important; }
     html[data-theme="light"] #commView .cmFoot > button { background: #eef1f6; }
     #cmList > .alertHint { margin: 24px 16px; text-align: center; }
+
+    /* ===== 내 종목 / 관심 종목: 박스 없이 깔끔한 행 목록 ===== */
+    #list .frCard { background: none !important; padding: 0; margin: 4px 0 0; border-radius: 0; }
+    #list .frCard .frName { font-size: 0; margin: 0 0 2px; justify-content: flex-end; }
+    #list .frCard .frName .frOn { font-size: 12px; background: var(--card2); padding: 4px 10px; }
+    #list .frRow { padding: 16px 0 4px; border-top: 1px solid var(--line); }
+    #list .frRow .sym { font-size: 18px; }
+    #list .frRow .pnl { font-size: 15px; padding: 5px 12px; border-radius: 999px; background: var(--card2); }
+    #list .frRow .pnl.up { background: rgba(255,90,106,.14); }
+    #list .frRow .pnl.down { background: rgba(91,168,255,.14); }
+    #list .frRow .sub { font-size: 13px; margin-top: 2px; }
+    #list .frCard > div:first-of-type .frRow { border-top: none; }
+    #list .frCard .alertHint { margin: 0 0 10px; }
+    #wList .wItem { background: none; border-radius: 0; padding: 16px 0 14px; margin: 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+    #wList .wItem:first-child { border-top: 1px solid var(--line); }
+    #wList .wItem b { font-size: 18px; font-weight: 800; }
+    #wList .wItem .sub { font-size: 13px; margin-top: 4px; }
+    #wList .wItem button { width: 30px; height: 30px; padding: 0; border-radius: 50%; background: var(--card2); font-size: 13px; flex: none; }
+    html[data-theme="light"] #list .frCard, html[data-theme="light"] #wList .wItem { background: none !important; box-shadow: none !important; }
+    html[data-theme="light"] #list .frRow .pnl { background: #eef1f6; }
+    html[data-theme="light"] #list .frRow .pnl.up { background: #ffe9ec; }
+    html[data-theme="light"] #list .frRow .pnl.down { background: #e6f1ff; }
+    html[data-theme="light"] #wList .wItem button { background: #eef1f6; }
 </style>
 </head>
 <body>
@@ -2152,6 +2175,7 @@
         "추천 분야 선택을 ▾ 목록으로 정리",
         "커뮤 게시판 선택도 ▾ 목록으로",
         "커뮤 피드 토스 스타일로",
+        "내 종목·관심 종목 행 목록으로 정리",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
