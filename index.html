@@ -99,7 +99,7 @@
     h3 { color: var(--txt); }
     button { background: var(--card2); color: var(--txt); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
     button:active { transform: scale(0.98); }
-    #toggle, #analyze, #add { background: linear-gradient(90deg, #3ddc97, #5b8cff); color: #07210f; border: none; font-weight: bold; }
+    #toggle, #analyze, #add, #wAdd { background: linear-gradient(90deg, #3ddc97, #5b8cff); color: #07210f; border: none; font-weight: bold; }
     #pfBtn { border-color: var(--accent2); color: var(--accent2); }
     input { background: var(--card); color: var(--txt); border: 1px solid var(--line); border-radius: 10px; }
     input::placeholder { color: #6b7886; }
@@ -354,6 +354,9 @@
     .wItem { background: var(--card); border-radius: 14px; padding: 12px 14px; margin: 8px 0 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
     .wItem b { font-size: 15px; } .wItem .sub { display: block; font-size: 12px; color: var(--sub); margin-top: 3px; line-height: 1.5; }
     .wItem button { background: none; border: none; color: var(--sub); font-size: 16px; padding: 6px 8px; }
+    .ctaRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 4px; }
+    .ctaRow .pfCta { margin: 0; padding: 14px; min-width: 0; text-align: left; }
+    .ctaRow .pfT { font-size: 15px; } .ctaRow .pfS { font-size: 12px; line-height: 1.4; }
   </style>
 </head>
 <body>
@@ -400,7 +403,10 @@
         <div id="anaStrat" class="btRec" style="display:none"></div>
       </div>
 
-      <button id="pfBtn" class="pfCta"><span class="pfT">📋 내 포트폴리오 확인하기</span><span class="pfS">눌러서 수익률 표와 종목별 차트를 확인하세요</span></button>
+      <div class="ctaRow">
+        <button id="pfBtn" class="pfCta"><span class="pfT">📋 내 포트폴리오</span><span class="pfS">수익률 표·차트 보기</span></button>
+        <button id="botBtn" class="pfCta"><span class="pfT">🤖 시뮬봇</span><span class="pfS" id="botBtnS">가상 매매 봇 성적 보기</span></button>
+      </div>
 
       <div id="pfBox">
         <div class="secHead"><h3>📋 포트폴리오 현황</h3><button id="pfClose" style="font-size:13px;padding:6px 12px">✕ 닫기</button></div>
@@ -426,7 +432,6 @@
       <div id="wList"></div>
 
       <div id="frHold"></div>
-      <button id="botBtn" class="pfCta"><span class="pfT">🤖 시뮬봇 보러가기</span><span class="pfS" id="botBtnS">신호대로 가상 매매하는 봇의 성적을 확인하세요</span></button>
 
       <details id="frBox" class="alertBox">
         <summary>⚙️ 설정 · 내 닉네임 <span id="frCnt"></span></summary>
