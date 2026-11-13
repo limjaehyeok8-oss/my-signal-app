@@ -75,7 +75,10 @@ jobs:
           EOT
           cat > app/src/main/res/values/strings.xml <<'EOT'
           <?xml version="1.0" encoding="utf-8"?>
-          <resources><string name="app_name">주식 알리미</string></resources>
+          <resources>
+            <string name="app_name">주식 알리미</string>
+            <string name="asset_statements">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://limjaehyeok8-oss.github.io\"}}]</string>
+          </resources>
           EOT
           cat > app/src/main/AndroidManifest.xml <<EOT
           <?xml version="1.0" encoding="utf-8"?>
@@ -85,6 +88,7 @@ jobs:
                 android:label="@string/app_name"
                 android:icon="@mipmap/ic_launcher"
                 android:theme="@android:style/Theme.Material.Light.NoActionBar">
+              <meta-data android:name="asset_statements" android:resource="@string/asset_statements"/>
               <activity android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
                         android:exported="true">
                 <meta-data android:name="android.support.customtabs.trusted.DEFAULT_URL" android:value="$SITE"/>
@@ -109,5 +113,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp twa/app/build/outputs/apk/debug/app-debug.apk signal.apk
+          FP=$(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep -m1 "SHA256:" | sed 's/.*SHA256: *//')
+          echo "서명 지문: $FP"
+          cat > assetlinks.json <<EOT
+          [{
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+              "namespace": "android_app",
+              "package_name": "io.github.limjaehyeok8.signal",
+              "sha256_cert_fingerprints": ["$FP"]
+            }
+          }]
+          EOT
           gh release delete apk -y --cleanup-tag || true
-          gh release create apk signal.apk --title "안드로이드 앱 (APK)" --notes "주식 알리미 안드로이드 설치 파일" --latest
+          gh release create apk signal.apk assetlinks.json --title "안드로이드 앱 (APK)" --notes "주식 알리미 안드로이드 설치 파일 + 주소창 제거용 확인 파일(assetlinks.json)" --latest
