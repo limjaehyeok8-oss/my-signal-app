@@ -392,7 +392,7 @@
     .coinVal { padding: 10px 0; border-top: 1px solid var(--card2); cursor: pointer; }
     .coinVal .mkTip { display: none; } .coinVal.open .mkTip { display: block; }
     #wRow { display: flex; gap: 8px; } #wRow input { flex: 1; min-width: 0; } #wRow button { white-space: nowrap; }
-    .recBox { margin-top: 18px; }
+    .recBox { margin-top: 0; }
     .recBox h3 { margin: 0 0 4px; font-size: 16px; }
     .recRow { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 14px; padding: 11px 14px; margin-top: 8px; }
     .recRow .rs { font-weight: 800; font-size: 16px; color: var(--accent2); cursor: pointer; min-width: 56px; }
@@ -432,6 +432,13 @@
     .frCard.closed .frArr { transform: rotate(180deg); }
     .frCard.closed > :not(.frName) { display: none; }
     #frHold .frName { cursor: pointer; margin-bottom: 4px; }
+    .frAv, .cmAv { background-repeat: no-repeat; }
+    #frMe .frAv { width: 48px; height: 48px; }
+    /* 구역 사이 구분선 (친구 구역과 같은 스타일) */
+    .secDiv { margin-top: 30px !important; padding-top: 18px; border-top: 1px solid var(--line); }
+    #todayRec .recBox { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--line); }
+    #todayRec:empty { display: none; }
+    #holdingsBox > h3:first-of-type { margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -496,13 +503,13 @@
         <div id="pfCharts"></div>
       </div>
 
-      <div class="secHead">
+      <div class="secHead secDiv">
         <h3>내 보유 종목</h3>
       </div>
       <div id="list"></div>
       <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
 
-      <div class="secHead"><h3>👀 관심 종목</h3></div>
+      <div class="secHead secDiv"><h3>👀 관심 종목</h3></div>
       <div class="alertHint" style="margin:0 0 8px">목표가에 닿으면 알림이 오고, 매수·매도·저점 신호가 뜨면 개장 전·마감 후에 같이 알려드려요.</div>
       <div class="row" id="wRow">
         <input id="wSym" placeholder="티커 (예: NVDA)" style="text-transform:uppercase" autocomplete="off">
@@ -701,7 +708,7 @@
 
     // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
     const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
-                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getExtPrices: 60 };
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, getExtPrices: 60 };
     const apiMemo = {};
     async function api(body) {
       const ttl = API_TTL[body.action];
@@ -959,7 +966,7 @@
           const nm = mkEl("div", "frName");
           const nmL = mkEl("span", "frWho");
           let hh = 0; for (const ch of String(f.name)) hh = (hh * 31 + ch.charCodeAt(0)) % 360;
-          const av = mkEl("span", "frAv", String(f.name).trim().slice(-1)); av.style.background = "hsl(" + hh + ",45%,38%)";
+          const av = avatarEl(f.name, "frAv"); if (!photoMap[f.name]) av.style.background = "hsl(" + hh + ",45%,38%)";
           nmL.appendChild(av); nmL.appendChild(mkEl("span", null, f.name));
           nm.appendChild(nmL);
           const nmR = mkEl("span", "frR");
@@ -1021,6 +1028,25 @@
           return;
         }
 
+        const myLabel = r.nickname ? r.nickname : "익명 " + String(r.code || "").slice(0, 3);
+        const pl = mkEl("div", "stLine"); pl.style.alignItems = "center";
+        const pav = avatarEl(myLabel, "frAv", 48); pav.style.fontSize = "18px"; if (!photoMap[myLabel]) pav.style.background = "var(--accent2)";
+        const pin = document.createElement("input"); pin.type = "file"; pin.accept = "image/*"; pin.style.display = "none";
+        const pb = mkEl("button", null, "📷 프로필 사진 바꾸기"); pb.style.cssText = "flex:1;min-width:0";
+        const pd = mkEl("button", "linkBtn", "삭제");
+        const savePhoto = async (d) => {
+          $("frMsg").textContent = "저장 중…";
+          try {
+            const x = await api({ action: "setPhoto", token: myToken, photo: d });
+            $("frMsg").textContent = x.msg || "";
+            if (x.ok) { if (d) photoMap[myLabel] = d; else delete photoMap[myLabel]; lsSet("sigPhotos", photoMap); const n2 = avatarEl(myLabel, "frAv", 48); n2.style.fontSize = "18px"; if (!d) n2.style.background = "var(--accent2)"; pav.replaceWith(n2); }
+          } catch (e) { $("frMsg").textContent = "오류: " + e.message; }
+        };
+        pb.onclick = () => pin.click();
+        pin.onchange = async () => { const f = pin.files && pin.files[0]; pin.value = ""; if (!f) return; try { await savePhoto(await squarePhoto(f)); } catch (e) { $("frMsg").textContent = e.message; } };
+        pd.onclick = () => savePhoto("");
+        pl.appendChild(pav); pl.appendChild(pb); pl.appendChild(pd); pl.appendChild(pin);
+        me.appendChild(pl);
         const nl = mkEl("div", "stLine");
         const nick = document.createElement("input"); nick.placeholder = "내 닉네임 (친구에게 보여요)"; nick.maxLength = 12; nick.value = r.nickname || "";
         nick.style.cssText = "flex:1;min-width:0";
@@ -1252,6 +1278,44 @@
     }
     const lsGet = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
     const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+    // ===== 프로필 사진 =====
+    let photoMap = lsGet("sigPhotos") || {};
+    function avatarEl(name, cls, px) {
+      const nm = String(name || "?");
+      const a = mkEl("span", cls || "frAv");
+      if (px) { a.style.width = px + "px"; a.style.height = px + "px"; }
+      const ph = photoMap[nm];
+      if (ph) { a.style.backgroundImage = "url(" + ph + ")"; a.style.backgroundSize = "cover"; a.style.backgroundPosition = "center"; a.textContent = ""; a.style.backgroundColor = "transparent"; }
+      else { a.textContent = nm.replace("익명 ", "").trim().slice(-1) || "?"; a.style.background = ""; }
+      return a;
+    }
+    function loadPhotos() {
+      if (!myToken) return;
+      api({ action: "getPhotos", token: myToken }).then((r) => {
+        if (!r || !r.ok) return;
+        const changed = JSON.stringify(r.map) !== JSON.stringify(photoMap);
+        photoMap = r.map || {}; lsSet("sigPhotos", photoMap);
+        if (changed) { try { const c = lsGet("sigFr"); if (c) paintFriendsAndMe(c.fh, c.sr0); } catch (e) {} try { document.querySelectorAll("#cmList .cmAv").length && typeof loadPosts === "function" && loadPosts(); } catch (e) {} }
+      }).catch(() => {});
+    }
+    function squarePhoto(file) {                              // 가운데를 정사각형으로 잘라 96px JPEG 로
+      return new Promise((resolve, reject) => {
+        const img = new Image(), url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const side = Math.min(img.width, img.height), sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+          for (const [px, q] of [[96, .8], [96, .65], [80, .6], [64, .55]]) {
+            const cv = document.createElement("canvas"); cv.width = px; cv.height = px;
+            cv.getContext("2d").drawImage(img, sx, sy, side, side, 0, 0, px, px);
+            const d = cv.toDataURL("image/jpeg", q);
+            if (d.length <= 13000) return resolve(d);
+          }
+          reject(new Error("사진을 줄이지 못했어요. 다른 사진을 골라주세요"));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("사진을 열 수 없어요")); };
+        img.src = url;
+      });
+    }
     let holdFromFr = false;
     async function loadHoldings() {
       const box = $("list");
@@ -1461,6 +1525,7 @@
       loadAlerts();
       loadFriends();
       setTimeout(loadWatch, 0);
+      loadPhotos();
       loadTodayRec();                                                     // 추천(오늘 매수 신호)은 미리 받아서 관심 종목 아래에도 보여줌
       api({ action: "getPosts", token: myToken }).catch(() => {});
     }
@@ -1735,7 +1800,7 @@
     function postCard(p) {
       const c = mkEl("div", "cmCard");
       const head = mkEl("div", "cmHead");
-      head.appendChild(mkEl("div", "cmAv", (p.name || "?").replace("익명 ", "").charAt(0)));
+      { const av = avatarEl(p.name, "cmAv"); if (photoMap[p.name]) { av.style.width = "36px"; av.style.height = "36px"; av.style.borderRadius = "50%"; av.style.flexShrink = "0"; } head.appendChild(av); }
       const who = mkEl("div");
       who.appendChild(mkEl("div", "cmName", p.name));
       who.appendChild(mkEl("div", "cmTime", p.time));
