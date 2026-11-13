@@ -17,7 +17,14 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
+      # 러너에 안드로이드 SDK가 이미 깔려 있어서, 약관 동의 파일만 넣어 줘요
+      - name: Accept Android licenses
+        run: |
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          sudo mkdir -p "$SDK/licenses"
+          printf "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e\n84831b9409646a918e30573bab4c9c91346d8abd\n" | sudo tee "$SDK/licenses/android-sdk-license" >/dev/null
+          printf "\n84831b9409646a918e30573bab4c9c91346d8abd\n" | sudo tee "$SDK/licenses/android-sdk-preview-license" >/dev/null
+          echo "sdk.dir=$SDK" > "$RUNNER_TEMP/local.properties"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -93,7 +100,9 @@ jobs:
 
       - name: Build
         working-directory: twa
-        run: gradle assembleDebug --no-daemon
+        run: |
+          cp "$RUNNER_TEMP/local.properties" local.properties
+          gradle assembleDebug --no-daemon
 
       - name: Publish release
         env:
