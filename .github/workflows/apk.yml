@@ -65,7 +65,7 @@ jobs:
               applicationId 'io.github.limjaehyeok8.signal'
               minSdk 21
               targetSdk 34
-              versionCode 2
+              versionCode (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
               versionName '1.0'
             }
           }
