@@ -768,6 +768,32 @@
 
     #analysisText .anNote { margin-top: 10px; padding: 10px 14px; border-radius: 14px; font-size: 14px; font-weight: 700; background: var(--card2); line-height: 1.5; }
     #analysisText .anNote.good { background: rgba(61,220,151,.13); color: var(--accent); }
+
+    /* ===== 종목 분석 결과: 하나의 카드로 정돈 (요약 → 차트 → 전략) ===== */
+    #analysis { position: relative; margin-top: 18px; padding: 20px 18px 18px; background: var(--card2); border-radius: 22px; flex-direction: column; }
+    #analysis[style*="block"] { display: flex !important; }
+    #analysis #anaClose { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; padding: 0; margin: 0; border-radius: 50%; font-size: 0; background: var(--card); z-index: 2; }
+    #analysis #anaClose::after { content: "✕"; font-size: 13px; color: var(--sub); }
+    #analysis #analysisText { order: 1; margin: 0; font-family: inherit; white-space: normal; }
+    #analysis #chartWait { order: 2; }
+    #analysis #chartImg { order: 2; margin: 18px 0 4px; border-radius: 14px; }
+    #analysis #anaStrat { order: 3; margin-top: 14px; padding: 14px; border: none; background: var(--card); border-radius: 16px; }
+    #analysisText .anTop { padding-right: 40px; }
+    #analysisText .anMore summary { background: var(--card); margin-top: 12px; }
+    #analysisText .anSig { margin-top: 12px; }
+    #analysis .stTitle { font-size: 14px; color: var(--sub); font-weight: 700; margin-bottom: 4px; }
+    #analysis .stLine select { background: var(--card2); border: none; border-radius: 12px; padding: 12px; font-size: 13px; }
+    #analysis .stLine button { border-radius: 12px; background: var(--card2); color: var(--txt); border: none; }
+    #analysis .btRec button { border-radius: 12px; }
+    html[data-theme="light"] #analysis { background: #f2f4f8; }
+    html[data-theme="light"] #analysis #anaStrat, html[data-theme="light"] #analysis #anaClose, html[data-theme="light"] #analysisText .anMore summary { background: #fff; }
+
+    #analysis #analysisText { background: none !important; padding: 0 !important; border-radius: 0; font-size: 14px; }
+    #analysis #analysisText .anStats b { font-size: 15px; }
+
+    #analysis #analysisText .anStats > div:last-child { flex: 1.7; }
+    #analysis #analysisText .anStats b { white-space: normal; font-size: 14.5px; line-height: 1.35; }
+    #analysis #analysisText .anStats > div + div { padding-left: 12px; }
 </style>
 </head>
 <body>
