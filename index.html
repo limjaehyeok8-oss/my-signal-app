@@ -426,6 +426,7 @@
       <h4>👋 처음 오셨나요?</h4>
       <div class="mkP" style="margin:0 0 12px">이 기기에서 한 번 등록해야 종목·친구·커뮤가 보여요. 아래 버튼을 누르고, 알림 허용 창이 뜨면 <b>허용</b>을 눌러 주세요.<br>카카오톡·인스타 안에서 열었다면 오른쪽 위 ⋮ → <b>다른 브라우저(Chrome)로 열기</b>를 먼저 해주세요.</div>
       <div id="needRegMsg" style="font-size:13px;color:#ffb44d;margin:0 0 10px;line-height:1.5"></div>
+      <a id="openChrome" href="intent://limjaehyeok8-oss.github.io/my-signal-app/#Intent;scheme=https;package=com.android.chrome;end" style="display:none;text-align:center;background:#3182f6;color:#fff;text-decoration:none;border-radius:12px;padding:13px;font-weight:800;font-size:15px;margin-bottom:10px">🌐 크롬으로 열어서 알림 허용하기</a>
       <button id="needRegBtn" style="width:100%;background:#3182f6;color:#fff;border:none;border-radius:12px;padding:13px;font-weight:800;font-size:15px">알림 받기로 시작하기</button>
     </div>
 
@@ -724,9 +725,13 @@
         log("등록 중… 알림 허용 창이 뜨면 '허용'을 눌러 주세요");
         let permission;
         try { permission = await Notification.requestPermission(); } catch (e) { return log("알림 권한을 물어보지 못했어요: " + e.message + " — 크롬(Chrome)으로 열어주세요."); }
-        if (permission === "denied") return log(/Android/i.test(navigator.userAgent)
-          ? "알림이 '차단'으로 돼 있어요. 오른쪽 위 ⋮ → 'Chrome에서 열기'를 누른 뒤, 주소창 왼쪽 자물쇠 → 권한 → 알림을 '허용'으로 바꾸고 새로고침하세요. (한 번 허용하면 이 앱에서도 적용돼요)"
-          : "알림이 '차단'으로 돼 있어요. 주소창 왼쪽 자물쇠에서 이 사이트 알림을 '허용'으로 바꾸고 새로고침하세요.");
+        if (permission === "denied") {
+          if (/Android/i.test(navigator.userAgent)) {
+            $("openChrome").style.display = "block"; $("needReg").style.display = "block";
+            return log("알림이 막혀 있어요. 아래 '크롬으로 열어서 알림 허용하기'를 눌러 크롬에서 '알림 받기' → '허용'을 눌러 주세요. 한 번 하면 이 앱에서도 알림이 켜져요.");
+          }
+          return log("알림이 '차단'으로 돼 있어요. 주소창 왼쪽 자물쇠에서 이 사이트 알림을 '허용'으로 바꾸고 새로고침하세요.");
+        }
         if (permission !== "granted") return log("알림 허용 창을 그냥 닫으셨어요. 다시 눌러서 '허용'을 선택해 주세요. (비밀 모드에서는 안 돼요)");
         log("등록 중… (10초쯤 걸릴 수 있어요)");
         return init();
