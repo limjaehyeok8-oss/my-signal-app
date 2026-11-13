@@ -1,8 +1,0 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "io.github.limjaehyeok8.signal",
-    "sha256_cert_fingerprints": [""]
-  }
-}]
