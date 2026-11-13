@@ -688,6 +688,10 @@
     #homeView .ctaRow .pfT { font-size: 14px; white-space: nowrap; }
     #homeView .ctaRow .pfS { font-size: 11.5px; white-space: nowrap; }
     #frHold .frSlider { margin: 4px -18px 0; padding: 0 18px 4px; scroll-padding: 0 18px; }
+
+    #homeView .ctaRow { margin-top: 18px; }
+    #wRow { margin-top: 14px; }
+    #wList:empty { display: none; }
 </style>
 </head>
 <body>
@@ -741,6 +745,13 @@
         <div id="anaStrat" class="btRec" style="display:none"></div>
       </div>
 
+      </div>
+
+      <div class="blk">
+      <div class="secHead secDiv">
+        <h3>내 보유 종목</h3>
+      </div>
+      <div id="list"></div>
       <div class="ctaRow">
         <button id="pfBtn" class="pfCta"><span class="pfI">📋</span><span class="pfT">내 포트폴리오</span><span class="pfS">수익률·차트 보기</span></button>
         <button id="botBtn" class="pfCta"><span class="pfI">🤖</span><span class="pfT">시뮬봇</span><span class="pfS" id="botBtnS">봇 성적 보기</span></button>
@@ -752,26 +763,19 @@
         <p id="pfInfo"></p>
         <div id="pfCharts"></div>
       </div>
-      </div>
-
-      <div class="blk">
-      <div class="secHead secDiv">
-        <h3>내 보유 종목</h3>
-      </div>
-      <div id="list"></div>
       <div class="tinyRow"><button id="stResetAll" class="linkBtn">알림 전략 모두 기본으로 되돌리기</button> <span id="stResetMsg" class="btApplyMsg"></span></div>
       </div>
 
       <div class="blk">
       <div class="secHead secDiv"><h3>👀 관심 종목</h3></div>
       <div class="alertHint" style="margin:0 0 8px">목표가에 닿으면 알림이 오고, 매수·매도·저점 신호가 뜨면 개장 전·마감 후에 같이 알려드려요.</div>
+      <div id="wList"></div>
       <div class="row" id="wRow">
         <input id="wSym" placeholder="티커 (예: NVDA)" style="text-transform:uppercase" autocomplete="off">
         <input id="wTgt" type="number" step="any" inputmode="decimal" placeholder="목표가 $ (선택)">
         <button id="wAdd">추가</button>
       </div>
       <div id="wMsg" class="alertHint"></div>
-      <div id="wList"></div>
       </div>
       <div id="todayRec"></div>
 
@@ -2284,6 +2288,7 @@
         "포트폴리오 현황 읽기 쉽게 정리",
         "친구 종목을 옆으로 넘겨서 한 명씩 보기",
         "구역을 둥근 패널로 나눠서 구분이 확실해졌어요",
+        "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
