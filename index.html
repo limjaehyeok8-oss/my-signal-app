@@ -558,6 +558,30 @@
 
     .pkBadge.side { background: rgba(255,170,60,.18); color: #ffa63c; }
     html[data-theme="light"] .pkBadge.side { background: #fff1de; color: #c46a00; }
+
+    /* ===== 커뮤: 토스 피드 스타일 (박스 없이 한 줄씩, 글 사이 굵은 띠) ===== */
+    #commView > h3 { display: none; }
+    #cmList { margin: 4px -16px 0; }
+    #commView .cmCard { background: none !important; border-radius: 0; margin: 0; padding: 18px 16px 6px; border-bottom: 8px solid var(--band); box-shadow: none !important; }
+    #commView .cmHead { gap: 10px; align-items: center; }
+    #commView .cmAv { width: 34px; height: 34px; font-size: 14px; }
+    #commView .cmName { font-size: 14px; font-weight: 800; }
+    #commView .cmTime { font-size: 12px; margin-top: 1px; }
+    #commView .cmCat { order: 3; margin: 0 0 0 auto; font-size: 11px; padding: 3px 8px; }
+    #commView .cmDel { margin-left: 4px; order: 4; }
+    #commView .cmText { font-size: 16px; line-height: 1.6; margin: 12px 0 12px; }
+    #commView .cmImg { border-radius: 12px; margin: 0 0 12px; }
+    #commView .cmTick { margin-bottom: 10px; }
+    #commView .cmFoot { border-top: none; margin: 0; padding: 2px 0 8px; }
+    #commView .cmFoot > button { font-size: 13px; font-weight: 700; color: var(--sub); background: var(--card2); border-radius: 999px; padding: 7px 14px; }
+    #commView .cmCmt { background: none; padding: 10px 0 2px; margin-top: 0; border-top: 1px solid var(--line); font-size: 14px; }
+    #commView .cmCmt:first-child { margin-top: 10px; }
+    #commView .cmIn { margin: 10px 0 4px; }
+    #commView .cmIn input { background: var(--card2); border-radius: 999px; padding: 11px 16px; font-size: 14px; }
+    #commView .cmIn button { border-radius: 999px; }
+    html[data-theme="light"] #commView .cmCard { background: #fff !important; }
+    html[data-theme="light"] #commView .cmFoot > button { background: #eef1f6; }
+    #cmList > .alertHint { margin: 24px 16px; text-align: center; }
 </style>
 </head>
 <body>
@@ -2129,6 +2153,7 @@
         "추천 티커 옆에 점수·유형·횡보 표시",
         "추천 분야 선택을 ▾ 목록으로 정리",
         "커뮤 게시판 선택도 ▾ 목록으로",
+        "커뮤 피드 토스 스타일로",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
         "🔄 새로고침 버튼",
