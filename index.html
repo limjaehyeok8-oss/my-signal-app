@@ -464,6 +464,13 @@
     #todayRec:empty { display: none; }
     .secDiv h3, #frHold .frSec h3, .recBox h3 { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
     .secDiv + .alertHint, .recBox > .alertHint { font-size: 13px; margin: 2px 0 12px !important; }
+    .btMore { display: none; }
+    .btShowAll .btMore { display: table-row; }
+    .btSecT { margin: 18px 0 6px; font-weight: 800; font-size: 15px; }
+    .btAll { margin-top: 16px; }
+    .btAll > summary { padding: 14px 16px; background: var(--card); border-radius: 14px; font-weight: 700; font-size: 14px; cursor: pointer; list-style: none; }
+    .btAll[open] > summary { margin-bottom: 4px; }
+    #btOut .btRec { margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -550,7 +557,6 @@
 
 
     </div>
-    <div id="homeGlos"></div>
   </div>
 
   <!-- ===== 탭: 커뮤 ===== -->
@@ -614,6 +620,7 @@
     <div class="setRow" id="apkRow" style="display:none"><h4>안드로이드 앱 파일</h4>
       <a href="https://github.com/limjaehyeok8-oss/my-signal-app/releases/download/apk/signal.apk" style="color:var(--accent2);font-weight:700;text-decoration:none">📦 APK 설치 파일 받기</a>
       <div class="alertHint" style="margin-top:8px">받은 파일을 열고 '이 출처 허용'을 누르면 설치돼요.</div></div>
+    <div id="setGlos"></div>
     <div class="alertHint">장 상태는 미국 시간 기준(프리·정규·애프터·데이장)이고, 공휴일은 반영하지 않아요.</div>
   </div>
 
@@ -640,7 +647,6 @@
       <button id="btRun" class="btGo">실행</button>
     </div>
     <p class="btNote">내 신호 로직을 과거 데이터에 그대로 돌려서 전략별 성과를 비교해요. 종가 체결을 가정했고 수수료·세금·슬리피지는 빼서, 실제보다 좋게 나올 수 있어요. 과거 성과는 미래를 보장하지 않아요.</p>
-    <div id="btGlos"></div>
     <div id="btMsg"></div>
     <div id="btOut"></div>
   </div>
@@ -733,7 +739,7 @@
 
     // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
     const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
-                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, getExtPrices: 60 };
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60 };
     const apiMemo = {};
     async function api(body) {
       const ttl = API_TTL[body.action];
@@ -1204,17 +1210,28 @@
       const box = $("analysis"), img = $("chartImg"), pre = $("analysisText");
       box.style.display = "block";
       img.style.display = "none";
-      pre.textContent = symbol + " 분석 중... (10초 정도 걸려요)";
+      let wait = $("chartWait");
+      if (!wait) { wait = mkEl("div", "alertHint"); wait.id = "chartWait"; img.parentNode.insertBefore(wait, img); }
+      wait.textContent = "📈 차트 불러오는 중…"; wait.style.display = "block";
+      pre.textContent = symbol + " 분석 중…";
       box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      let shown = false;
+      const showText = (text) => { if (shown) return; shown = true; renderAnalysis(pre, text); renderStratPanel(symbol, seq); };
+      // 글(빠름)과 차트 포함 전체(느림)를 동시에 요청 → 글이 먼저 뜨고 차트는 도착하면 붙임
+      const full = api({ action: "analyze", token: myToken, ticker: symbol });
+      api({ action: "analyzeFast", token: myToken, ticker: symbol }).then((r) => {
+        if (seq !== analyzeSeq || !r || !r.ok) return;
+        showText(r.text);
+      }).catch(() => {});
       try {
-        const r = await api({ action: "analyze", token: myToken, ticker: symbol });
+        const r = await full;
         if (seq !== analyzeSeq) return;
-        if (!r.ok) { pre.textContent = r.msg || "분석에 실패했어요"; return; }
+        wait.style.display = "none";
+        if (!r.ok) { if (!shown) pre.textContent = r.msg || "분석에 실패했어요"; return; }
         if (r.image) { img.src = "data:image/png;base64," + r.image; img.style.display = "block"; }
-        renderAnalysis(pre, r.text);
-        renderStratPanel(symbol, seq);
+        showText(r.text);
       } catch (e) {
-        if (seq === analyzeSeq) pre.textContent = "오류: " + e.message;
+        if (seq === analyzeSeq) { wait.style.display = "none"; if (!shown) pre.textContent = "오류: " + e.message; }
       }
     }
 
@@ -2079,15 +2096,18 @@
       head.appendChild(document.createElement("br"));
       head.appendChild(document.createTextNode("그냥 들고 있었다면(매수 후 보유): " + pct(r.bh.total, 0) + " · 최대 낙폭 " + pct(r.bh.mdd, 0)));
       out.appendChild(head);
+      const recSlot = mkEl("div"); out.appendChild(recSlot);           // 자동 추천을 맨 위에 보여줌
 
       const best = r.strategies.reduce((a, b) => (b.total > a.total ? b : a), r.strategies[0]);
       const table = mkEl("table", "bt");
       const hr = document.createElement("tr");
       ["전략", "거래", "승률", "총수익", "최대낙폭"].forEach((t) => hr.appendChild(mkEl("th", null, t)));
       table.appendChild(hr);
-      r.strategies.forEach((s) => {
+      const sortedS = r.strategies.slice().sort((a, b) => (b.n ? b.total : -1e9) - (a.n ? a.total : -1e9));
+      sortedS.forEach((s, si) => {
         const tr = document.createElement("tr");
         if (s.key === best.key && s.n > 0) tr.className = "best";
+        if (si >= 5) tr.className += " btMore";
         tr.appendChild(mkEl("td", null, s.short));
         tr.appendChild(mkEl("td", null, s.n + "회"));
         tr.appendChild(mkEl("td", null, s.win == null ? "-" : s.win.toFixed(0) + "%"));
@@ -2095,7 +2115,14 @@
         tr.appendChild(mkEl("td", null, s.n ? pct(s.mdd, 0) : "-"));
         table.appendChild(tr);
       });
+      const cmpTitle = mkEl("div", "btSecT", "📊 전략 비교 · 수익 높은 순");
+      out.appendChild(cmpTitle);
       out.appendChild(table);
+      if (sortedS.length > 5) {
+        const more = mkEl("button", "linkBtn", "나머지 " + (sortedS.length - 5) + "개 전략도 보기");
+        more.onclick = () => { const on = table.classList.toggle("btShowAll"); more.textContent = on ? "접기" : "나머지 " + (sortedS.length - 5) + "개 전략도 보기"; };
+        out.appendChild(more);
+      }
       out.appendChild(mkEl("div", "btNote", "초록 줄이 총수익이 가장 높은 전략이에요. 거래가 5회 미만이면 우연일 수 있어서 참고만 하세요."));
 
       // 수익 최고 전략 자동 추천 + 적용
@@ -2125,7 +2152,10 @@
         rec.appendChild(mkEl("div", null, "🏆 자동 추천: 거래 5회 이상이면서 최대 낙폭 -50% 이내인 전략이 없어요. 아래 전략을 직접 골라 보세요."));
       }
       rec.appendChild(recMsg);
-      out.appendChild(rec);
+      recSlot.appendChild(rec);
+
+      const allBox = mkEl("details", "btAll");
+      allBox.appendChild(mkEl("summary", null, "📚 전략별 자세히 보기 (" + r.strategies.length + "개) — 눌러서 펼치기"));
 
       r.strategies.forEach((s) => {
         const det = mkEl("details", "btCard");
@@ -2172,8 +2202,9 @@
         inner.appendChild(ap);
         inner.appendChild(apMsg);
         det.appendChild(inner);
-        out.appendChild(det);
+        allBox.appendChild(det);
       });
+      out.appendChild(allBox);
     }
 
 
@@ -2254,8 +2285,7 @@
         $("btRun").disabled = false;
       }
     };
-    buildGlossary($("btGlos"));
-    buildGlossary($("homeGlos"));
+    buildGlossary($("setGlos"));
     if (location.hash === "#bt") showBt();
     if (location.hash === "#pick") showPick();
     if (location.hash === "#comm") showComm();
