@@ -550,6 +550,7 @@
 
     .pkHead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .pkBadge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--card2); color: var(--sub); white-space: nowrap; }
+    .pkBadge.rr { color: var(--sub); } .pkBadge.rr.hi { background: rgba(60,200,140,.18); color: #3cc88c; }
     .pkBadge.cls { color: var(--accent2); }
     html[data-theme="light"] .pkBadge { background: #eef1f6; }
 
@@ -1021,6 +1022,7 @@
       <button data-f="all">전체</button>
       <button data-f="today" class="on">오늘</button>
       <button data-f="d3">최근 3일</button>
+      <button data-f="rr">손익비순</button>
     </div>
     <div class="pkChips" id="pickGroups"></div>
     <div id="pickUpd" class="alertHint"></div>
@@ -1554,6 +1556,7 @@
       sym.onclick = (e) => { e.stopPropagation(); showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
       const head = mkEl("div", "pkHead"); head.appendChild(sym);
       head.appendChild(mkEl("span", "pkBadge", "점수 " + x.sc));
+      if (x.rr != null) head.appendChild(mkEl("span", "pkBadge rr" + (x.rr >= 2 ? " hi" : ""), "손익비 " + x.rr));
       if (x.cls) head.appendChild(mkEl("span", "pkBadge cls", x.cls));
       const side = (x.why || []).some((w) => /횡보장/.test(w));          // 서버 why 문구로 횡보장 판별 (서버 수정 불필요)
       if (side) head.appendChild(mkEl("span", "pkBadge side", "횡보"));
@@ -1610,13 +1613,14 @@
       if (pickFilter === "today") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("오늘") !== -1));
       if (pickFilter === "clover") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("저점매수") !== -1));
       if (pickFilter === "buy") items = items.filter((x) => (x.tag || []).some((t) => t.indexOf("매수 신호") !== -1));
+      if (pickFilter === "rr") items = items.filter((x) => x.rr != null && x.rr >= 1).sort((a, b) => b.rr - a.rr || b.sc - a.sc);
       if (pickFilter === "strong") items = items.filter((x) => x.sc >= 3);
       if (pickGroup) {
-        const gi = items.filter((x) => x.g === pickGroup).sort((a, b) => b.sc - a.sc || b.ch - a.ch);
+        const gi = items.filter((x) => x.g === pickGroup).sort(pickFilter === "rr" ? (a, b) => b.rr - a.rr : (a, b) => b.sc - a.sc || b.ch - a.ch);
         appendLimited(list, gi, false, "g:" + pickGroup + pickFilter);
       } else {                                                  // 전체 분야: 분야별 5개씩 고른 뒤 점수 높은 순으로 한 줄 정렬
         const c5 = {};
-        items.sort((a, b) => b.sc - a.sc || b.ch - a.ch);
+        if (pickFilter !== "rr") items.sort((a, b) => b.sc - a.sc || b.ch - a.ch);
         appendLimited(list, items.filter((x) => { c5[x.g] = (c5[x.g] || 0) + 1; return c5[x.g] <= 5; }), true, "all" + pickFilter);
       }
 
@@ -2481,6 +2485,7 @@
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
+        "추천에 손익비(손절 대비 상승 여력) 표시·정렬 (서버 업데이트 필요)",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
