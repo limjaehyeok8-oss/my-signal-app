@@ -551,6 +551,14 @@
     .pkHead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .pkBadge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--card2); color: var(--sub); white-space: nowrap; }
     .pkBadge.rr { color: var(--sub); } .pkBadge.rr.hi { background: rgba(60,200,140,.18); color: #3cc88c; }
+    .rrCard { background: var(--card2); border-radius: 20px; padding: 16px; margin: 6px 0 14px; }
+    .rrTitle { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
+    .rrRow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+    .rrRow:first-of-type { border-top: none; }
+    .rrNo { width: 24px; height: 24px; border-radius: 50%; background: var(--card); text-align: center; line-height: 24px; font-size: 12px; font-weight: 800; flex: none; }
+    .rrMid { flex: 1; min-width: 0; } .rrMid b { font-size: 17px; cursor: pointer; } .rrMid .sub { display: block; font-size: 12px; color: var(--sub); margin-top: 3px; }
+    .rrVal { font-size: 16px; font-weight: 800; color: #3cc88c; white-space: nowrap; }
+    html[data-theme="light"] .rrCard { background: #f2f4f8; } html[data-theme="light"] .rrNo { background: #fff; }
     .pkBadge.cls { color: var(--accent2); }
     html[data-theme="light"] .pkBadge { background: #eef1f6; }
 
@@ -1018,6 +1026,7 @@
   <div id="pickView" style="display:none">
     <h3 style="margin:14px 0 4px">🔎 추천</h3>
     <p class="alertHint">점수는 참고용이고 매수 권유가 아니에요.</p>
+    <div id="rrTop"></div>
     <div class="pkChips" id="pickChips">
       <button data-f="all">전체</button>
       <button data-f="today" class="on">오늘</button>
@@ -1602,7 +1611,25 @@
       }
     }
     const pickShown = {};
+    function renderRrTop() {
+      const box = $("rrTop"); if (!box) return; box.textContent = "";
+      const t = pickData.filter((x) => x.rr != null && x.rr > 0 && (x.tag || []).some((g) => g.indexOf("오늘") !== -1) && !(x.lt && !(x.tag || []).some((g) => g.indexOf("신호") !== -1 || g.indexOf("저점매수") !== -1)))
+        .sort((a, b) => b.rr - a.rr || b.sc - a.sc).slice(0, 3);
+      if (!t.length) return;
+      const card = mkEl("div", "rrCard");
+      card.appendChild(mkEl("div", "rrTitle", "🏆 오늘 손익비 TOP " + t.length));
+      t.forEach((x, i) => {
+        const r = mkEl("div", "rrRow");
+        r.appendChild(mkEl("span", "rrNo", String(i + 1)));
+        const m = mkEl("div", "rrMid"); const sy = mkEl("b", null, x.s);
+        sy.onclick = () => { showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+        m.appendChild(sy); m.appendChild(mkEl("span", "sub", "상승 여력 +" + x.up + "% · 손절 -" + x.sp + "% · 점수 " + x.sc));
+        r.appendChild(m); r.appendChild(mkEl("span", "rrVal", x.rr + " : 1")); card.appendChild(r);
+      });
+      box.appendChild(card);
+    }
     function renderPicks() {
+      renderRrTop();
       const list = $("pickList");
       list.textContent = "";
       // 태그가 하나도 없는 종목은 숨김
@@ -2485,7 +2512,7 @@
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
-        "추천에 손익비(손절 대비 상승 여력) 표시·정렬 (서버 업데이트 필요)",
+        "추천에 손익비(손절 대비 상승 여력) 표시·정렬, 오늘 손익비 TOP3 (서버 업데이트 필요)",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
