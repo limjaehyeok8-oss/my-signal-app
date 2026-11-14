@@ -837,6 +837,29 @@
     html[data-theme="light"] .sortBtn, html[data-theme="light"] .emptyBox .emBtn { background: #eef1f6; }
     html[data-theme="light"] #actSheet .actBox { background: #fff; } html[data-theme="light"] #actSheet #actBtns button { background: #f2f4f8; }
     html[data-theme="light"] .buyPill, html[data-theme="light"] .buyForm input { background: #fff; }
+
+    .botNote { font-size: 12px; color: var(--sub); text-align: center; background: none; padding: 0 0 10px; margin: 0; }
+    .botHero { background: var(--card2); border-radius: 24px; padding: 22px 20px; margin-bottom: 12px; }
+    .botHero .bhLbl { font-size: 13px; color: var(--sub); }
+    .botHero .bhBig { font-size: 30px; font-weight: 800; margin-top: 6px; }
+    .botHero .bhRet { font-size: 40px; font-weight: 800; line-height: 1.15; margin-top: 4px; }
+    .botHero .bhVs { font-size: 14px; font-weight: 700; margin-top: 10px; }
+    .botPend { background: rgba(49,130,246,.12); border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; }
+    .botPend .bpT { font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+    .bpRow { display: flex; align-items: center; gap: 10px; padding: 6px 0; } .bpRow b { font-size: 16px; } .bpRow .sub { display: block; font-size: 12px; color: var(--sub); margin-top: 2px; }
+    .bpTag { flex: none; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; }
+    .bpTag.buy { background: rgba(60,200,140,.18); color: #3cc88c; } .bpTag.sell { background: rgba(255,107,121,.18); color: #ff6b79; }
+    .botCard h4 { font-size: 15px; margin: 0 0 10px; }
+    .botPos { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
+    .botPos:first-of-type { border-top: none; } .botPos b { font-size: 17px; } .botPos .sub, .botRow .sub { display: block; font-size: 12px; color: var(--sub); margin-top: 3px; line-height: 1.4; }
+    .botPos .bpPnl { font-size: 18px; white-space: nowrap; }
+    .botRow { align-items: center; justify-content: flex-start; } .botRow b { font-size: 15px; }
+    .botCard .botGrid { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 0; }
+    .botCard .botGrid > div { background: var(--card2); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+    .botCard .botGrid span { font-size: 12px; color: var(--sub); } .botCard .botGrid b { font-size: 20px; } .botCard .botGrid em { font-style: normal; font-size: 11px; color: var(--sub); }
+    .botRule { color: var(--sub); font-size: 13px; padding: 4px 4px 0; } .botRule summary { cursor: pointer; font-weight: 700; padding: 8px 0; } .botRule p { margin: 6px 0; line-height: 1.6; }
+    html[data-theme="light"] .botHero, html[data-theme="light"] .botCard .botGrid > div { background: #f2f4f8; }
+    html[data-theme="light"] .botPend { background: #e8f1ff; }
 </style>
 </head>
 <body>
@@ -2512,6 +2535,7 @@
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
+        "시뮬봇 화면 정리 (큰 수익률·예정 주문·성적표)",
         "추천에 손익비(손절 대비 상승 여력) 표시·정렬, 오늘 손익비 TOP3 (서버 업데이트 필요)",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
@@ -3288,29 +3312,56 @@
       r.bots.forEach((x) => { const ch = mkEl("button", "pkChip" + (x.id === botSel ? " on" : ""), x.name); ch.onclick = () => { botSel = x.id; paintBot(r); }; chips.appendChild(ch); });
       body.appendChild(chips);
       const b = r.bots.filter((x) => x.id === botSel)[0] || r.bots[0];
-      body.appendChild(mkEl("div", "botNote", "규칙: " + b.desc));
+      const cls = (v) => (v >= 0 ? "up" : "down");
       if (!b.started) { body.appendChild(mkEl("div", "alertHint", "봇이 아직 시작 전이에요. 서버에서 setupBotTrigger 를 한 번 실행하면 시작돼요.")); return; }
-      const c1 = mkEl("div", "botCard");
-      c1.appendChild(mkEl("div", "sub", b.start + " 시작 · " + b.last + " 기준"));
-      c1.appendChild(mkEl("div", "botBig", won(b.total)));
-      const g = mkEl("div", "botGrid");
-      [["누적 수익률", (b.ret >= 0 ? "▲ " : "▼ ") + bPct(b.ret)], ["S&P500 대비", bPct(b.ret - b.spy) + "p"], ["현금", Math.round(b.cash / 10000).toLocaleString("ko-KR") + "만원"]].forEach(([k, v]) => { const d = mkEl("div"); d.appendChild(mkEl("span", null, k)); d.appendChild(mkEl("b", null, v)); g.appendChild(d); });
-      c1.appendChild(g); body.appendChild(c1);
+
+      // 1) 한눈에: 총 자산 + 누적 수익률 + S&P 대비
+      const hero = mkEl("div", "botHero");
+      hero.appendChild(mkEl("div", "bhLbl", "총 자산 · " + b.last + " 기준"));
+      hero.appendChild(mkEl("div", "bhBig", won(b.total)));
+      hero.appendChild(mkEl("div", "bhRet " + cls(b.ret), (b.ret >= 0 ? "▲ " : "▼ ") + bPct(b.ret)));
+      const vs = b.ret - b.spy;
+      const vsEl = mkEl("div", "bhVs " + cls(vs), vs >= 0 ? "S&P500보다 " + vs.toFixed(1) + "%p 앞서는 중" : "S&P500보다 " + Math.abs(vs).toFixed(1) + "%p 뒤처진 중");
+      hero.appendChild(vsEl); body.appendChild(hero);
+
+      // 2) 오늘 할 일: 예정 주문
+      if (b.pend.length) {
+        const pc = mkEl("div", "botPend"); pc.appendChild(mkEl("div", "bpT", "⏰ 다음 장 시가에 체결 예정"));
+        b.pend.forEach((o) => { const row = mkEl("div", "bpRow"); row.appendChild(mkEl("span", "bpTag " + (o.act === "buy" ? "buy" : "sell"), o.act === "buy" ? "매수" : "매도")); const m = mkEl("div"); m.appendChild(mkEl("b", null, o.s)); m.appendChild(mkEl("span", "sub", o.why)); row.appendChild(m); pc.appendChild(row); });
+        body.appendChild(pc);
+      }
+
+      // 3) 그래프
       const c2 = mkEl("div", "botCard"); c2.appendChild(mkEl("h4", null, "수익률 비교")); c2.appendChild(botChart(b.eq)); body.appendChild(c2);
-      const c3 = mkEl("div", "botCard"); c3.appendChild(mkEl("h4", null, "보유 종목 " + b.pos.length + " / " + b.max));
+
+      // 4) 보유 종목
+      const c3 = mkEl("div", "botCard"); c3.appendChild(mkEl("h4", null, "보유 종목 " + b.pos.length + " / " + b.max + "  ·  현금 " + Math.round(b.cash / 10000).toLocaleString("ko-KR") + "만원"));
       if (!b.pos.length) c3.appendChild(mkEl("div", "alertHint", "지금은 들고 있는 종목이 없어요."));
-      b.pos.forEach((p) => { const row = mkEl("div", "botRow"); const l = mkEl("div"); l.appendChild(mkEl("b", null, p.s)); l.appendChild(mkEl("span", "sub", "평단 $" + p.avg + " · 현재 $" + p.px + " · " + p.d.slice(5) + " 매수")); l.appendChild(mkEl("span", "sub", p.why)); row.appendChild(l); row.appendChild(mkEl("b", null, (p.pnl >= 0 ? "▲ " : "▼ ") + bPct(p.pnl))); c3.appendChild(row); });
-      b.pend.forEach((o) => c3.appendChild(mkEl("div", "alertHint", "다음 장 시가에 " + (o.act === "buy" ? "▲ 매수 예정: " : "❗ 매도 예정: ") + o.s + " — " + o.why)));
+      b.pos.forEach((p) => {
+        const row = mkEl("div", "botPos"); const l = mkEl("div", "bpL"); l.appendChild(mkEl("b", null, p.s));
+        l.appendChild(mkEl("span", "sub", "평단 $" + p.avg + " → $" + p.px + " · " + p.d.slice(5).replace("-", "/") + " 매수"));
+        row.appendChild(l); row.appendChild(mkEl("b", "bpPnl " + cls(p.pnl), (p.pnl >= 0 ? "▲ " : "▼ ") + bPct(p.pnl))); c3.appendChild(row);
+      });
       body.appendChild(c3);
+
+      // 5) 성적표
       const c4 = mkEl("div", "botCard"); c4.appendChild(mkEl("h4", null, "성적표"));
       const g2 = mkEl("div", "botGrid");
-      [["승률", b.stat.n ? Math.round(b.stat.win / b.stat.n * 100) + "% (" + b.stat.win + "/" + b.stat.n + ")" : "-"], ["평균 수익 / 손실", b.stat.n ? bPct(b.stat.avgWin) + " / " + bPct(b.stat.avgLoss) : "-"], ["최대 낙폭", "-" + b.stat.mdd.toFixed(1) + "%"]].forEach(([k, v]) => { const d = mkEl("div"); d.appendChild(mkEl("span", null, k)); d.appendChild(mkEl("b", null, v)); g2.appendChild(d); });
+      [["승률", b.stat.n ? Math.round(b.stat.win / b.stat.n * 100) + "%" : "-", b.stat.n ? b.stat.win + "승 " + (b.stat.n - b.stat.win) + "패" : ""], ["평균 수익", b.stat.n ? bPct(b.stat.avgWin) : "-", "이길 때"], ["평균 손실", b.stat.n ? bPct(b.stat.avgLoss) : "-", "질 때"], ["최대 낙폭", "-" + b.stat.mdd.toFixed(1) + "%", "가장 크게 빠진 폭"]].forEach(([k, v, sub]) => { const d = mkEl("div"); d.appendChild(mkEl("span", null, k)); d.appendChild(mkEl("b", null, v)); if (sub) d.appendChild(mkEl("em", null, sub)); g2.appendChild(d); });
       c4.appendChild(g2); body.appendChild(c4);
+
+      // 6) 매매 일지 (최근 5건 + 더보기)
       const c5 = mkEl("div", "botCard"); c5.appendChild(mkEl("h4", null, "매매 일지"));
       if (!b.log.length) c5.appendChild(mkEl("div", "alertHint", "아직 매매가 없어요."));
-      b.log.forEach((x) => { const row = mkEl("div", "botRow"); const l = mkEl("div"); l.appendChild(mkEl("b", null, x.d.slice(5).replace("-", "/") + " " + x.s + (x.t === "buy" ? " ▲ 매수" : " ❗ 매도") + " @$" + x.px)); l.appendChild(mkEl("span", "sub", x.why)); row.appendChild(l); c5.appendChild(row); });
+      const addLog = (x) => { const row = mkEl("div", "botRow"); row.appendChild(mkEl("span", "bpTag " + (x.t === "buy" ? "buy" : "sell"), x.t === "buy" ? "매수" : "매도")); const l = mkEl("div", "bpL"); l.appendChild(mkEl("b", null, x.s + "  @$" + x.px)); l.appendChild(mkEl("span", "sub", x.d.slice(5).replace("-", "/") + " · " + x.why)); row.appendChild(l); return row; };
+      const shown = b.log.slice(0, 5); shown.forEach((x) => c5.appendChild(addLog(x)));
+      if (b.log.length > 5) { const mb = mkEl("button", "emBtn", "더보기 (" + (b.log.length - 5) + ")"); mb.style.cssText = "width:100%;margin-top:10px"; mb.onclick = () => { mb.remove(); b.log.slice(5).forEach((x) => c5.appendChild(addLog(x))); }; c5.appendChild(mb); }
       body.appendChild(c5);
-      body.appendChild(mkEl("div", "alertHint", "시작 " + won(b.startCash) + " · 최대 " + b.max + "종목(종목당 1/" + b.max + ") · 신호 다음 장 시가 체결 · 비용 " + b.fee + "%씩 · 환율 반영(원화 기준)"));
+
+      // 7) 규칙은 접어두기
+      const det = mkEl("details", "botRule"); det.appendChild(mkEl("summary", null, "봇 규칙 보기"));
+      det.appendChild(mkEl("p", null, b.desc)); det.appendChild(mkEl("p", null, "시작 " + won(b.startCash) + " · 최대 " + b.max + "종목 · 신호 다음 장 시가 체결 · 비용 " + b.fee + "%씩 · 환율 반영"));
+      body.appendChild(det);
     }
     function closeBot() { $("botView").style.display = "none"; $("setView").style.display = "none"; $("alertView").style.display = "none"; }
     $("botBtn").onclick = () => {
