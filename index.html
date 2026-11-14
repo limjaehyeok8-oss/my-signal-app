@@ -2480,6 +2480,7 @@
         "설정에 등락 색상(한국/미국식)·글자 크기·자동 갱신 on/off 추가",
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
+        "관심 종목 누르면 바로 분석",
         "내 종목 화면 순서 정리 (포트폴리오·시뮬봇은 보유 종목 아래로)",
         "탭 ▾ 전체 보기 (옆으로 밀기 삭제)",
         "📢 공지 탭 추가",
@@ -3066,8 +3067,11 @@
         const del = mkEl("button", null, "✕"); del.title = "관심 종목에서 빼기";
         del.onclick = async () => { it.style.opacity = ".4"; try { await api({ action: "removeWatch", token: myToken, symbol: x.s }); } catch (e) {} loadWatch(true); };
         it.appendChild(del); box.appendChild(it);
+        const goAn = () => { symbolEl.value = x.s; analyze(x.s); const b = document.querySelector("#pgNav button:nth-child(1)"); if (b) b.click(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+        it.style.cursor = "pointer";
+        it.addEventListener("click", (e) => { if (e.target.closest("button, input, .buyForm")) return; goAn(); });
         onLong(it, () => openAct(x.s, [
-          ["📈 분석 보기", () => { symbolEl.value = x.s; analyze(x.s); const b = document.querySelector("#pgNav button:nth-child(1)"); if (b) b.click(); window.scrollTo({ top: 0, behavior: "smooth" }); }],
+          ["📈 분석 보기", goAn],
           ["✅ 샀어요 (보유 종목으로)", () => openBuyForm(x.s, buy)],
           ["🗑 관심에서 빼기", () => del.onclick(), true]
         ]));
