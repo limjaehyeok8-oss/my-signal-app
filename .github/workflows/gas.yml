@@ -1,0 +1,66 @@
+name: Apps Script 자동 배포
+
+on:
+  push:
+    branches: [main]
+    paths: ["gs/**"]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "pull = 서버 코드를 레포로 가져오기 / deploy = 레포 코드를 서버에 배포"
+        type: choice
+        options: [pull, deploy]
+        default: pull
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gas
+  cancel-in-progress: false
+
+jobs:
+  gas:
+    runs-on: ubuntu-latest
+    env:
+      MODE: ${{ github.event_name == 'push' && 'deploy' || inputs.mode }}
+      SCRIPT_ID: ${{ vars.GAS_SCRIPT_ID }}
+      DEPLOYMENT_ID: ${{ vars.GAS_DEPLOYMENT_ID }}
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 설정 확인
+        run: |
+          [ -n "$CLASPRC_JSON" ] || { echo "::error::Secret CLASPRC_JSON 이 없어요"; exit 1; }
+          [ -n "$SCRIPT_ID" ] || { echo "::error::Variable GAS_SCRIPT_ID 가 없어요"; exit 1; }
+      - name: clasp 준비
+        run: |
+          npm install -g @google/clasp@2.4.2
+          printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+          mkdir -p gs
+          printf '{"scriptId":"%s","rootDir":".","fileExtension":"gs"}' "$SCRIPT_ID" > gs/.clasp.json
+      - name: 서버 코드 가져오기 (pull)
+        if: env.MODE == 'pull'
+        run: |
+          cd gs && clasp pull && cd ..
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add gs ':!gs/.clasp.json'
+          git diff --cached --quiet || git commit -m "gs: 서버 코드 가져오기"
+          git push
+      - name: 문법 검사
+        if: env.MODE == 'deploy'
+        run: |
+          [ -f gs/appsscript.json ] || { echo "::error::gs/appsscript.json 이 없어요. 먼저 pull 을 한 번 실행하세요"; exit 1; }
+          mkdir -p /tmp/chk
+          for f in gs/*.gs; do cp "$f" "/tmp/chk/$(basename "$f" .gs).js"; node --check "/tmp/chk/$(basename "$f" .gs).js"; done
+      - name: 서버에 올리고 배포 (deploy)
+        if: env.MODE == 'deploy'
+        run: |
+          [ -n "$DEPLOYMENT_ID" ] || { echo "::error::Variable GAS_DEPLOYMENT_ID 가 없어요"; exit 1; }
+          cd gs
+          clasp push -f
+          clasp deploy -i "$DEPLOYMENT_ID" -d "auto ${GITHUB_SHA::7}"
