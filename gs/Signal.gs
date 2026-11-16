@@ -28,21 +28,32 @@ function _stateText(headline, days, dateMd, sigPrice, cp, notes) {
   return t;
 }
 
+// ---------- 공통: 일반 매수·매도 신호 ----------
+// 매수 조건 = 하이킨아시 양봉 + 종가가 20일선 위.  매도 조건 = 하이킨아시 음봉 + 종가가 20일선 아래.
+// 조건이 "새로 맞게 된 날"이 신호예요. (예전엔 색이 바뀌는 날에만 봐서, 색이 먼저 바뀌고 20일선을 나중에 넘으면 신호를 놓쳤어요)
+function haSignalFlags(dData, haDaily) {
+  var c = dData.closes, n = c.length, buyEv = [], sellEv = [], buy = [], sell = [], sum = 0, holding = false, pe = false, px = false;
+  for (var k = 0; k < n; k++) {
+    sum += c[k]; if (k >= 20) sum -= c[k - 20];
+    var ma = k >= 19 ? sum / 20 : null;
+    var g = haDaily.closes[k] > haDaily.opens[k];
+    var e = ma !== null && g && c[k] > ma, x = ma !== null && !g && c[k] < ma;
+    buyEv.push(e && !pe); sellEv.push(x && !px);
+    var b = !holding && e && !pe, s = holding && x;
+    if (b) holding = true; else if (s) holding = false;
+    buy.push(b); sell.push(s);
+    pe = e; px = x;
+  }
+  return {buyEv: buyEv, sellEv: sellEv, buy: buy, sell: sell, holding: holding};
+}
+
 function getSignalState(dData, haDaily) {
   var len = dData.closes.length;
-  var isHolding = false, lastType = null, lastIdx = -1;
+  var lastType = null, lastIdx = -1;
+  var fl = haSignalFlags(dData, haDaily);
   for (var j = 0; j < len; j++) {
-    var ma20 = calculateMA(dData.closes.slice(0, j + 1), 20);
-    var isGreen = haDaily.closes[j] > haDaily.opens[j];
-    var isPrevRed = j > 0 ? haDaily.closes[j - 1] <= haDaily.opens[j - 1] : false;
-    var isRed = haDaily.closes[j] <= haDaily.opens[j];
-    var isPrevGreen = j > 0 ? haDaily.closes[j - 1] > haDaily.opens[j - 1] : false;
-    var price = dData.closes[j];
-    if (!isHolding && isGreen && isPrevRed && price > ma20) {
-      isHolding = true; lastType = "buy"; lastIdx = j;
-    } else if (isHolding && isRed && isPrevGreen && price < ma20) {
-      isHolding = false; lastType = "sell"; lastIdx = j;
-    }
+    if (fl.buy[j]) { lastType = "buy"; lastIdx = j; }
+    else if (fl.sell[j]) { lastType = "sell"; lastIdx = j; }
   }
   // ☘️ 저점매수(클로버) 신호도 함께 반영
   var cloverIdx = -1;

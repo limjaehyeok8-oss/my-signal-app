@@ -929,6 +929,17 @@
     #list .frCard select { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--bg); color: var(--txt); font-size: 14px; margin-top: 10px; }
     #list .haRow input { background: var(--bg); } #list .hMsg { font-size: 13px; color: var(--sub); margin-top: 6px; }
     html[data-theme="light"] #list .frCard select, html[data-theme="light"] #list .haRow input { background: #fff; }
+
+    #analysis #anOvs { order: 1; margin-top: 12px; padding: 14px; background: var(--card); border-radius: 16px; }
+    #anOvs .afT { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; margin-bottom: 10px; }
+    #anOvs .afV { font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 999px; background: var(--card2); color: var(--sub); }
+    #anOvs .afV.good { background: rgba(61,220,151,.15); color: var(--accent); }
+    #anOvs .afW { font-size: 13px; font-weight: 700; margin: -2px 0 12px; } #anOvs .afN { font-size: 12px; color: var(--sub); margin-top: 10px; }
+    #anOvs .ovG { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+    #anOvs .ovG > div { background: var(--card2); border-radius: 12px; padding: 10px 4px; text-align: center; }
+    #anOvs .ovG small { display: block; font-size: 12px; color: var(--sub); } #anOvs .ovG b { display: block; font-size: 14px; font-weight: 800; margin: 3px 0; white-space: nowrap; }
+    #anOvs .ovG em { font-style: normal; font-size: 10px; color: var(--sub); white-space: nowrap; }
+    html[data-theme="light"] #analysis #anOvs { background: #fff; } html[data-theme="light"] #anOvs .ovG > div { background: #f2f4f8; }
 </style>
 </head>
 <body>
@@ -984,6 +995,7 @@
         <img id="chartImg" alt="차트">
         <pre id="analysisText"></pre>
         <div id="anFund" style="display:none"></div>
+        <div id="anOvs" style="display:none"></div>
         <div id="anaStrat" class="btRec" style="display:none"></div>
       </div>
 
@@ -1240,7 +1252,7 @@
 
     // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
     const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
-                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60, getFund: 3600, getHoldAlerts: 60 };
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60, getFund: 3600, getHoldAlerts: 60, getOversold: 3600 };
     const apiMemo = {};
     async function api(body) {
       const ttl = API_TTL[body.action];
@@ -1708,7 +1720,7 @@
     const pickShown = {};
     function renderRrTop() {
       const box = $("rrTop"); if (!box) return; box.textContent = "";
-      const t = pickData.filter((x) => x.rr != null && x.rr > 0 && (x.tag || []).some((g) => g.indexOf("오늘") !== -1) && !(x.lt && !(x.tag || []).some((g) => g.indexOf("신호") !== -1 || g.indexOf("저점매수") !== -1)))
+      const t = pickData.filter((x) => x.rr != null && x.rr > 0 && x.sc >= 1 && (x.tag || []).some((g) => g.indexOf("오늘") !== -1) && !(x.lt && !(x.tag || []).some((g) => g.indexOf("신호") !== -1 || g.indexOf("저점매수") !== -1)))
         .sort((a, b) => b.rr - a.rr || b.sc - a.sc).slice(0, 3);
       if (!t.length) return;
       const card = mkEl("div", "rrCard");
@@ -1852,6 +1864,27 @@
       if (hasVal) box.appendChild(mkEl("div", "afN", f.secPe ? "업종 평균은 대표 ETF 기준이고, 참고용이에요." : "숫자만 본 참고용이에요. 성장주는 원래 PER이 높아요."));
       box.style.display = "block";
     }
+    // 과매도 뒤 성적 (최근 5년, RSI 30 아래로 내려간 날 이후)
+    function paintOversold(box, o) {
+      box.textContent = ""; box.style.display = "none";
+      if (!o || !o.ok || !o.rows) return;
+      const tt = mkEl("div", "afT", "과매도 뒤 성적");
+      tt.appendChild(mkEl("span", "afV " + (o.now ? "good" : "mid"), o.now ? "지금 과매도 (RSI " + o.rsi + ")" : "지금 RSI " + o.rsi));
+      box.appendChild(tt);
+      const rows = o.rows.filter((r) => r.n > 0);
+      if (!o.cnt || !rows.length) { box.appendChild(mkEl("div", "afW", "최근 " + o.years + "년 동안 과매도(RSI " + o.th + " 아래)가 없었어요")); box.style.display = "block"; return; }
+      box.appendChild(mkEl("div", "afW", "최근 " + o.years + "년간 과매도 " + o.cnt + "번 · 그 뒤 평균"));
+      const g = mkEl("div", "ovG");
+      rows.forEach((r) => {
+        const d = mkEl("div"); d.appendChild(mkEl("small", null, r.h + "일 뒤"));
+        d.appendChild(mkEl("b", r.avg >= 0 ? "up" : "down", (r.avg >= 0 ? "+" : "") + r.avg + "%"));
+        d.appendChild(mkEl("em", null, "상승 " + r.win + "%")); g.appendChild(d);
+      });
+      box.appendChild(g);
+      const w20 = rows.find((r) => r.h === 20) || rows[rows.length - 1];
+      box.appendChild(mkEl("div", "afN", "가장 나빴던 때는 " + w20.h + "일 뒤 " + w20.worst + "%였어요. 과거 기록일 뿐이에요."));
+      box.style.display = "block";
+    }
     async function analyze(symbol) {
       symbol = String(symbol || "").trim().toUpperCase();
       if (!symbol) return log("종목을 입력하거나 검색해서 선택하세요");
@@ -1868,7 +1901,8 @@
       const showText = (text) => { if (shown) return; shown = true; renderAnalysis(pre, text); renderStratPanel(symbol, seq); };
       // 글(빠름)과 차트 포함 전체(느림)를 동시에 요청 → 글이 먼저 뜨고 차트는 도착하면 붙임
       const full = api({ action: "analyze", token: myToken, ticker: symbol });
-      $("anFund").style.display = "none";
+      $("anFund").style.display = "none"; $("anOvs").style.display = "none";
+      api({ action: "getOversold", token: myToken, symbol }).then((o) => { if (seq === analyzeSeq) paintOversold($("anOvs"), o); }).catch(() => {});
       api({ action: "getFund", token: myToken, symbol }).then((f) => { if (seq === analyzeSeq) paintFund($("anFund"), f); }).catch(() => {});
       api({ action: "analyzeFast", token: myToken, ticker: symbol }).then((r) => {
         if (seq !== analyzeSeq || !r || !r.ok) return;
@@ -2684,6 +2718,8 @@
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
+        "종목 분석에 '과매도 뒤 성적' (5년 통계)",
+        "신호·손절 로직 수정: 손절가 이탈 표시, 놓치던 매수·매도 신호, 손익비 계산",
         "보유 종목 목표가·손절가 알림 (종목 눌러서 설정, 장외 시간에도 확인)",
         "코인 탭에 차트·신호 분석 추가",
         "종목 분석에 PER·PBR·시가총액·배당 + 저평가/고평가 판정 (업종 평균 비교)",

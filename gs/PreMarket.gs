@@ -75,7 +75,7 @@ function checkPreMarketAlert(e) {
     var withSignal = [];
     byToken[token].forEach(function (h) {
       try {
-        var r = preMarketLine(h.symbol, h.avgPrice, pre[h.symbol], etDate, etDow, h.strategy);
+        var r = preMarketLine(h.symbol, h.avgPrice, pre[h.symbol], etDate, etDow, h.strategy, _ownStop(token, h.symbol));
         if (r.hasSignal) withSignal.push((h.watch ? "👀 관심 종목\n" : "") + r.text);
       } catch (err) {
         console.error(h.symbol + " 체크 실패: " + err.message);
@@ -136,26 +136,12 @@ function getSymbolAlertsPre(symbol, pmPrice, etDate, etDow) {
       break;
     }
   }
-  if (!longStopPrice || longStopPrice >= cp) longStopPrice = Math.min.apply(null, dData.lows.slice(-40));
+  if (!longStopPrice) longStopPrice = Math.min.apply(null, dData.lows.slice(-40));      // 깨졌다고 손절가를 내리지 않음
 
   var isHighpointSell = checkHighpointSellSignal(wData, haDaily);
 
-  var isHolding = false, todayBuySignal = false, todaySellSignal = false;
-  for (var j = 0; j < len; j++) {
-    var ma20 = calculateMA(dData.closes.slice(0, j + 1), 20);
-    var isGreen = haDaily.closes[j] > haDaily.opens[j];
-    var isPrevRed = j > 0 ? haDaily.closes[j - 1] <= haDaily.opens[j - 1] : false;
-    var isRed = haDaily.closes[j] <= haDaily.opens[j];
-    var isPrevGreen = j > 0 ? haDaily.closes[j - 1] > haDaily.opens[j - 1] : false;
-    var price = dData.closes[j];
-    if (!isHolding && isGreen && isPrevRed && price > ma20) {
-      isHolding = true;
-      if (j === len - 1) todayBuySignal = true;
-    } else if (isHolding && isRed && isPrevGreen && price < ma20) {
-      isHolding = false;
-      if (j === len - 1) todaySellSignal = true;
-    }
-  }
+  var _fl = haSignalFlags(dData, haDaily);
+  var todayBuySignal = !!_fl.buy[len - 1], todaySellSignal = !!_fl.sell[len - 1];
 
   var cloverToday = false;
   var isExtremeLowArr = calculateIsExtremeLowArray(dData);
@@ -170,7 +156,7 @@ function getSymbolAlertsPre(symbol, pmPrice, etDate, etDow) {
   }
 
   var alerts = [];
-  if (longStopPrice && cp < longStopPrice) alerts.push("🚨 장기손절가(" + longStopPrice.toFixed(2) + "$) 이탈 - 프리장가 " + cp.toFixed(2) + "$");
+  if (longStopPrice && cp < longStopPrice && len >= 2 && dData.closes[len - 2] >= longStopPrice) alerts.push("🚨 장기손절가(" + longStopPrice.toFixed(2) + "$) 이탈 - 프리장가 " + cp.toFixed(2) + "$");   // 깬 날 한 번만
   if (isHighpointSell) alerts.push("🌋 초고점 매도 신호 발생 (주봉 과열 후 반전)");
   if (todaySellSignal) alerts.push("▼ 일반 매도 타점 발생 (일봉 하이킨아시 반전)");
   if (todayBuySignal) alerts.push("▲ 추가 매수 타점 발생 (일봉 하이킨아시 반전)");
@@ -180,7 +166,7 @@ function getSymbolAlertsPre(symbol, pmPrice, etDate, etDow) {
   return {price: prevClose, alerts: alerts, ctx: ctx};
 }
 
-function preMarketLine(symbol, avgPrice, pm, etDate, etDow, strategy) {
+function preMarketLine(symbol, avgPrice, pm, etDate, etDow, strategy, ownStop) {
   var info = getSymbolAlerts(symbol); // 전일 정규장 마감 기준 (비교용)
   if (!info) return {hasSignal: false, text: "🔸 " + symbol + ": 데이터 조회 실패"};
 
@@ -212,7 +198,8 @@ function preMarketLine(symbol, avgPrice, pm, etDate, etDow, strategy) {
   if (avgPrice) {
     var pnl = (pm.price - avgPrice) / avgPrice * 100;
     lines.push("💰 평단가 " + avgPrice.toFixed(2) + "$ 대비 " + (pnl >= 0 ? "+" : "") + pnl.toFixed(1) + "%");
-    if (cx && pnl <= -cx.cls.stopPct) lines.push("🛑 손절 참고선(평단 -" + cx.cls.stopPct + "%)에 도달했어요");
+    if (ownStop > 0) { if (pm.price <= ownStop) lines.push("🛑 내 손절가(" + ownStop + "$) 아래예요"); }             // 직접 정한 손절가가 있으면 그것만 봄
+    else if (cx && pnl <= -cx.cls.stopPct) lines.push("🛑 손절 참고선(평단 -" + cx.cls.stopPct + "%)에 도달했어요");
   }
   return {hasSignal: true, text: "🔸 " + symbol + "\n" + lines.join("\n")};
 }
@@ -261,7 +248,7 @@ function checkPostCloseAlert(e) {
     var withSignal = [];
     byToken[token].forEach(function (h) {
       try {
-        var res = postCloseLine(h.symbol, h.avgPrice, h.strategy);
+        var res = postCloseLine(h.symbol, h.avgPrice, h.strategy, _ownStop(token, h.symbol));
         if (res.hasSignal) withSignal.push((h.watch ? "👀 관심 종목\n" : "") + res.text);
       } catch (err) {
         console.error(h.symbol + " 체크 실패: " + err.message);
@@ -274,7 +261,7 @@ function checkPostCloseAlert(e) {
 }
 
 // 마감 후 알림 한 줄 (신호 있을 때만 hasSignal)
-function postCloseLine(symbol, avgPrice, strategy) {
+function postCloseLine(symbol, avgPrice, strategy, ownStop) {
   var info = getSymbolAlerts(symbol);
   if (!info) return {hasSignal: false, text: ""};
   var alerts = applyStrategy(symbol, strategy, info.alerts, null, null);
@@ -284,7 +271,8 @@ function postCloseLine(symbol, avgPrice, strategy) {
   if (avgPrice) {
     var pnl = (info.price - avgPrice) / avgPrice * 100;
     lines.push("💰 평단가 " + avgPrice.toFixed(2) + "$ 대비 " + (pnl >= 0 ? "+" : "") + pnl.toFixed(1) + "%");
-    if (info.ctx && pnl <= -info.ctx.cls.stopPct) lines.push("🛑 손절 참고선(평단 -" + info.ctx.cls.stopPct + "%)에 도달했어요");
+    if (ownStop > 0) { if (info.price <= ownStop) lines.push("🛑 내 손절가(" + ownStop + "$) 아래예요"); }
+    else if (info.ctx && pnl <= -info.ctx.cls.stopPct) lines.push("🛑 손절 참고선(평단 -" + info.ctx.cls.stopPct + "%)에 도달했어요");
   }
   return {hasSignal: true, text: "🔸 " + symbol + "\n" + lines.join("\n")};
 }

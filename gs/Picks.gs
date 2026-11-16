@@ -113,12 +113,15 @@ function pickOne(symbol, d, w) {
   if (ctx.sideways) { score -= 2; why.push("⚠️ 횡보장이라 신호가 자주 틀려요"); }
 
   var ch = (price / d.closes[len - 2] - 1) * 100;
-  // 손익비: 최근 120거래일 고점까지 남은 상승폭 ÷ 손절 참고선(%)
-  var hi120 = 0;
-  for (var hi = Math.max(0, len - 120); hi < len; hi++) { if (d.highs[hi] > hi120) hi120 = d.highs[hi]; }
-  var upPct = hi120 > price ? (hi120 / price - 1) * 100 : 0;
-  var spPct = ctx.cls.stopPct || 12;
-  var rr = Number((upPct / spPct).toFixed(1));
+  // 손익비: (가까운 목표 = 최근 60거래일 고점까지 남은 폭) ÷ (손절 폭 = 최근 10거래일 최저가까지)
+  // 손절 폭은 하루 평균 변동폭보다 작게 잡지 않고, 종목 성격별 한도(8·12·20%)를 넘기지 않아요.
+  var hi60 = 0, lo10 = price;
+  for (var hi = Math.max(0, len - 60); hi < len; hi++) { if (d.highs[hi] > hi60) hi60 = d.highs[hi]; }
+  for (var lo = Math.max(0, len - 10); lo < len; lo++) { if (d.lows[lo] < lo10) lo10 = d.lows[lo]; }
+  var upPct = hi60 > price ? (hi60 / price - 1) * 100 : 0;
+  var spPct = Math.min(Math.max((1 - lo10 / price) * 100, ctx.atrPct || 1), ctx.cls.stopPct || 12);
+  spPct = Number(spPct.toFixed(1));
+  var rr = spPct > 0 ? Number((upPct / spPct).toFixed(1)) : 0;
   return {s: symbol, up: Math.round(upPct), sp: spPct, rr: rr, p: Number(price.toFixed(2)), ch: Number(ch.toFixed(1)), sc: score, tag: tag, why: why, cls: ctx.cls.name, g: PICK_GROUP_OF[symbol] || "🧑 내 보유·기타",
           lt: cloverRepeat ? 1 : 0, cn: cc ? cc.n : 0, dd: cc ? Math.round(cc.dd) : 0};
 }

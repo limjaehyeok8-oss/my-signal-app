@@ -407,11 +407,11 @@ function analyzeStock(ticker, skipChart, stratKey) {
   for (var i = hLenD - 1; i >= 1; i--) {
     if (haDaily.closes[i] > haDaily.opens[i] && haDaily.closes[i - 1] <= haDaily.opens[i - 1]) { shortStopPrice = haDaily.lows[i]; break; }
   }
-  if (!shortStopPrice || shortStopPrice >= cp) shortStopPrice = Math.min.apply(null, dData.lows.slice(-10));
+  if (!shortStopPrice) shortStopPrice = Math.min.apply(null, dData.lows.slice(-10));     // 깨졌다고 손절가를 내리지 않음 (이탈로 표시)
   for (var w = hLenW - 1; w >= 1; w--) {
     if (haWeekly.closes[w] > haWeekly.opens[w] && haWeekly.closes[w - 1] <= haWeekly.opens[w - 1]) { longStopPrice = haWeekly.lows[w]; break; }
   }
-  if (!longStopPrice || longStopPrice >= cp) longStopPrice = Math.min.apply(null, dData.lows.slice(-40));
+  if (!longStopPrice) longStopPrice = Math.min.apply(null, dData.lows.slice(-40));
 
   var sResPrice = calcResLine_TM(sPivotsH, len), lResPrice = calcResLine_TM(lPivotsH, len);
   var sSupPrice = calcSupLine_TM(sPivotsL, len), lSupPrice = calcSupLine_TM(lPivotsL, len);
@@ -488,18 +488,8 @@ function analyzeStock(ticker, skipChart, stratKey) {
   var localMin = Math.min.apply(null, chartLows), localMax = Math.max.apply(null, chartHighs);
   var markerOffset = (localMax - localMin) * 0.05 || chartCloses[0] * 0.02;
 
-  var isHoldingState = false;
-  var fullBuy = new Array(len).fill(false), fullSell = new Array(len).fill(false);
-  for (var f = 0; f < len; f++) {
-    var fMa = calculateMA(dData.closes.slice(0, f + 1), 20);
-    var fGreen = haDaily.closes[f] > haDaily.opens[f];
-    var fPrevRed = f > 0 ? haDaily.closes[f - 1] <= haDaily.opens[f - 1] : false;
-    var fRed = haDaily.closes[f] <= haDaily.opens[f];
-    var fPrevGreen = f > 0 ? haDaily.closes[f - 1] > haDaily.opens[f - 1] : false;
-    var fPrice = dData.closes[f];
-    if (!isHoldingState && fGreen && fPrevRed && fPrice > fMa) { fullBuy[f] = true; isHoldingState = true; }
-    else if (isHoldingState && fRed && fPrevGreen && fPrice < fMa) { fullSell[f] = true; isHoldingState = false; }
-  }
+  var _fl = haSignalFlags(dData, haDaily);
+  var fullBuy = _fl.buy.slice(), fullSell = _fl.sell.slice();
   applyStrategyToMarkers(dData, ticker, stratKey, fullBuy, fullSell);
 
   var chartMa20 = [], buyMarkers = [], sellMarkers = [];

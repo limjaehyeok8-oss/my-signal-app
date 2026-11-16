@@ -41,14 +41,15 @@ function btPrepare(d, ticker) {
   for (var i = 0; i < n; i++) ma20.push(i >= 19 ? calculateMA(d.closes.slice(i - 19, i + 1), 20) : null);
   var ex = calculateIsExtremeLowArray(d);
 
+  var _fl = haSignalFlags(d, ha);
   var buy = [], sell = [], clover = [], haGreen = [];
   for (var k = 0; k < n; k++) {
     var g = ha.closes[k] > ha.opens[k];
     var pg = k > 0 ? ha.closes[k - 1] > ha.opens[k - 1] : false;
     var m = ma20[k];
     haGreen.push(g);
-    buy.push(k >= 20 && g && !pg && d.closes[k] > m);
-    sell.push(k >= 20 && !g && pg && d.closes[k] < m);
+    buy.push(k >= 20 && _fl.buyEv[k]);
+    sell.push(k >= 20 && _fl.sellEv[k]);
     var hadEx = false;
     for (var q = Math.max(0, k - 4); q <= k; q++) { if (ex[q]) { hadEx = true; break; } }
     clover.push(k >= 20 && hadEx && g && !pg);

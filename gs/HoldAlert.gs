@@ -94,3 +94,15 @@ function checkHoldAlerts(force) {
   });
   return "가격 알림 " + sent + "건" + tag;
 }
+
+// 이 기기가 직접 정한 손절가 (없으면 0). 알림 한 번 도는 동안은 시트를 한 번만 읽음
+var _ownStopMap = null;
+function _ownStop(token, symbol) {
+  try {
+    if (!_ownStopMap) {
+      _ownStopMap = {};
+      _haRows().forEach(function (r) { if (r[0] && r[1] && Number(r[3]) > 0) _ownStopMap[_dev(r[0]) + "|" + String(r[1]).toUpperCase()] = Number(r[3]); });
+    }
+    return _ownStopMap[_dev(token) + "|" + String(symbol).toUpperCase()] || 0;
+  } catch (e) { return 0; }
+}

@@ -467,27 +467,12 @@ function getSymbolAlerts(symbol) {
       break;
     }
   }
-  if (!longStopPrice || longStopPrice >= cp) longStopPrice = Math.min.apply(null, dData.lows.slice(-40));
+  if (!longStopPrice) longStopPrice = Math.min.apply(null, dData.lows.slice(-40));      // 깨졌다고 손절가를 내리지 않음
 
   var isHighpointSell = checkHighpointSellSignal(wData, haDaily);
 
-  var isHolding = false, todayBuySignal = false, todaySellSignal = false;
-  for (var j = 0; j < len; j++) {
-    var ma20 = calculateMA(dData.closes.slice(0, j + 1), 20);
-    var isGreen = haDaily.closes[j] > haDaily.opens[j];
-    var isPrevRed = j > 0 ? haDaily.closes[j - 1] <= haDaily.opens[j - 1] : false;
-    var isRed = haDaily.closes[j] <= haDaily.opens[j];
-    var isPrevGreen = j > 0 ? haDaily.closes[j - 1] > haDaily.opens[j - 1] : false;
-    var price = dData.closes[j];
-
-    if (!isHolding && isGreen && isPrevRed && price > ma20) {
-      isHolding = true;
-      if (j === len - 1) todayBuySignal = true;
-    } else if (isHolding && isRed && isPrevGreen && price < ma20) {
-      isHolding = false;
-      if (j === len - 1) todaySellSignal = true;
-    }
-  }
+  var _fl = haSignalFlags(dData, haDaily);
+  var todayBuySignal = !!_fl.buy[len - 1], todaySellSignal = !!_fl.sell[len - 1];
 
   var cloverToday = false;
   var isExtremeLowArr = calculateIsExtremeLowArray(dData);
@@ -502,7 +487,7 @@ function getSymbolAlerts(symbol) {
   }
 
   var alerts = [];
-  if (longStopPrice && cp < longStopPrice) alerts.push("🚨 장기손절가(" + longStopPrice.toFixed(2) + "$) 이탈 - 현재가 " + cp.toFixed(2) + "$");
+  if (longStopPrice && cp < longStopPrice && len >= 2 && dData.closes[len - 2] >= longStopPrice) alerts.push("🚨 장기손절가(" + longStopPrice.toFixed(2) + "$) 이탈 - 현재가 " + cp.toFixed(2) + "$");   // 깬 날 한 번만
   if (isHighpointSell) alerts.push("🌋 초고점 매도 신호 발생 (주봉 과열 후 반전)");
   if (todaySellSignal) alerts.push("🔴 일반 매도 타점 발생 (일봉 하이킨아시 반전)");
   if (todayBuySignal) alerts.push("🟢 추가 매수 타점 발생 (일봉 하이킨아시 반전)");

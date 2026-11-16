@@ -297,3 +297,38 @@ function _yhSector(s) {
   var pe = _yhSectorPe()[def[0]];
   return {name: def[1], pe: pe || null};
 }
+
+
+// ===== 과매도 뒤 성적: 최근 5년 동안 RSI(14)가 30 아래로 내려간 날 이후 수익률 통계 (6시간 저장) =====
+function getOversold(token, symbol) {
+  if (!isRegistered(token)) return {ok: false};
+  var s = String(symbol || "").trim().toUpperCase();
+  if (!/^[A-Z0-9.\-]{1,12}$/.test(s)) return {ok: false, msg: "티커 형식이 올바르지 않아요"};
+  var cache = CacheService.getScriptCache(), ck = "ovs_" + s, hit = cache.get(ck);
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var r = UrlFetchApp.fetch("https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(s) + "?range=5y&interval=1d", {muteHttpExceptions: true});
+  if (r.getResponseCode() !== 200) return {ok: false, msg: "데이터를 불러오지 못했어요"};
+  var d = processYahooData(JSON.parse(r.getContentText()));
+  if (!d || d.closes.length < 120) return {ok: false, msg: "데이터가 부족해요"};
+  var out = _oversoldStats(d.closes);
+  out.ok = true; out.s = s;
+  try { cache.put(ck, JSON.stringify(out), 21600); } catch (e) {}
+  return out;
+}
+function _oversoldStats(c) {
+  var rsi = calculateWilderRSI(c, 14), off = c.length - rsi.length, n = c.length, TH = 30, ev = [], last = -99;
+  for (var i = Math.max(1, off + 1); i < n; i++) {
+    var a = rsi[i - off], b = rsi[i - 1 - off];
+    if (a < TH && b >= TH && i - last >= 10) { ev.push(i); last = i; }      // 30 아래로 "내려간 날". 10거래일 안의 반복은 한 번으로 침
+  }
+  var rows = [5, 10, 20, 60].map(function (h) {
+    var rets = [];
+    ev.forEach(function (i) { if (i + h < n) rets.push((c[i + h] / c[i] - 1) * 100); });
+    if (!rets.length) return {h: h, n: 0};
+    var sum = 0, win = 0, worst = rets[0];
+    rets.forEach(function (x) { sum += x; if (x > 0) win++; if (x < worst) worst = x; });
+    return {h: h, n: rets.length, avg: Number((sum / rets.length).toFixed(1)), win: Math.round(win / rets.length * 100), worst: Number(worst.toFixed(1))};
+  });
+  var cur = rsi[rsi.length - 1];
+  return {th: TH, cnt: ev.length, rows: rows, rsi: Number(cur.toFixed(0)), now: cur < TH, years: Number((n / 252).toFixed(1))};
+}
