@@ -63,4 +63,7 @@ jobs:
           [ -n "$DEPLOYMENT_ID" ] || { echo "::error::Variable GAS_DEPLOYMENT_ID 가 없어요"; exit 1; }
           cd gs
           clasp push -f
-          clasp deploy -i "$DEPLOYMENT_ID" -d "auto ${GITHUB_SHA::7}"
+          clasp deploy -i "$DEPLOYMENT_ID" -d "auto ${GITHUB_SHA::7}" | tee /tmp/deploy.log
+          V=$(grep -o 'Created version [0-9]*' /tmp/deploy.log | grep -o '[0-9]*' | tail -1)
+          echo "version=$V"
+          if [ -n "$V" ] && [ "$V" -ge 170 ]; then echo "::warning::Apps Script 버전이 $V 개예요 (한도 200). 프로젝트 기록에서 옛 버전을 일괄 삭제하세요."; fi
