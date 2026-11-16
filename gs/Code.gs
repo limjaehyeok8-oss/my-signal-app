@@ -282,6 +282,14 @@ function searchSymbols(token, query) {
   var cached = cache.get(key);
   if (cached) return JSON.parse(cached);
 
+  // 한글로 검색하면 네이버 종목 자동완성으로 찾아요 (국장은 코드.KS / 코드.KQ, 미국 주식은 티커로 바꿔 줌)
+  if (/[가-힣]/.test(query)) {
+    try {
+      var kr = _searchNaver(query);
+      if (kr.length) { var outK = {ok: true, results: kr}; cache.put(key, JSON.stringify(outK), 3600); return outK; }
+    } catch (e) {}
+  }
+
   var res = UrlFetchApp.fetch(
     "https://query1.finance.yahoo.com/v1/finance/search?q=" + encodeURIComponent(query) +
     "&quotesCount=8&newsCount=0&lang=ko-KR",
@@ -297,6 +305,25 @@ function searchSymbols(token, query) {
 
   var out = {ok: true, results: quotes};
   cache.put(key, JSON.stringify(out), 3600);
+  return out;
+}
+
+function _searchNaver(query) {
+  var r = UrlFetchApp.fetch("https://ac.stock.naver.com/ac?q=" + encodeURIComponent(query) + "&target=stock",
+    {headers: {"User-Agent": "Mozilla/5.0"}, muteHttpExceptions: true});
+  if (r.getResponseCode() !== 200) return [];
+  var items = JSON.parse(r.getContentText()).items || [], out = [];
+  items.forEach(function (it) {
+    if (!it || typeof it !== "object" || Array.isArray(it)) return;
+    var code = String(it.code || "").toUpperCase(), type = String(it.typeCode || "").toUpperCase(), nation = String(it.nationCode || "").toUpperCase(), sym = "";
+    if (nation === "KOR" || /^[0-9][0-9A-Z]{5}$/.test(code)) {
+      if (type.indexOf("KOSDAQ") !== -1) sym = code + ".KQ";
+      else if (type.indexOf("KOSPI") !== -1 || type === "") sym = code + ".KS";
+      else return;                                                  // 코넥스 등은 야후에 없어서 뺌
+    } else if (nation === "USA" && /^[A-Z.\-]{1,6}$/.test(code)) sym = code;
+    else return;
+    if (out.length < 8) out.push({symbol: sym, name: String(it.name || ""), exchange: String(it.typeName || it.typeCode || ""), type: "EQUITY"});
+  });
   return out;
 }
 
@@ -674,3 +701,4 @@ function testHoldingsCheck() {
   checkHoldingsAndAlert();
   Logger.log("점검 완료");
 }
+function testSearchKr() { Logger.log(UrlFetchApp.fetch("https://ac.stock.naver.com/ac?q=" + encodeURIComponent("인버스") + "&target=stock", {muteHttpExceptions: true}).getContentText().slice(0, 800)); Logger.log(JSON.stringify(_searchNaver("인버스"))); }
