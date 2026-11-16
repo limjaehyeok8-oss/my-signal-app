@@ -1429,11 +1429,6 @@
           tpOut.appendChild(mkEl("div", null, st.name + " — 거래 " + st.n + "회 · 총수익 " + pct(st.total, 0) + " · 최대 낙폭 " + pct(st.mdd, 0) + (sel.value === "default" ? " (기본은 ①번 기준)" : "")));
           const cb = mkEl("div"); tpOut.appendChild(cb);
           drawBtChart(cb, r.series, st.trades);
-          const recent = st.trades.slice(-5).reverse();
-          if (recent.length) {
-            tpOut.appendChild(mkEl("div", null, "최근 거래"));
-            recent.forEach((t) => tpOut.appendChild(mkEl("div", "btApplyMsg", t.inDate + " 매수 " + t.inPx + " → " + (t.open ? "보유 중" : t.outDate + " 매도 " + t.outPx) + " (" + pct(t.ret, 1) + ")")));
-          }
         } catch (e) { tpOut.textContent = "오류: " + e.message; } finally { tpBtn.disabled = false; }
       };
     }
