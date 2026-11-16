@@ -48,7 +48,7 @@ jobs:
           cd gs && clasp pull && cd ..
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add gs ':!gs/.clasp.json'
+          git add gs
           git diff --cached --quiet || git commit -m "gs: 서버 코드 가져오기"
           git push
       - name: 문법 검사
