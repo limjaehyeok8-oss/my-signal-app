@@ -363,3 +363,46 @@ function getSectors(token) {
   try { cache.put("sectors_v1", JSON.stringify(out), 1800); } catch (e) {}
   return out;
 }
+
+
+// 업종 안의 대표 종목들 수익률 (업종 강도에서 줄을 눌렀을 때). 업종별 30분 저장
+var SECTOR_STOCKS = {
+  SPY: "AAPL MSFT NVDA GOOGL AMZN META TSLA AVGO LLY JPM BRK-B V WMT XOM", QQQ: "AAPL MSFT NVDA GOOGL AMZN META TSLA AVGO NFLX COST AMD PLTR CSCO",
+  SMH: "NVDA AVGO AMD TSM MU INTC QCOM ASML AMAT LRCX KLAC MRVL TXN ARM SNDK WDC STX", IGV: "MSFT ORCL CRM ADBE NOW PLTR PANW CRWD SNOW DDOG NET ZS INTU WDAY TEAM",
+  XLK: "AAPL MSFT NVDA AVGO ORCL CSCO IBM DELL ANET ACN HPE SMCI", XLC: "GOOGL META NFLX DIS TMUS VZ T CMCSA SPOT RBLX TTWO EA",
+  XLF: "JPM BAC WFC GS MS C BLK AXP V MA SCHW COF BRK-B", KRE: "USB PNC TFC FITB RF KEY HBAN CFG MTB ZION WAL",
+  XLE: "XOM CVX COP EOG OXY SLB HAL MPC VLO PSX DVN", XLU: "NEE VST CEG SO DUK NRG TLN AEP D EXC GEV", URA: "CCJ UEC LEU OKLO SMR NNE BWXT UUUU DNN",
+  XLV: "LLY UNH JNJ ABBV MRK PFE TMO ABT ISRG AMGN BSX NVO", XBI: "VRTX REGN MRNA GILD CRSP BNTX ALNY EXEL INCY NTRA HIMS",
+  XLI: "GE CAT HON DE UNP UPS ETN PH EMR FDX WM VRT", ITA: "LMT RTX NOC GD BA LHX HWM TDG AXON KTOS RKLB",
+  XLY: "AMZN TSLA HD MCD NKE SBUX LOW BKNG TJX CMG ABNB UBER", XLP: "WMT COST PG KO PEP PM MO CL MDLZ TGT KR",
+  XLB: "LIN SHW FCX NEM APD ECL NUE DOW ALB MP", XLRE: "PLD AMT EQIX WELL SPG O PSA DLR CCI", GDX: "NEM B AEM FNV WPM KGC AU GFI PAAS",
+  TAN: "FSLR ENPH NXT RUN SEDG CSIQ JKS ARRY", IBIT: "COIN MSTR HOOD MARA RIOT CLSK IREN CIFR GLXY", ARKK: "TSLA COIN ROKU PLTR HOOD SHOP RBLX CRSP TEM"
+};
+function getSectorStocks(token, etf) {
+  if (!isRegistered(token)) return {ok: false};
+  etf = String(etf || "").toUpperCase();
+  if (!SECTOR_STOCKS[etf]) return {ok: false, msg: "업종을 찾지 못했어요"};
+  var cache = CacheService.getScriptCache(), ck = "secst_" + etf, hit = cache.get(ck);
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var syms = SECTOR_STOCKS[etf].split(" "), resps;
+  try {
+    resps = UrlFetchApp.fetchAll(syms.map(function (s) {
+      return {url: "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(s) + "?range=6mo&interval=1d", muteHttpExceptions: true};
+    }));
+  } catch (e) { return {ok: false, msg: "종목 데이터를 불러오지 못했어요"}; }
+  var rows = [];
+  syms.forEach(function (s, i) {
+    try {
+      if (resps[i].getResponseCode() !== 200) return;
+      var res = JSON.parse(resps[i].getContentText()).chart.result[0];
+      var c = res.indicators.quote[0].close.filter(function (v) { return v != null; }), n = c.length;
+      if (n < 70) return;
+      var r = function (k) { return Number(((c[n - 1] / c[n - 1 - k] - 1) * 100).toFixed(1)); };
+      rows.push({s: s, n: String(res.meta.shortName || res.meta.longName || s).slice(0, 22), p: Number(c[n - 1].toFixed(2)), w1: r(5), m1: r(21), m3: r(63)});
+    } catch (err) {}
+  });
+  if (!rows.length) return {ok: false, msg: "종목 데이터를 불러오지 못했어요"};
+  var out = {ok: true, etf: etf, rows: rows};
+  try { cache.put(ck, JSON.stringify(out), 1800); } catch (e) {}
+  return out;
+}

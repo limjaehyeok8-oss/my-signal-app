@@ -33,6 +33,7 @@ function handleExtra(data) {
   if (data.action === "getHeat")       return getHeat(token, data.symbols);
   if (data.action === "getFund")       return getFund(token, data.symbol);
   if (data.action === "getSectors")    return getSectors(token);
+  if (data.action === "getSectorStocks") return getSectorStocks(token, data.etf);
   if (data.action === "deleteAccount") return deleteAccount(token, data.confirm);
   if (data.action === "getOversold")   return getOversold(token, data.symbol);
   if (data.action === "getHoldAlerts") return getHoldAlerts(token);

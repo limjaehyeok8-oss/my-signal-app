@@ -975,6 +975,14 @@
     .earnRow b { font-size: 15px; display: block; } .earnRow .sub { font-size: 12px; color: var(--sub); } .earnT { flex: none; font-size: 12px; font-weight: 700; color: var(--sub); }
     html[data-theme="light"] .flowSeg button { background: #eef1f6; } html[data-theme="light"] .flowSeg button.on { background: #191f28; color: #fff; }
     html[data-theme="light"] .flowCard { background: #f2f4f8; } html[data-theme="light"] .hiCnt, html[data-theme="light"] .hiChip { background: #fff; }
+
+    .secArr { flex: none; color: var(--sub); font-size: 12px; width: 12px; text-align: center; }
+    .ssBox { margin: 0 0 10px; padding: 4px 12px 10px; background: var(--card); border-radius: 14px; }
+    .ssRow { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); cursor: pointer; } .ssRow:first-child { border-top: none; }
+    .ssMid { flex: 1; min-width: 0; } .ssMid b { font-size: 15px; } .ssMid .sub { font-size: 12px; color: var(--sub); margin-left: 8px; white-space: nowrap; }
+    .ssMid { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ssEtf { width: 100%; margin-top: 8px; padding: 10px; border: none; border-radius: 12px; background: var(--card2); color: var(--sub); font-size: 13px; font-weight: 700; }
+    html[data-theme="light"] .ssBox { background: #fff; } html[data-theme="light"] .ssEtf { background: #f2f4f8; }
 </style>
 </head>
 <body>
@@ -1309,7 +1317,7 @@
 
     // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
     const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
-                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60, getFund: 3600, getHoldAlerts: 60, getOversold: 3600, getSectors: 600 };
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60, getFund: 3600, getHoldAlerts: 60, getOversold: 3600, getSectors: 600, getSectorStocks: 600 };
     const apiMemo = {};
     async function api(body) {
       const ttl = API_TTL[body.action];
@@ -2820,6 +2828,7 @@
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
         "🧭 시장 흐름 탭: 업종 강도 · 52주 신고가 · 실적 일정 (히트맵 탭 확장)",
+        "업종 강도에서 업종을 누르면 그 안의 종목 순위",
         "알림 전략에 ⑮ 200일선 전략 추가",
         "설정에 탈퇴 기능 추가",
         "아이폰: 카톡 링크는 사파리로 열고, 설치 방법 안내 창 표시",
@@ -2928,7 +2937,22 @@
       history.replaceState(null, "", "#heat"); showFlow(flowView);
     }
     // ----- 시장 흐름: 업종 강도 / 신고가 / 실적 일정 -----
-    let flowView = "heat", secPeriod = "m1", secData = null;
+    let flowView = "heat", secPeriod = "m1", secData = null, secOpen = null; const secStocks = {};
+    function paintSecStocks(host, etf) {
+      host.textContent = "";
+      const d = secStocks[etf];
+      if (!d) { for (let i = 0; i < 3; i++) { const sk = mkEl("div", "skel"); sk.style.height = "34px"; host.appendChild(sk); } return; }
+      if (!d.ok) { host.appendChild(mkEl("div", "alertHint", d.msg || "불러오지 못했어요.")); return; }
+      d.rows.slice().sort((a, b) => b[secPeriod] - a[secPeriod]).forEach((x, i) => {
+        const v = x[secPeriod], row = mkEl("div", "ssRow");
+        row.appendChild(mkEl("span", "secNo", String(i + 1)));
+        const m = mkEl("div", "ssMid"); m.appendChild(mkEl("b", null, x.s)); m.appendChild(mkEl("span", "sub", x.n)); row.appendChild(m);
+        row.appendChild(mkEl("b", "secVal " + (v >= 0 ? "up" : "down"), (v >= 0 ? "+" : "") + v.toFixed(1) + "%"));
+        row.onclick = (e) => { e.stopPropagation(); goAnalyze(x.s); };
+        host.appendChild(row);
+      });
+      const etfBtn = mkEl("button", "ssEtf", "📈 " + etf + " (업종 ETF) 분석 보기"); etfBtn.onclick = (e) => { e.stopPropagation(); goAnalyze(etf); }; host.appendChild(etfBtn);
+    }
     const goAnalyze = (sym) => { showPage("home"); symbolEl.value = sym; analyze(sym); window.scrollTo({ top: 0, behavior: "smooth" }); };
     function paintSectors() {
       const box = $("flowSec"); box.textContent = "";
@@ -2946,11 +2970,21 @@
         const mid = mkEl("div", "secMid"); mid.appendChild(mkEl("b", null, r.n));
         const bar = mkEl("div", "secBar"); const fill = mkEl("i", v >= 0 ? "up" : "down"); fill.style.width = Math.max(Math.abs(v) / mx * 100, 2) + "%"; bar.appendChild(fill); mid.appendChild(bar);
         row.appendChild(mid); row.appendChild(mkEl("b", "secVal " + (v >= 0 ? "up" : "down"), (v >= 0 ? "+" : "") + v.toFixed(1) + "%"));
-        row.onclick = () => goAnalyze(r.s);
+        row.appendChild(mkEl("span", "secArr", secOpen === r.s ? "▴" : "▾"));
         card.appendChild(row);
+        const host = mkEl("div", "ssBox"); host.style.display = secOpen === r.s ? "block" : "none"; card.appendChild(host);
+        if (secOpen === r.s) paintSecStocks(host, r.s);
+        row.onclick = () => {
+          secOpen = secOpen === r.s ? null : r.s; paintSectors();
+          if (secOpen && !secStocks[secOpen]) {
+            const etf = secOpen;
+            api({ action: "getSectorStocks", token: myToken, etf }).then((x) => { secStocks[etf] = x && x.ok ? x : { ok: false, msg: (x && x.msg) || "" }; if (secOpen === etf && flowView === "sec") paintSectors(); if (!x || !x.ok) delete secStocks[etf]; })
+              .catch(() => {});
+          }
+        };
       });
       box.appendChild(card);
-      box.appendChild(mkEl("div", "heatSub", "업종 대표 ETF의 수익률이에요 · " + secData.at + " 기준 · 누르면 분석"));
+      box.appendChild(mkEl("div", "heatSub", "업종 대표 ETF의 수익률이에요 · " + secData.at + " 기준 · 누르면 그 업종의 종목 순위"));
     }
     function loadSectors() {
       paintSectors();
