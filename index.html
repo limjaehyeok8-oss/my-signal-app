@@ -904,6 +904,13 @@
     .coinAn img { width: 100%; display: block; margin-top: 16px; border-radius: 14px; }
     .coinAn .anText { font-size: 14px; }
     html[data-theme="light"] .coinAn { background: #f2f4f8; }
+
+    #analysis #anFund { order: 1; margin-top: 14px; padding: 14px; background: var(--card); border-radius: 16px; }
+    #anFund .afT { font-size: 14px; font-weight: 800; margin-bottom: 10px; }
+    #anFund .afG { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 8px; }
+    #anFund .afG small { display: block; font-size: 12px; color: var(--sub); margin-bottom: 3px; } #anFund .afG b { font-size: 16px; font-weight: 800; white-space: nowrap; }
+    #anFund .afN { font-size: 12px; color: var(--sub); margin-top: 10px; }
+    html[data-theme="light"] #analysis #anFund { background: #fff; }
 </style>
 </head>
 <body>
@@ -958,6 +965,7 @@
         <button id="anaClose" aria-label="분석 닫기">✕ 닫기</button>
         <img id="chartImg" alt="차트">
         <pre id="analysisText"></pre>
+        <div id="anFund" style="display:none"></div>
         <div id="anaStrat" class="btRec" style="display:none"></div>
       </div>
 
@@ -1214,7 +1222,7 @@
 
     // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
     const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
-                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60 };
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60, getFund: 3600 };
     const apiMemo = {};
     async function api(body) {
       const ttl = API_TTL[body.action];
@@ -1799,6 +1807,20 @@
 
     let analyzeSeq = 0;
     $("anaClose").onclick = () => { analyzeSeq++; $("analysis").style.display = "none"; };
+    // 기업 가치 지표 (PER·PBR·시총·배당)
+    function paintFund(box, f) {
+      box.textContent = ""; box.style.display = "none";
+      if (!f || !f.ok) return;
+      const cap = f.mcap ? (f.mcap >= 1e12 ? (f.mcap / 1e12).toFixed(2) + "조 달러" : Math.round(f.mcap / 1e8).toLocaleString("ko-KR") + "억 달러") : null;
+      const cells = [["PER", f.pe != null ? f.pe + "배" : (f.eps != null && f.eps < 0 ? "적자" : null)], ["예상 PER", f.fpe != null ? f.fpe + "배" : null], ["PBR", f.pbr != null ? f.pbr + "배" : null], ["시가총액", cap], ["배당", f.div ? f.div + "%" : null]].filter((c) => c[1] != null);
+      if (!cells.length) return;
+      box.appendChild(mkEl("div", "afT", "기업 가치"));
+      const g = mkEl("div", "afG");
+      cells.forEach(([k, v]) => { const d = mkEl("div"); d.appendChild(mkEl("small", null, k)); d.appendChild(mkEl("b", null, v)); g.appendChild(d); });
+      box.appendChild(g);
+      if (f.pe != null || f.pbr != null) box.appendChild(mkEl("div", "afN", "PER·PBR은 낮을수록 이익·자산 대비 싼 편이에요"));
+      box.style.display = "block";
+    }
     async function analyze(symbol) {
       symbol = String(symbol || "").trim().toUpperCase();
       if (!symbol) return log("종목을 입력하거나 검색해서 선택하세요");
@@ -1815,6 +1837,8 @@
       const showText = (text) => { if (shown) return; shown = true; renderAnalysis(pre, text); renderStratPanel(symbol, seq); };
       // 글(빠름)과 차트 포함 전체(느림)를 동시에 요청 → 글이 먼저 뜨고 차트는 도착하면 붙임
       const full = api({ action: "analyze", token: myToken, ticker: symbol });
+      $("anFund").style.display = "none";
+      api({ action: "getFund", token: myToken, symbol }).then((f) => { if (seq === analyzeSeq) paintFund($("anFund"), f); }).catch(() => {});
       api({ action: "analyzeFast", token: myToken, ticker: symbol }).then((r) => {
         if (seq !== analyzeSeq || !r || !r.ok) return;
         showText(r.text);
@@ -2609,6 +2633,7 @@
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
         "코인 탭에 차트·신호 분석 추가",
+        "종목 분석에 PER·PBR·시가총액·배당 표시",
         "내 종목 추천을 5개로 (오늘 신호 우선)",
         "추천 종목 가격에 프리·애프터·데이장 시세 반영",
         "🗺 히트맵 탭 추가 (시총 크기 × 오늘 등락, 서버 업데이트 필요)",

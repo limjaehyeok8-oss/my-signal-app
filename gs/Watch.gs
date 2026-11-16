@@ -219,3 +219,49 @@ function testOvernight() {
   var q = UrlFetchApp.fetch("https://query1.finance.yahoo.com/v7/finance/quote?symbols=NVDA", {muteHttpExceptions: true});
   Logger.log("quote code=" + q.getResponseCode() + " " + q.getContentText().slice(0, 600));
 }
+
+// ===== 기업 가치 지표 (PER·PBR·시총 등): 야후 quote (쿠키+crumb 필요, 1시간 저장) =====
+function _yhAuth(force) {
+  var cache = CacheService.getScriptCache(), hit = force ? null : cache.get("yh_auth");
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+  var r1 = UrlFetchApp.fetch("https://fc.yahoo.com", {muteHttpExceptions: true, followRedirects: false, headers: {"User-Agent": UA}});
+  var sc = r1.getAllHeaders()["Set-Cookie"] || r1.getAllHeaders()["set-cookie"] || [];
+  if (typeof sc === "string") sc = [sc];
+  var cookie = sc.map(function (c) { return String(c).split(";")[0]; }).join("; ");
+  if (!cookie) return null;
+  var r2 = UrlFetchApp.fetch("https://query2.finance.yahoo.com/v1/test/getcrumb", {muteHttpExceptions: true, headers: {"User-Agent": UA, "Cookie": cookie}});
+  var crumb = r2.getContentText();
+  if (r2.getResponseCode() !== 200 || !crumb || crumb.length > 40 || crumb.indexOf("<") !== -1) return null;
+  var a = {cookie: cookie, crumb: crumb, ua: UA};
+  try { cache.put("yh_auth", JSON.stringify(a), 3600); } catch (e) {}
+  return a;
+}
+function _yhQuote(syms) {
+  for (var attempt = 0; attempt < 2; attempt++) {
+    var a = _yhAuth(attempt === 1);
+    if (!a) continue;
+    var r = UrlFetchApp.fetch("https://query2.finance.yahoo.com/v7/finance/quote?symbols=" + encodeURIComponent(syms.join(",")) + "&crumb=" + encodeURIComponent(a.crumb),
+      {muteHttpExceptions: true, headers: {"User-Agent": a.ua, "Cookie": a.cookie}});
+    if (r.getResponseCode() === 200) { try { return JSON.parse(r.getContentText()).quoteResponse.result || []; } catch (e) { return []; } }
+  }
+  return null;
+}
+function getFund(token, symbol) {
+  if (!isRegistered(token)) return {ok: false};
+  var s = String(symbol || "").trim().toUpperCase();
+  if (!/^[A-Z0-9.\-]{1,12}$/.test(s)) return {ok: false, msg: "티커 형식이 올바르지 않아요"};
+  var cache = CacheService.getScriptCache(), ck = "fund_" + s, hit = cache.get(ck);
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var q;
+  try { q = _yhQuote([s]); } catch (e) { return {ok: false, msg: "가치 지표 오류: " + e.message}; }
+  if (!q) return {ok: false, msg: "가치 지표를 불러오지 못했어요"};
+  if (!q.length) return {ok: false, msg: s + " 가치 지표가 없어요"};
+  var x = q[0], n = function (v, d) { return (typeof v === "number" && isFinite(v)) ? Number(v.toFixed(d == null ? 2 : d)) : null; };
+  var out = {ok: true, s: s, type: x.quoteType || "", pe: n(x.trailingPE, 1), fpe: n(x.forwardPE, 1), pbr: n(x.priceToBook, 1), eps: n(x.epsTrailingTwelveMonths),
+             mcap: n(x.marketCap, 0), div: n(x.trailingAnnualDividendYield != null ? x.trailingAnnualDividendYield * 100 : null, 1)};
+  try { cache.put(ck, JSON.stringify(out), 3600); } catch (e) {}
+  return out;
+}
+function testFund() { Logger.log(JSON.stringify(getFundRaw_("NVDA"))); }
+function getFundRaw_(s) { var q = _yhQuote([s]); return q && q[0] ? {pe: q[0].trailingPE, fpe: q[0].forwardPE, pbr: q[0].priceToBook, mcap: q[0].marketCap} : q; }

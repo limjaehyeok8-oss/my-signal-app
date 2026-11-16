@@ -31,6 +31,7 @@ function handleExtra(data) {
   if (data.action === "addComment")    return addComment(token, data.postId, data.text);
   if (data.action === "getExtPrices")  return getExtPrices(token, data.symbols);
   if (data.action === "getHeat")       return getHeat(token, data.symbols);
+  if (data.action === "getFund")       return getFund(token, data.symbol);
   if (data.action === "getWatch")      return getWatch(token);
   if (data.action === "addWatch")      return addWatch(token, data.symbol, data.target);
   if (data.action === "removeWatch")   return removeWatch(token, data.symbol);
