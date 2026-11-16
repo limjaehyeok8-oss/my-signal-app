@@ -948,6 +948,13 @@
     .iosStep span { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #3182f6; color: #fff; text-align: center; line-height: 26px; font-size: 13px; font-weight: 800; }
     #iosPop .sub { display: flex; justify-content: space-between; margin-top: 12px; } #iosPop .sub button { background: none; border: none; color: var(--sub); font-size: 13px; padding: 6px 2px; }
     html[data-theme="light"] .iosStep { background: #f2f4f8; }
+
+    .quitLink { background: none; border: none; color: #ff6b79; font-size: 14px; font-weight: 700; padding: 6px 0; }
+    #quitBox p { font-size: 13px; line-height: 1.6; color: var(--sub); margin: 4px 0 12px; } #quitBox p b { color: var(--txt); }
+    #quitBox input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; border: none; background: var(--card2); color: var(--txt); font-size: 14px; }
+    .quitBtns { display: flex; gap: 8px; margin-top: 10px; } .quitBtns button { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 800; font-size: 14px; background: var(--card2); color: var(--txt); }
+    .quitBtns #quitGo { background: #ff6b79; color: #fff; } .quitBtns #quitGo:disabled { opacity: .4; }
+    html[data-theme="light"] #quitBox input, html[data-theme="light"] .quitBtns button { background: #f2f4f8; } html[data-theme="light"] .quitBtns #quitGo { background: #ff6b79; }
 </style>
 </head>
 <body>
@@ -1136,6 +1143,15 @@
         <div class="tinyRow"><button id="installApp" class="linkBtn">📲 앱으로 설치하기</button> <span id="installMsg" class="btApplyMsg"></span></div>
         <div class="tinyRow"><button id="copyLink" class="linkBtn">🔗 앱 주소 복사 (친구에게 공유)</button> <span id="copyMsg" class="btApplyMsg"></span></div>
       </details>
+    <div class="setRow" id="quitRow"><h4>탈퇴</h4>
+      <button id="quitOpen" class="quitLink">탈퇴하기</button>
+      <div id="quitBox" style="display:none">
+        <p>이 기기의 <b>보유·관심 종목, 가격 알림, 닉네임·사진, 친구 연결, 알림 기록</b>을 모두 지워요. 커뮤니티 글과 댓글도 삭제돼요. <b>되돌릴 수 없어요.</b></p>
+        <input id="quitIn" placeholder="'탈퇴'라고 입력하세요" autocomplete="off">
+        <div class="quitBtns"><button id="quitNo">취소</button><button id="quitGo" disabled>탈퇴</button></div>
+        <div id="quitMsg" class="hMsg"></div>
+      </div>
+    </div>
     <div class="setRow" id="apkRow" style="display:none"><h4>안드로이드 앱 파일</h4>
       <a href="https://github.com/limjaehyeok8-oss/my-signal-app/releases/download/apk/signal.apk" style="color:var(--accent2);font-weight:700;text-decoration:none">📦 APK 설치 파일 받기</a>
       <div class="alertHint" style="margin-top:8px">받은 파일을 열고 '이 출처 허용'을 누르면 설치돼요.</div></div>
@@ -1340,6 +1356,7 @@
         if (typeof Notification === "undefined" || !("serviceWorker" in navigator)) return log("이 브라우저는 알림을 지원하지 않아요. 크롬(Chrome)으로 열어주세요. (아이폰은 홈 화면에 추가 후 열기)");
         log("등록 중… 알림 허용 창이 뜨면 '허용'을 눌러 주세요");
         let permission;
+        try { localStorage.removeItem("sigQuit"); } catch (e) {}
         try { permission = await Notification.requestPermission(); } catch (e) { return log("알림 권한을 물어보지 못했어요: " + e.message + " — 크롬(Chrome)으로 열어주세요."); }
         if (permission === "denied") {
           if (/Android/i.test(navigator.userAgent)) {
@@ -1479,6 +1496,23 @@
       if (!ok) { try { const t = document.createElement("textarea"); t.value = url; document.body.appendChild(t); t.select(); ok = document.execCommand("copy"); t.remove(); } catch (e) {} }
       $("copyMsg").textContent = ok ? "복사됐어요" : url;
       setTimeout(() => { $("copyMsg").textContent = ""; }, 3000);
+    };
+    // 탈퇴: 서버의 내 정보 삭제 → 이 기기 저장값도 비움
+    $("quitOpen").onclick = () => { $("quitBox").style.display = "block"; $("quitOpen").style.display = "none"; $("quitIn").value = ""; $("quitGo").disabled = true; $("quitMsg").textContent = ""; };
+    $("quitNo").onclick = () => { $("quitBox").style.display = "none"; $("quitOpen").style.display = ""; };
+    $("quitIn").oninput = () => { $("quitGo").disabled = $("quitIn").value.trim() !== "탈퇴"; };
+    $("quitGo").onclick = async () => {
+      const m = $("quitMsg");
+      if (!myToken) { m.textContent = "등록된 기기가 아니에요"; return; }
+      $("quitGo").disabled = true; m.textContent = "지우는 중…";
+      try {
+        const r = await api({ action: "deleteAccount", token: myToken, confirm: "탈퇴" });
+        if (!r || !r.ok) { m.textContent = (r && r.msg) || "탈퇴하지 못했어요"; $("quitGo").disabled = false; return; }
+        m.textContent = "탈퇴가 끝났어요";
+        try { const th = localStorage.getItem("sigTheme"); localStorage.clear(); if (th) localStorage.setItem("sigTheme", th); localStorage.setItem("sigQuit", "true"); sessionStorage.clear(); } catch (e) {}
+        try { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map((x) => x.unregister())); } catch (e) {}
+        setTimeout(() => { location.href = location.pathname; }, 900);
+      } catch (e) { m.textContent = "오류가 났어요. 잠시 후 다시 해 주세요"; $("quitGo").disabled = false; }
     };
     $("stResetAll").onclick = async () => {
       const m = $("stResetMsg");
@@ -2333,7 +2367,7 @@
       if (r.ok) { $("avg").value = ""; loadHoldings(); }
     };
 
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") init();
+    if (typeof Notification !== "undefined" && Notification.permission === "granted" && !lsGet("sigQuit")) init();   // 탈퇴한 기기는 자동으로 다시 등록하지 않음
     else if (!lsGet("sigTok")) $("needReg").style.display = "block";   // 처음 온 기기: 등록 안내
 
     fbReady.then(() => { if (messaging) {
@@ -2758,6 +2792,7 @@
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
+        "설정에 탈퇴 기능 추가",
         "아이폰: 카톡 링크는 사파리로 열고, 설치 방법 안내 창 표시",
         "종목 분석에 '과매도 뒤 성적' (5년 통계)",
         "손절 로직 수정: 손절가 이탈 표시, 손익비 계산 (신호 규칙은 5년 비교 후 기존 유지)",
