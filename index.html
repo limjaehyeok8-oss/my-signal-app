@@ -955,6 +955,26 @@
     .quitBtns { display: flex; gap: 8px; margin-top: 10px; } .quitBtns button { flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 800; font-size: 14px; background: var(--card2); color: var(--txt); }
     .quitBtns #quitGo { background: #ff6b79; color: #fff; } .quitBtns #quitGo:disabled { opacity: .4; }
     html[data-theme="light"] #quitBox input, html[data-theme="light"] .quitBtns button { background: #f2f4f8; } html[data-theme="light"] .quitBtns #quitGo { background: #ff6b79; }
+
+    .flowSeg { display: flex; gap: 6px; margin: 8px 0 14px; overflow-x: auto; scrollbar-width: none; } .flowSeg::-webkit-scrollbar { display: none; }
+    .flowSeg button { flex: none; border: none; background: var(--card2); color: var(--sub); font-size: 14px; font-weight: 700; padding: 9px 16px; border-radius: 999px; }
+    .flowSeg button.on { background: var(--txt); color: var(--bg); }
+    .flowCard { background: var(--card2); border-radius: 20px; padding: 8px 16px; margin-bottom: 12px; }
+    .flowLead { font-size: 13px; font-weight: 700; margin: -4px 2px 12px; color: var(--sub); }
+    .secRow { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); cursor: pointer; } .secRow:first-child { border-top: none; }
+    .secRow.base b { color: var(--sub); } .secNo { flex: none; width: 22px; text-align: center; font-size: 12px; font-weight: 800; color: var(--sub); }
+    .secMid { flex: 1; min-width: 0; } .secMid b { font-size: 15px; display: block; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .secBar { height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; } .secBar i { display: block; height: 100%; border-radius: 3px; background: currentColor; }
+    .secBar i.up { color: var(--up, #f04452); } .secBar i.down { color: var(--down, #3182f6); }
+    .secVal { flex: none; font-size: 15px; font-weight: 800; min-width: 62px; text-align: right; }
+    .hiT { display: flex; justify-content: space-between; align-items: center; padding: 10px 0 8px; } .hiT b { font-size: 15px; }
+    .hiCnt { font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--card); color: var(--accent); }
+    .hiChips { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 10px; }
+    .hiChip { border: none; background: var(--card); color: var(--txt); border-radius: 12px; padding: 8px 11px; font-size: 13px; display: flex; gap: 6px; align-items: baseline; } .hiChip b { font-weight: 800; } .hiChip span { font-size: 11px; font-weight: 700; }
+    .earnRow { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); cursor: pointer; }
+    .earnRow b { font-size: 15px; display: block; } .earnRow .sub { font-size: 12px; color: var(--sub); } .earnT { flex: none; font-size: 12px; font-weight: 700; color: var(--sub); }
+    html[data-theme="light"] .flowSeg button { background: #eef1f6; } html[data-theme="light"] .flowSeg button.on { background: #191f28; color: #fff; }
+    html[data-theme="light"] .flowCard { background: #f2f4f8; } html[data-theme="light"] .hiCnt, html[data-theme="light"] .hiChip { background: #fff; }
 </style>
 </head>
 <body>
@@ -973,7 +993,7 @@
     <button id="tabFg">🌡️ 시장</button>
     <button id="tabCoin">🪙 코인</button>
     <button id="tabBt">🧪 백테스트</button>
-    <button id="tabHeat">🗺 히트맵</button>
+    <button id="tabHeat">🧭 시장 흐름</button>
     <button id="tabNote">📢 공지<i id="noteDot"></i></button>
   </div>
   <button id="tabMore" aria-label="전체 탭 보기"><span id="tabCur">📈 내 종목</span><span class="arr">▾</span></button>
@@ -1178,9 +1198,15 @@
 
   <!-- ===== 탭: 백테스트 ===== -->
   <div id="heatView" style="display:none">
+    <div class="flowSeg" id="flowSeg"><button data-v="heat" class="on">히트맵</button><button data-v="sec">업종 강도</button><button data-v="hi">신고가</button><button data-v="earn">실적 일정</button></div>
+    <div id="flowHeat">
     <div class="heatHead"><h3>🗺 미국 시장 히트맵</h3><div class="heatSeg" id="heatN"><button data-n="15">Top 15</button><button data-n="30" class="on">Top 30</button></div></div>
     <div id="heatBox"></div>
     <div class="heatSub" id="heatSub"></div>
+    </div>
+    <div id="flowSec" style="display:none"></div>
+    <div id="flowHi" style="display:none"></div>
+    <div id="flowEarn" style="display:none"></div>
   </div>
   <div id="noteView" style="display:none"><div id="noteList"></div></div>
 
@@ -1283,7 +1309,7 @@
 
     // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
     const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
-                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60, getFund: 3600, getHoldAlerts: 60, getOversold: 3600 };
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60, getFund: 3600, getHoldAlerts: 60, getOversold: 3600, getSectors: 600 };
     const apiMemo = {};
     async function api(body) {
       const ttl = API_TTL[body.action];
@@ -2793,6 +2819,7 @@
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
+        "🧭 시장 흐름 탭: 업종 강도 · 52주 신고가 · 실적 일정 (히트맵 탭 확장)",
         "알림 전략에 ⑮ 200일선 전략 추가",
         "설정에 탈퇴 기능 추가",
         "아이폰: 카톡 링크는 사파리로 열고, 설치 방법 안내 창 표시",
@@ -2898,8 +2925,101 @@
       ["homeView", "fgView", "pickView", "btView", "commView", "coinView", "noteView", "reportView"].forEach((id) => { const e = document.getElementById(id); if (e) e.style.display = "none"; });
       document.querySelectorAll(".mainTabs button").forEach((b) => b.className = "");
       $("tabHeat").className = "on"; $("heatView").style.display = "block";
-      history.replaceState(null, "", "#heat"); loadHeat();
+      history.replaceState(null, "", "#heat"); showFlow(flowView);
     }
+    // ----- 시장 흐름: 업종 강도 / 신고가 / 실적 일정 -----
+    let flowView = "heat", secPeriod = "m1", secData = null;
+    const goAnalyze = (sym) => { showPage("home"); symbolEl.value = sym; analyze(sym); window.scrollTo({ top: 0, behavior: "smooth" }); };
+    function paintSectors() {
+      const box = $("flowSec"); box.textContent = "";
+      const head = mkEl("div", "heatHead"); head.appendChild(mkEl("h3", null, "💪 업종별 강도"));
+      const seg = mkEl("div", "heatSeg");
+      [["w1", "1주"], ["m1", "1달"], ["m3", "3달"]].forEach(([k, t]) => { const b = mkEl("button", secPeriod === k ? "on" : "", t); b.onclick = () => { secPeriod = k; paintSectors(); }; seg.appendChild(b); });
+      head.appendChild(seg); box.appendChild(head);
+      if (!secData) { for (let i = 0; i < 6; i++) { const sk = mkEl("div", "skel"); sk.style.height = "44px"; box.appendChild(sk); } return; }
+      const rows = secData.rows.slice().sort((a, b) => b[secPeriod] - a[secPeriod]);
+      const mx = Math.max(...rows.map((r) => Math.abs(r[secPeriod])), 1);
+      const card = mkEl("div", "flowCard");
+      rows.forEach((r, i) => {
+        const v = r[secPeriod], row = mkEl("div", "secRow" + (r.s === "SPY" ? " base" : ""));
+        row.appendChild(mkEl("span", "secNo", String(i + 1)));
+        const mid = mkEl("div", "secMid"); mid.appendChild(mkEl("b", null, r.n));
+        const bar = mkEl("div", "secBar"); const fill = mkEl("i", v >= 0 ? "up" : "down"); fill.style.width = Math.max(Math.abs(v) / mx * 100, 2) + "%"; bar.appendChild(fill); mid.appendChild(bar);
+        row.appendChild(mid); row.appendChild(mkEl("b", "secVal " + (v >= 0 ? "up" : "down"), (v >= 0 ? "+" : "") + v.toFixed(1) + "%"));
+        row.onclick = () => goAnalyze(r.s);
+        card.appendChild(row);
+      });
+      box.appendChild(card);
+      box.appendChild(mkEl("div", "heatSub", "업종 대표 ETF의 수익률이에요 · " + secData.at + " 기준 · 누르면 분석"));
+    }
+    function loadSectors() {
+      paintSectors();
+      api({ action: "getSectors", token: myToken }).then((r) => {
+        if (r && r.ok && r.rows) { secData = r; paintSectors(); }
+        else if (!secData) { const b = $("flowSec"); b.querySelectorAll(".skel").forEach((x) => x.remove()); b.appendChild(mkEl("div", "alertHint", (r && r.msg) || "업종 데이터를 불러오지 못했어요.")); }
+      }).catch(() => {});
+    }
+    function paintHighs(r) {
+      const box = $("flowHi"); box.textContent = "";
+      box.appendChild(mkEl("div", "heatHead")).appendChild(mkEl("h3", null, "🚀 52주 신고가"));
+      if (!r) { for (let i = 0; i < 4; i++) { const sk = mkEl("div", "skel"); box.appendChild(sk); } return; }
+      if (!r.ok || !r.highs) { box.appendChild(mkEl("div", "alertHint", r.ok ? "다음 추천 계산이 끝나면 채워져요. (추천 탭에서 🔄을 누르면 바로 계산해요)" : "불러오지 못했어요.")); return; }
+      if (!r.highs.length) { box.appendChild(mkEl("div", "alertHint", "최근 5거래일 안에 신고가를 찍은 종목이 없어요.")); return; }
+      const by = {}; r.highs.forEach((x) => { (by[x.g] = by[x.g] || []).push(x); });
+      const groups = Object.keys(by).sort((a, b) => by[b].length - by[a].length);
+      box.appendChild(mkEl("div", "flowLead", "총 " + r.highs.length + "개 · 한 분야에 몰려 있으면 그쪽으로 돈이 가는 중이에요"));
+      groups.forEach((g) => {
+        const card = mkEl("div", "flowCard"); const t = mkEl("div", "hiT"); t.appendChild(mkEl("b", null, g)); t.appendChild(mkEl("span", "hiCnt", by[g].length + "개")); card.appendChild(t);
+        const wrap = mkEl("div", "hiChips");
+        by[g].sort((a, b) => (b.m1 || 0) - (a.m1 || 0)).forEach((x) => {
+          const c = mkEl("button", "hiChip"); c.appendChild(mkEl("b", null, x.s));
+          if (x.m1 != null) c.appendChild(mkEl("span", x.m1 >= 0 ? "up" : "down", (x.m1 >= 0 ? "+" : "") + x.m1 + "%"));
+          c.onclick = () => goAnalyze(x.s); wrap.appendChild(c);
+        });
+        card.appendChild(wrap); box.appendChild(card);
+      });
+      box.appendChild(mkEl("div", "heatSub", "최근 5거래일 안에 1년 최고가를 찍은 종목 · 옆 숫자는 최근 1달 수익률 · " + (r.updated || "")));
+    }
+    function loadHighs() {
+      paintHighs(null);
+      api({ action: "getPicks", token: myToken, force: false }).then(paintHighs).catch(() => paintHighs({ ok: false }));
+    }
+    function paintEarn(list) {
+      const box = $("flowEarn"); box.textContent = "";
+      box.appendChild(mkEl("div", "heatHead")).appendChild(mkEl("h3", null, "📅 실적 발표 일정"));
+      if (list === null) { for (let i = 0; i < 4; i++) { const sk = mkEl("div", "skel"); sk.style.height = "60px"; box.appendChild(sk); } return; }
+      if (!list) { box.appendChild(mkEl("div", "alertHint", "일정을 불러오지 못했어요. 내일 아침 리포트가 만들어지면 채워져요.")); return; }
+      if (!list.length) { box.appendChild(mkEl("div", "alertHint", "앞으로 3주 안에 대표 회사의 실적 발표가 없어요.")); return; }
+      const mine = {}; document.querySelectorAll("#list .frRow[data-xsym], #wList [data-xsym]").forEach((e) => { mine[e.dataset.xsym] = 1; });
+      const days = {}; list.forEach((x) => { (days[x.d] = days[x.d] || []).push(x); });
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      Object.keys(days).sort().forEach((d) => {
+        const dt = new Date(d + "T00:00:00"), diff = Math.round((dt - today) / 86400000);
+        const card = mkEl("div", "flowCard"); const t = mkEl("div", "hiT");
+        t.appendChild(mkEl("b", null, (dt.getMonth() + 1) + "/" + dt.getDate() + " (" + "일월화수목금토"[dt.getDay()] + ")"));
+        t.appendChild(mkEl("span", "hiCnt", diff <= 0 ? "오늘" : "D-" + diff)); card.appendChild(t);
+        days[d].forEach((x) => {
+          const row = mkEl("div", "earnRow"); const l = mkEl("div");
+          l.appendChild(mkEl("b", null, (mine[x.s] ? "⭐ " : "") + x.n)); l.appendChild(mkEl("span", "sub", x.s + " · " + x.g));
+          row.appendChild(l); row.appendChild(mkEl("span", "earnT", x.t === "bmo" ? "장 시작 전" : x.t === "amc" ? "장 마감 후" : "시간 미정"));
+          row.onclick = () => goAnalyze(x.s); card.appendChild(row);
+        });
+        box.appendChild(card);
+      });
+      box.appendChild(mkEl("div", "heatSub", "업종 대표 회사만 모았어요 · 미국 현지 날짜 기준 · ⭐는 내 보유·관심 종목"));
+    }
+    function loadEarn() {
+      paintEarn(null);
+      fetch("report.json?t=" + Math.floor(Date.now() / 3600000)).then((r) => r.json()).then((j) => paintEarn(Array.isArray(j.earnCal) ? j.earnCal : false)).catch(() => paintEarn(false));
+    }
+    function showFlow(v) {
+      flowView = v;
+      document.querySelectorAll("#flowSeg button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+      [["heat", "flowHeat"], ["sec", "flowSec"], ["hi", "flowHi"], ["earn", "flowEarn"]].forEach(([k, id]) => { $(id).style.display = k === v ? "block" : "none"; });
+      if (!myToken) return;
+      if (v === "heat") loadHeat(); else if (v === "sec") loadSectors(); else if (v === "hi") loadHighs(); else loadEarn();
+    }
+    $("flowSeg").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) showFlow(b.dataset.v); });
     $("tabHeat").onclick = showHeat;
     $("heatN").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; heatN = +b.dataset.n; document.querySelectorAll("#heatN button").forEach((x) => x.classList.toggle("on", x === b)); paintHeat(); });
     if (location.hash === "#heat") showHeat();

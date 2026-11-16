@@ -685,6 +685,39 @@ web["weeklyHA"] = ({"items": [_plain(s) for s in ha_turn_list], "failed": weekly
 
 web["earnings"] = [_plain(s) for s in earnings_lines]
 
+# ---- 실적 발표 달력: 업종 대표 회사들의 앞으로 3주 일정 (앱 '시장 흐름' 탭에서 사용) ----
+EARN_REP = {
+    "NVDA": ("엔비디아", "반도체"), "AMD": ("AMD", "반도체"), "AVGO": ("브로드컴", "반도체"), "TSM": ("TSMC", "반도체"), "ASML": ("ASML", "반도체"),
+    "MU": ("마이크론", "메모리"), "WDC": ("웨스턴디지털", "메모리"), "STX": ("씨게이트", "메모리"), "SNDK": ("샌디스크", "메모리"),
+    "AAPL": ("애플", "빅테크"), "MSFT": ("마이크로소프트", "빅테크"), "GOOGL": ("알파벳", "빅테크"), "AMZN": ("아마존", "빅테크"), "META": ("메타", "빅테크"), "TSLA": ("테슬라", "빅테크"), "NFLX": ("넷플릭스", "빅테크"),
+    "ORCL": ("오라클", "소프트웨어"), "CRM": ("세일즈포스", "소프트웨어"), "ADBE": ("어도비", "소프트웨어"), "PLTR": ("팔란티어", "소프트웨어"), "CRWD": ("크라우드스트라이크", "소프트웨어"), "SNOW": ("스노우플레이크", "소프트웨어"),
+    "DELL": ("델", "서버·장비"), "SMCI": ("슈퍼마이크로", "서버·장비"), "VRT": ("버티브", "서버·장비"), "ANET": ("아리스타", "서버·장비"),
+    "JPM": ("제이피모건", "금융"), "BAC": ("뱅크오브아메리카", "금융"), "GS": ("골드만삭스", "금융"), "V": ("비자", "금융"),
+    "XOM": ("엑슨모빌", "에너지"), "CVX": ("셰브론", "에너지"),
+    "VST": ("비스트라", "전력"), "CEG": ("컨스텔레이션", "전력"), "GEV": ("GE버노바", "전력"), "NEE": ("넥스트에라", "전력"),
+    "LLY": ("일라이 릴리", "헬스케어"), "UNH": ("유나이티드헬스", "헬스케어"), "JNJ": ("존슨앤존슨", "헬스케어"), "NVO": ("노보 노디스크", "헬스케어"),
+    "WMT": ("월마트", "소비"), "COST": ("코스트코", "소비"), "HD": ("홈디포", "소비"), "NKE": ("나이키", "소비"), "MCD": ("맥도날드", "소비"),
+    "CAT": ("캐터필러", "산업"), "BA": ("보잉", "산업"), "GE": ("GE에어로스페이스", "산업"), "LMT": ("록히드마틴", "산업"),
+    "COIN": ("코인베이스", "크립토"), "MSTR": ("스트래티지", "크립토"), "HOOD": ("로빈후드", "크립토"),
+}
+earn_cal = []
+if finnhub_token:
+    try:
+        from datetime import timedelta
+        _to = (today + timedelta(days=21)).isoformat()
+        _url = f"https://finnhub.io/api/v1/calendar/earnings?from={today}&to={_to}&token={finnhub_token}"
+        _data = requests.get(_url, timeout=15).json()
+        _seen = set()
+        for it in _data.get("earningsCalendar", []):
+            sy = it.get("symbol")
+            if sy in EARN_REP and sy not in _seen and it.get("date"):
+                _seen.add(sy)
+                earn_cal.append({"d": it["date"], "s": sy, "n": EARN_REP[sy][0], "g": EARN_REP[sy][1], "t": it.get("hour") or ""})
+        earn_cal.sort(key=lambda x: (x["d"], x["g"], x["s"]))
+    except Exception as e:
+        print(f"실적 달력 조회 실패: {e}")
+web["earnCal"] = earn_cal
+
 with open("report.json", "w", encoding="utf-8") as fp:
     json.dump(web, fp, ensure_ascii=False, indent=2)
 print("report.json 저장 완료")

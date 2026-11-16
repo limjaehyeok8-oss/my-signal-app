@@ -332,3 +332,34 @@ function _oversoldStats(c) {
   var cur = rsi[rsi.length - 1];
   return {th: TH, cnt: ev.length, rows: rows, rsi: Number(cur.toFixed(0)), now: cur < TH, years: Number((n / 252).toFixed(1))};
 }
+
+
+// ===== 업종별 강도: 업종 대표 ETF 의 1주·1달·3달 수익률 (30분 저장) =====
+var SECTOR_ETFS = [["SPY", "S&P500 (기준)"], ["QQQ", "나스닥100"], ["SMH", "반도체"], ["IGV", "소프트웨어"], ["XLK", "기술 전체"], ["XLC", "통신·미디어"],
+  ["XLF", "금융"], ["KRE", "지역은행"], ["XLE", "에너지(석유)"], ["XLU", "전력·유틸리티"], ["URA", "원전·우라늄"], ["XLV", "헬스케어"], ["XBI", "바이오"],
+  ["XLI", "산업재"], ["ITA", "방산·항공"], ["XLY", "경기소비재"], ["XLP", "필수소비재"], ["XLB", "소재"], ["XLRE", "부동산"], ["GDX", "금광"], ["TAN", "태양광"], ["IBIT", "비트코인"], ["ARKK", "혁신 성장주"]];
+function getSectors(token) {
+  if (!isRegistered(token)) return {ok: false};
+  var cache = CacheService.getScriptCache(), hit = cache.get("sectors_v1");
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var resps;
+  try {
+    resps = UrlFetchApp.fetchAll(SECTOR_ETFS.map(function (e) {
+      return {url: "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(e[0]) + "?range=6mo&interval=1d", muteHttpExceptions: true};
+    }));
+  } catch (e) { return {ok: false, msg: "업종 데이터를 불러오지 못했어요"}; }
+  var rows = [];
+  SECTOR_ETFS.forEach(function (e, i) {
+    try {
+      if (resps[i].getResponseCode() !== 200) return;
+      var c = JSON.parse(resps[i].getContentText()).chart.result[0].indicators.quote[0].close.filter(function (v) { return v != null; }), n = c.length;
+      if (n < 70) return;
+      var r = function (k) { return Number(((c[n - 1] / c[n - 1 - k] - 1) * 100).toFixed(1)); };
+      rows.push({s: e[0], n: e[1], d1: r(1), w1: r(5), m1: r(21), m3: r(63)});
+    } catch (err) {}
+  });
+  if (!rows.length) return {ok: false, msg: "업종 데이터를 불러오지 못했어요"};
+  var out = {ok: true, rows: rows, at: Utilities.formatDate(new Date(), "Asia/Seoul", "MM/dd HH:mm")};
+  try { cache.put("sectors_v1", JSON.stringify(out), 1800); } catch (e) {}
+  return out;
+}

@@ -165,7 +165,7 @@ function refreshPicks() {
   var props = PropertiesService.getScriptProperties();
   props.setProperty("PICKS_RUN_AT", String(t0));                // 계산 중 표시
   var universe = pickUniverse();
-  var items = [], scanned = 0, CH = 25;
+  var items = [], highs = [], scanned = 0, CH = 25;
   for (var i = 0; i < universe.length; i += CH) {
     if (Date.now() - t0 > 5 * 60 * 1000) break;                 // 6분 제한 전에 멈춤
     var chunk = universe.slice(i, i + CH);
@@ -184,13 +184,23 @@ function refreshPicks() {
         var d = processYahooData(JSON.parse(a.getContentText()));
         var w = processYahooData(JSON.parse(b.getContentText()));
         scanned++;
+        try {                                              // 52주 신고가: 1년 최고가를 최근 5거래일 안에 찍은 종목
+          var hl = d.highs.length;
+          if (hl >= 200 && d.closes[hl - 1] >= 3) {
+            var mx = 0, mi = -1;
+            for (var q = 0; q < hl; q++) { if (d.highs[q] >= mx) { mx = d.highs[q]; mi = q; } }
+            if (hl - 1 - mi <= 4) highs.push({s: s, g: PICK_GROUP_OF[s] || "기타", p: Number(d.closes[hl - 1].toFixed(2)),
+              ch: Number(((d.closes[hl - 1] / d.closes[hl - 2] - 1) * 100).toFixed(1)), ago: hl - 1 - mi,
+              m1: hl > 22 ? Number(((d.closes[hl - 1] / d.closes[hl - 22] - 1) * 100).toFixed(0)) : null});
+          }
+        } catch (e) {}
         var r = pickOne(s, d, w);
         if (r && r.sc >= 1) items.push(r);                 // 점수 1점 이상만 보여줌
       } catch (e) { /* 한 종목 실패는 무시 */ }
     });
   }
   items.sort(function (x, y) { return y.sc - x.sc || y.ch - x.ch; });
-  var out = {scanned: scanned, total: universe.length, items: _splitPicks(items)};
+  var out = {scanned: scanned, total: universe.length, items: _splitPicks(items), highs: highs.slice(0, 150)};
   var sh = getPicksSheet();
   sh.getRange(2, 1, 1, 2).setValues([[Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm"), JSON.stringify(out)]]);
   props.deleteProperty("PICKS_RUN_AT");
@@ -223,7 +233,7 @@ function getPicks(token, force) {
       refreshing = true;
     }
   } catch (e) { /* 트리거를 못 만들어도 기존 결과는 보여줌 */ }
-  return {ok: true, updated: upd, scanned: o.scanned || 0, total: o.total || 0, items: o.items || [], refreshing: refreshing, groups: Object.keys(PICK_GROUPS)};
+  return {ok: true, updated: upd, scanned: o.scanned || 0, total: o.total || 0, items: o.items || [], highs: o.highs || null, refreshing: refreshing, groups: Object.keys(PICK_GROUPS)};
 }
 
 // 한 번짜리 트리거가 부르는 함수: 계산하고 자기 트리거를 지움
