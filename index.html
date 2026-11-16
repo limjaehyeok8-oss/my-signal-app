@@ -2609,6 +2609,7 @@
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
         "코인 탭에 차트·신호 분석 추가",
+        "내 종목 추천을 5개로 (오늘 신호 우선)",
         "추천 종목 가격에 프리·애프터·데이장 시세 반영",
         "🗺 히트맵 탭 추가 (시총 크기 × 오늘 등락, 서버 업데이트 필요)",
         "시뮬봇 화면 정리 (큰 수익률·예정 주문·성적표), 보유 주수 표시 (서버 업데이트 필요)",
@@ -3208,18 +3209,19 @@
       const have = {};
       try { ((lsGet("sigHold") || {}).holdings || []).forEach((h) => { have[String(h.symbol).toUpperCase()] = 1; }); } catch (e) {}
       try { ((lsGet("sigWatch") || {}).items || []).forEach((h) => { have[String(h.s).toUpperCase()] = 1; }); } catch (e) {}
-      const list = recData.filter((x) => !x.lt && (x.tag || []).some((t) => t.indexOf("오늘") !== -1) && !have[String(x.s).toUpperCase()])
-        .sort((a, b) => b.sc - a.sc || b.ch - a.ch).slice(0, 1);
+      const cand = recData.filter((x) => !x.lt && (x.tag || []).length && !have[String(x.s).toUpperCase()]).sort((a, b) => b.sc - a.sc || b.ch - a.ch);
+      const isToday = (x) => (x.tag || []).some((t) => t.indexOf("오늘") !== -1);
+      const list = cand.filter(isToday).concat(cand.filter((x) => !isToday(x))).slice(0, 5);   // 오늘 신호 먼저, 모자라면 최근 신호로 채움
       if (!list.length) return;
       const wrap = mkEl("div", "recBox");
-      wrap.appendChild(mkEl("h3", null, "💡 이 종목은 어떤가요?"));
+      wrap.appendChild(mkEl("h3", null, "💡 추천 종목 " + list.length));
       list.forEach((x) => {
         const row = mkEl("div", "recRow");
         const sy = mkEl("span", "rs", x.s);
-        sy.onclick = () => { symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+        sy.onclick = () => { symbolEl.value = x.s; analyze(x.s); const pb = document.querySelector("#pgNav button:nth-child(1)"); if (pb) pb.click(); window.scrollTo({ top: 0, behavior: "smooth" }); };
         const m = mkEl("div", "rm");
         const b = mkEl("b", null, "$" + fmt(x.p) + " "); b.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
-        m.appendChild(b); m.appendChild(mkEl("div", null, (x.tag || []).join(" · ") + " · 점수 " + x.sc));
+        m.appendChild(b); m.appendChild(mkEl("div", null, (x.tag || []).join(" · ") + " · 점수 " + x.sc + (x.rr != null ? " · 손익비 " + x.rr : "")));
         const bt = mkEl("button", null, "👀 관심");
         bt.onclick = async () => {
           bt.disabled = true; bt.textContent = "추가 중…";
