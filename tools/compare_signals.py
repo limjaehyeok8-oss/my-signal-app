@@ -29,36 +29,31 @@ def run(o, c, g, ma, new):
         if np.isnan(ma[k]):
             continue
         e = g[k] and c[k] > ma[k]; x = (not g[k]) and c[k] < ma[k]
-        if new:
-            if not hold and e and not pe: pend = "buy"
-            elif hold and x: pend = "sell"
-        else:
-            pg = g[k - 1] if k > 0 else False
-            if not hold and g[k] and not pg and c[k] > ma[k]: pend = "buy"
-            elif hold and (not g[k]) and pg and c[k] < ma[k]: pend = "sell"
+        pg = g[k - 1] if k > 0 else False
+        ob = g[k] and not pg and c[k] > ma[k]; os_ = (not g[k]) and pg and c[k] < ma[k]
+        nb = e and not pe; ns = x
+        bs, ss = {0: (ob, os_), 1: (nb, ns), 2: (ob, ns), 3: (nb, os_)}[int(new)]
+        if not hold and bs: pend = "buy"
+        elif hold and ss: pend = "sell"
         pe, px = e, x
     if hold: eq *= c[-1] * (1 - FEE) / ent
     return (eq - 1) * 100, trades, (wins / trades * 100 if trades else 0), days / n * 100
 
-rows = []
+NAMES = ["old", "new", "oldBuy+newSell", "newBuy+oldSell"]
+res = {k: [] for k in range(4)}; holds = []
 for t in TICKERS:
     try:
         d = yf.Ticker(t).history(period="5y", interval="1d", auto_adjust=True).dropna()
         if len(d) < 300: continue
         o, h, l, c = (d[x].to_numpy(dtype=float) for x in ("Open", "High", "Low", "Close"))
         g, ma = flags(o, h, l, c)
-        a = run(o, c, g, ma, False); b = run(o, c, g, ma, True)
-        bh = (c[-1] / c[19] - 1) * 100
-        rows.append((t, a, b, bh, len(d)))
-        print(f"{t:6s} old {a[0]:8.1f}% ({a[1]:3d}t win {a[2]:3.0f}% in {a[3]:3.0f}%) | new {b[0]:8.1f}% ({b[1]:3d}t win {b[2]:3.0f}% in {b[3]:3.0f}%) | hold {bh:8.1f}%")
+        for k in range(4): res[k].append(run(o, c, g, ma, k))
+        holds.append((c[-1] / c[19] - 1) * 100)
     except Exception as ex:
         print(t, "ERR", ex)
-
-def med(i, j): return float(np.median([r[i][j] for r in rows]))
-def avg(i, j): return float(np.mean([r[i][j] for r in rows]))
-better = sum(1 for r in rows if r[2][0] > r[1][0])
-print("SUMMARY " + json.dumps({"n": len(rows), "new_better": better,
-    "old_med": round(med(1, 0), 1), "new_med": round(med(2, 0), 1), "old_avg": round(avg(1, 0), 1), "new_avg": round(avg(2, 0), 1),
-    "old_trades": round(avg(1, 1), 1), "new_trades": round(avg(2, 1), 1), "old_win": round(avg(1, 2), 1), "new_win": round(avg(2, 2), 1),
-    "old_in": round(avg(1, 3), 1), "new_in": round(avg(2, 3), 1),
-    "hold_med": round(float(np.median([r[3] for r in rows])), 1), "hold_avg": round(float(np.mean([r[3] for r in rows])), 1)}))
+n = len(holds)
+for k in range(4):
+    r = np.array([x[0] for x in res[k]]); base = np.array([x[0] for x in res[0]])
+    print("RESULT %-16s median %6.1f%% avg %6.1f%% trades %5.1f win %4.1f%% inMarket %4.1f%% betterThanOld %d/%d worst %6.1f%%" % (
+        NAMES[k], np.median(r), r.mean(), np.mean([x[1] for x in res[k]]), np.mean([x[2] for x in res[k]]), np.mean([x[3] for x in res[k]]), int((r > base).sum()), n, r.min()))
+print("RESULT hold             median %6.1f%% avg %6.1f%%" % (np.median(holds), np.mean(holds)))
