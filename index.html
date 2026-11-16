@@ -940,6 +940,14 @@
     #anOvs .ovG small { display: block; font-size: 12px; color: var(--sub); } #anOvs .ovG b { display: block; font-size: 14px; font-weight: 800; margin: 3px 0; white-space: nowrap; }
     #anOvs .ovG em { font-style: normal; font-size: 10px; color: var(--sub); white-space: nowrap; }
     html[data-theme="light"] #analysis #anOvs { background: #fff; } html[data-theme="light"] #anOvs .ovG > div { background: #f2f4f8; }
+
+    #iosPop { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.55); display: none; align-items: flex-end; justify-content: center; }
+    #iosPop .box { width: 100%; max-width: 520px; background: var(--card); border-radius: 24px 24px 0 0; padding: 22px 20px 26px; }
+    #iosPop h3 { margin: 0 0 14px; font-size: 18px; }
+    .iosStep { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--card2); border-radius: 14px; margin-bottom: 8px; font-size: 15px; font-weight: 700; line-height: 1.4; }
+    .iosStep span { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #3182f6; color: #fff; text-align: center; line-height: 26px; font-size: 13px; font-weight: 800; }
+    #iosPop .sub { display: flex; justify-content: space-between; margin-top: 12px; } #iosPop .sub button { background: none; border: none; color: var(--sub); font-size: 13px; padding: 6px 2px; }
+    html[data-theme="light"] .iosStep { background: #f2f4f8; }
 </style>
 </head>
 <body>
@@ -1077,6 +1085,13 @@
     <div id="botBody"></div>
   </div>
 
+  <div id="iosPop">
+    <div class="box">
+      <h3 id="iosPopT">📲 홈 화면에 앱으로 추가하세요</h3>
+      <div id="iosPopB"></div>
+      <div class="sub"><button id="iosLater">나중에</button><button id="iosNever">다시 안 보기</button></div>
+    </div>
+  </div>
   <div id="apkPop">
     <div class="box">
       <h3>📲 앱으로 설치하세요</h3>
@@ -2490,6 +2505,31 @@
         try { sessionStorage.setItem("toChrome", "1"); } catch (e) {}
         location.href = "intent://" + location.host + location.pathname + location.search + "#Intent;scheme=https;package=com.android.chrome;end";
       }
+      // 아이폰: 카카오톡·라인 안에서 열리면 사파리로 넘김. 넘길 수 없는 앱(인스타 등)은 안내 창을 띄움
+      const iosInApp = isIOS && /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\//i.test(ua);
+      if (iosInApp && !sessionStorage.getItem("toSafari")) {
+        try { sessionStorage.setItem("toSafari", "1"); } catch (e) {}
+        if (/KAKAOTALK/i.test(ua)) location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(location.href);
+        else if (/Line\//i.test(ua)) location.href = location.href.split("#")[0] + (location.search ? "&" : "?") + "openExternalBrowser=1";
+      }
+      if (isIOS && !standalone && !lsGet("sigIosNo") && !sessionStorage.getItem("iosLater")) {
+        const pop = $("iosPop"), body = $("iosPopB"), close = () => { pop.style.display = "none"; };
+        const step = (n, t) => { const d = mkEl("div", "iosStep"); d.appendChild(mkEl("span", null, String(n))); d.appendChild(mkEl("div", null, t)); body.appendChild(d); };
+        if (iosInApp) {
+          $("iosPopT").textContent = "🧭 사파리(Safari)로 열어 주세요";
+          step(1, "화면 아래(또는 위)의 ⋯ 또는 공유 버튼을 눌러요");
+          step(2, "'Safari로 열기' 또는 '다른 브라우저로 열기'를 눌러요");
+          step(3, "사파리에서 열리면 홈 화면에 추가할 수 있어요");
+        } else {
+          step(1, "화면 아래 가운데 공유 버튼 □↑ 을 눌러요");
+          step(2, "목록을 내려 '홈 화면에 추가'를 눌러요");
+          step(3, "홈 화면 아이콘으로 열고 '알림 받기'를 눌러요");
+        }
+        pop.style.display = "flex";
+        $("iosLater").onclick = () => { try { sessionStorage.setItem("iosLater", "1"); } catch (e) {} close(); };
+        $("iosNever").onclick = () => { lsSet("sigIosNo", true); close(); };
+        pop.addEventListener("click", (e) => { if (e.target === pop) $("iosLater").onclick(); });
+      }
       let deferred = null;
       // 맨 위 설치 띠: 설치할 수 있을 때만 보이고, ✕ 누르면 다시 안 뜸
       const bar = $("instBar");
@@ -2718,6 +2758,7 @@
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
+        "아이폰: 카톡 링크는 사파리로 열고, 설치 방법 안내 창 표시",
         "종목 분석에 '과매도 뒤 성적' (5년 통계)",
         "손절 로직 수정: 손절가 이탈 표시, 손익비 계산 (신호 규칙은 5년 비교 후 기존 유지)",
         "보유 종목 목표가·손절가 알림 (종목 눌러서 설정, 장외 시간에도 확인)",
