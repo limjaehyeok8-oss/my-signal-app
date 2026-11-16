@@ -716,6 +716,24 @@ if finnhub_token:
         earn_cal.sort(key=lambda x: (x["d"], x["g"], x["s"]))
     except Exception as e:
         print(f"실적 달력 조회 실패: {e}")
+if not earn_cal:                       # Finnhub 키가 없거나 비었으면 야후(yfinance)에서 종목별로 가져옴
+    from datetime import timedelta, date as _date
+    _end = today + timedelta(days=21)
+    for sy, (nm, grp) in EARN_REP.items():
+        try:
+            cal = yf.Ticker(sy).calendar or {}
+            eds = cal.get("Earnings Date") or []
+            if not isinstance(eds, (list, tuple)):
+                eds = [eds]
+            for ed in eds:
+                ed = ed.date() if hasattr(ed, "date") and not isinstance(ed, _date) else ed
+                if isinstance(ed, _date) and today <= ed <= _end:
+                    earn_cal.append({"d": ed.isoformat(), "s": sy, "n": nm, "g": grp, "t": ""})
+                    break
+        except Exception as e:
+            print(f"실적일 조회 실패 ({sy}): {e}")
+    earn_cal.sort(key=lambda x: (x["d"], x["g"], x["s"]))
+    print(f"실적 달력(야후): {len(earn_cal)}건")
 web["earnCal"] = earn_cal
 
 with open("report.json", "w", encoding="utf-8") as fp:
