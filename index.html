@@ -1825,13 +1825,16 @@
       box.textContent = ""; box.style.display = "none";
       if (!f || !f.ok) return;
       const cap = f.mcap ? (f.mcap >= 1e12 ? (f.mcap / 1e12).toFixed(2) + "조 달러" : Math.round(f.mcap / 1e8).toLocaleString("ko-KR") + "억 달러") : null;
-      const cells = [["PER", f.pe != null ? f.pe + "배" : (f.eps != null && f.eps < 0 ? "적자" : null)], ["예상 PER", f.fpe != null ? f.fpe + "배" : null], ["PBR", f.pbr != null ? f.pbr + "배" : null], ["시가총액", cap], ["배당", f.div ? f.div + "%" : null]].filter((c) => c[1] != null);
+      const cells = [["PER", f.pe != null ? f.pe + "배" : (f.eps != null && f.eps < 0 ? "적자" : null)], ["예상 PER", f.fpe != null ? f.fpe + "배" : null], ["PBR", f.pbr != null ? f.pbr + "배" : null], [(f.sec || "업종") + " 평균 PER", f.secPe ? f.secPe + "배" : null], ["시가총액", cap], ["배당", f.div ? f.div + "%" : null]].filter((c) => c[1] != null);
       if (!cells.length) return;
       // 저평가·고평가 판정 (단순 규칙, 참고용)
       let sc = 0; const why = [];
       const loss = f.pe == null && f.eps != null && f.eps < 0;
       if (loss) { sc -= 1; why.push("지금은 적자"); }
-      if (f.pe != null) { if (f.pe < 15) { sc += 1; why.push("PER 낮음"); } else if (f.pe > 50) { sc -= 2; why.push("PER 매우 높음"); } else if (f.pe > 30) { sc -= 1; why.push("PER 높음"); } }
+      if (f.pe != null && f.secPe) {                               // 업종 평균과 비교 (있으면 이쪽이 우선)
+        const rt = f.pe / f.secPe;
+        if (rt < 0.8) { sc += 2; why.push("업종 평균보다 PER 낮음"); } else if (rt > 1.5) { sc -= 2; why.push("업종 평균보다 PER 많이 높음"); } else if (rt > 1.2) { sc -= 1; why.push("업종 평균보다 PER 높음"); } else why.push("PER 업종 평균 수준");
+      } else if (f.pe != null) { if (f.pe < 15) { sc += 1; why.push("PER 낮음"); } else if (f.pe > 50) { sc -= 2; why.push("PER 매우 높음"); } else if (f.pe > 30) { sc -= 1; why.push("PER 높음"); } }
       if (f.fpe != null) {
         if (f.fpe < 15) { sc += 1; why.push("예상 PER 낮음"); } else if (f.fpe > 35) { sc -= 1; why.push("예상 PER 높음"); }
         if (f.pe != null) { if (f.fpe < f.pe * 0.8) { sc += 1; why.push("이익 성장 예상"); } else if (f.fpe > f.pe * 1.05) { sc -= 1; why.push("이익 감소 예상"); } }
@@ -1846,7 +1849,7 @@
       const g = mkEl("div", "afG");
       cells.forEach(([k, v]) => { const d = mkEl("div"); d.appendChild(mkEl("small", null, k)); d.appendChild(mkEl("b", null, v)); g.appendChild(d); });
       box.appendChild(g);
-      if (hasVal) box.appendChild(mkEl("div", "afN", "숫자만 본 참고용이에요. 성장주는 원래 PER이 높아요."));
+      if (hasVal) box.appendChild(mkEl("div", "afN", f.secPe ? "업종 평균은 대표 ETF 기준이고, 참고용이에요." : "숫자만 본 참고용이에요. 성장주는 원래 PER이 높아요."));
       box.style.display = "block";
     }
     async function analyze(symbol) {
@@ -2681,9 +2684,9 @@
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
-        "보유 종목 목표가·손절가 알림 (종목 눌러서 설정)",
+        "보유 종목 목표가·손절가 알림 (종목 눌러서 설정, 장외 시간에도 확인)",
         "코인 탭에 차트·신호 분석 추가",
-        "종목 분석에 PER·PBR·시가총액·배당 + 저평가/고평가 판정",
+        "종목 분석에 PER·PBR·시가총액·배당 + 저평가/고평가 판정 (업종 평균 비교)",
         "내 종목 추천을 5개로 (오늘 신호 우선)",
         "추천 종목 가격에 프리·애프터·데이장 시세 반영",
         "🗺 히트맵 탭 추가 (시총 크기 × 오늘 등락, 서버 업데이트 필요)",

@@ -50,27 +50,47 @@ function setHoldAlert(token, symbol, target, stop) {
   return {ok: true, msg: symbol + " 저장됨 ·" + (target ? " 목표 $" + target : "") + (stop ? " 손절 $" + stop : "")};
 }
 
-// 10분마다(장중): 목표가·손절가에 닿으면 각각 한 번만 알림
-function checkHoldAlerts() {
+// 지금 미국 장 구간: "정규장" / "프리장" / "애프터장" / "데이장" / "" (주말 휴장)
+function _haSession() {
+  var now = new Date(), d = Number(Utilities.formatDate(now, "America/New_York", "u")), hm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
+  if (d <= 5 && hm >= 930 && hm < 1600) return "정규장";
+  if (d <= 5 && hm >= 400 && hm < 930) return "프리장";
+  if (d <= 5 && hm >= 1600 && hm < 2000) return "애프터장";
+  if ((hm >= 2000 && (d === 7 || d <= 4)) || (hm < 400 && d >= 1 && d <= 5)) return "데이장";
+  return "";
+}
+
+// 10분마다: 목표가·손절가에 닿으면 각각 한 번만 알림. 정규장은 정규 시세, 그 밖엔 장외 시세(프리·애프터·데이장)로 확인
+function checkHoldAlerts(force) {
+  var sess = _haSession();
+  if (!sess && force !== true) return "휴장";
   var sh = _haSheet(), rows = _haRows(), todo = [], set = {};
   rows.forEach(function (r, i) {
     if (!r[0] || !r[1]) return;
     if ((Number(r[2]) > 0 && !r[4]) || (Number(r[3]) > 0 && !r[5])) { todo.push(i); set[String(r[1])] = 1; }
   });
   if (!todo.length) return "대기 중인 가격 알림 없음";
-  var px = fetchPrices(Object.keys(set)), cur = _watchCurTokens(), sent = 0;
+  var syms = Object.keys(set), px = {};
+  if (sess === "정규장" || !sess) px = fetchPrices(syms);
+  else {
+    for (var k = 0; k < syms.length; k += 40) {
+      var part = _extPx(syms.slice(k, k + 40));
+      for (var s0 in part) { if (part[s0] && part[s0].px > 0) px[s0] = part[s0].px; }
+    }
+  }
+  var cur = _watchCurTokens(), sent = 0, tag = (sess && sess !== "정규장") ? " (" + sess + ")" : "";
   todo.forEach(function (i) {
     var r = rows[i], s = String(r[1]), t = Number(r[2]), st = Number(r[3]), p = px[s];
     if (p == null) return;
     var c = cur[_dev(r[0])] || {t: String(r[0]), paused: false};
     if (t > 0 && !r[4] && p >= t) {
       sh.getRange(i + 2, 5).setValue(new Date());
-      if (!c.paused) { sendToToken(c.t, "🎯 목표가 도달: " + s, s + " 현재 $" + Number(p).toFixed(2) + " · 내 목표 $" + t + "\n(목표가를 다시 저장하면 또 알려드려요)"); sent++; }
+      if (!c.paused) { sendToToken(c.t, "🎯 목표가 도달: " + s, s + " 현재 $" + Number(p).toFixed(2) + tag + " · 내 목표 $" + t + "\n(목표가를 다시 저장하면 또 알려드려요)"); sent++; }
     }
     if (st > 0 && !r[5] && p <= st) {
       sh.getRange(i + 2, 6).setValue(new Date());
-      if (!c.paused) { sendToToken(c.t, "🛑 손절가 도달: " + s, s + " 현재 $" + Number(p).toFixed(2) + " · 내 손절가 $" + st + "\n(손절가를 다시 저장하면 또 알려드려요)"); sent++; }
+      if (!c.paused) { sendToToken(c.t, "🛑 손절가 도달: " + s, s + " 현재 $" + Number(p).toFixed(2) + tag + " · 내 손절가 $" + st + "\n(손절가를 다시 저장하면 또 알려드려요)"); sent++; }
     }
   });
-  return "가격 알림 " + sent + "건";
+  return "가격 알림 " + sent + "건" + tag;
 }

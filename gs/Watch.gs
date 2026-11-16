@@ -80,8 +80,8 @@ function _watchCurTokens() {
 function checkWatchTargets(force) {
   var now = new Date();
   var dow = Number(Utilities.formatDate(now, "America/New_York", "u")), hm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
+  try { if (typeof checkHoldAlerts === "function") checkHoldAlerts(); } catch (e) {}      // 보유 종목 목표가·손절가 (장외 시간 포함)
   if (force !== true && (dow >= 6 || hm < 930 || hm > 1605)) return "장 시간이 아님";
-  try { if (typeof checkHoldAlerts === "function") checkHoldAlerts(); } catch (e) {}      // 보유 종목 목표가·손절가도 같이 확인
   var sh = _watchSheet(), rows = _watchRows(), todo = [], set = {};
   rows.forEach(function (r, i) { if (r[0] && r[1] && Number(r[2]) > 0 && !r[5]) { todo.push(i); set[String(r[1])] = 1; } });
   if (!todo.length) return "대기 중인 목표가 없음";
@@ -131,9 +131,13 @@ function setupWatchTrigger() {
 // 야후에서 가장 최근에 체결된 가격을 가져와요. 정규장이 아닐 때 종목 아래에 참고용으로 보여줍니다.
 function getExtPrices(token, symbols) {
   if (!isRegistered(token)) return {ok: false};
+  return {ok: true, px: _extPx(symbols)};
+}
+// 장외 포함 최신가 (토큰 확인 없이 서버 안에서 쓰는 용도). 한 번에 40개까지.
+function _extPx(symbols) {
   var syms = (symbols || []).map(function (s) { return String(s || "").trim().toUpperCase(); })
     .filter(function (s) { return /^[A-Z0-9.\-]{1,12}$/.test(s); }).slice(0, 40);
-  if (!syms.length) return {ok: true, px: {}};
+  if (!syms.length) return {};
   var cache = CacheService.getScriptCache(), out = {}, need = [], hit = {};
   try { hit = cache.getAll(syms.map(function (s) { return "ext_" + s; })); } catch (e) {}
   syms.forEach(function (s) { if (hit["ext_" + s]) { try { out[s] = JSON.parse(hit["ext_" + s]); } catch (e) { need.push(s); } } else need.push(s); });
@@ -169,7 +173,7 @@ function getExtPrices(token, symbols) {
     });
     try { cache.putAll(put, 15); } catch (e) {}
   }
-  return {ok: true, px: out};
+  return out;
 }
 
 
@@ -252,17 +256,44 @@ function getFund(token, symbol) {
   if (!isRegistered(token)) return {ok: false};
   var s = String(symbol || "").trim().toUpperCase();
   if (!/^[A-Z0-9.\-]{1,12}$/.test(s)) return {ok: false, msg: "티커 형식이 올바르지 않아요"};
-  var cache = CacheService.getScriptCache(), ck = "fund_" + s, hit = cache.get(ck);
+  var cache = CacheService.getScriptCache(), ck = "fund2_" + s, hit = cache.get(ck);
   if (hit) { try { return JSON.parse(hit); } catch (e) {} }
   var q;
   try { q = _yhQuote([s]); } catch (e) { return {ok: false, msg: "가치 지표 오류: " + e.message}; }
   if (!q) return {ok: false, msg: "가치 지표를 불러오지 못했어요"};
   if (!q.length) return {ok: false, msg: s + " 가치 지표가 없어요"};
   var x = q[0], n = function (v, d) { return (typeof v === "number" && isFinite(v)) ? Number(v.toFixed(d == null ? 2 : d)) : null; };
-  var out = {ok: true, s: s, type: x.quoteType || "", pe: n(x.trailingPE, 1), fpe: n(x.forwardPE, 1), pbr: n(x.priceToBook, 1), eps: n(x.epsTrailingTwelveMonths),
+  var sec = null;
+  try { sec = _yhSector(s); } catch (e) {}
+  var out = {ok: true, s: s, sec: sec ? sec.name : null, secPe: sec ? sec.pe : null, type: x.quoteType || "", pe: n(x.trailingPE, 1), fpe: n(x.forwardPE, 1), pbr: n(x.priceToBook, 1), eps: n(x.epsTrailingTwelveMonths),
              mcap: n(x.marketCap, 0), div: n(x.trailingAnnualDividendYield != null ? x.trailingAnnualDividendYield * 100 : null, 1)};
   try { cache.put(ck, JSON.stringify(out), 3600); } catch (e) {}
   return out;
 }
-function testFund() { Logger.log(JSON.stringify(getFundRaw_("NVDA"))); }
+function testFund() { Logger.log(JSON.stringify(getFundRaw_("NVDA"))); Logger.log(JSON.stringify(_yhSector("NVDA"))); Logger.log(JSON.stringify(_yhSectorPe())); }
 function getFundRaw_(s) { var q = _yhQuote([s]); return q && q[0] ? {pe: q[0].trailingPE, fpe: q[0].forwardPE, pbr: q[0].priceToBook, mcap: q[0].marketCap} : q; }
+
+
+// 업종 평균 PER: 종목의 업종(야후 assetProfile) → 그 업종 대표 ETF 의 PER 을 평균값으로 사용 (6시간 저장)
+var YH_SECTOR = {"Technology": ["XLK", "기술"], "Financial Services": ["XLF", "금융"], "Healthcare": ["XLV", "헬스케어"], "Consumer Cyclical": ["XLY", "경기소비재"],
+  "Consumer Defensive": ["XLP", "필수소비재"], "Energy": ["XLE", "에너지"], "Industrials": ["XLI", "산업재"], "Basic Materials": ["XLB", "소재"],
+  "Utilities": ["XLU", "유틸리티"], "Real Estate": ["XLRE", "부동산"], "Communication Services": ["XLC", "통신·미디어"]};
+function _yhSectorPe() {
+  var cache = CacheService.getScriptCache(), hit = cache.get("yh_secpe");
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var etfs = Object.keys(YH_SECTOR).map(function (k) { return YH_SECTOR[k][0]; }), q = _yhQuote(etfs), m = {};
+  (q || []).forEach(function (x) { if (typeof x.trailingPE === "number" && x.trailingPE > 0) m[x.symbol] = Number(x.trailingPE.toFixed(1)); });
+  if (Object.keys(m).length) { try { cache.put("yh_secpe", JSON.stringify(m), 21600); } catch (e) {} }
+  return m;
+}
+function _yhSector(s) {
+  var a = _yhAuth(false); if (!a) return null;
+  var r = UrlFetchApp.fetch("https://query2.finance.yahoo.com/v10/finance/quoteSummary/" + encodeURIComponent(s) + "?modules=assetProfile&crumb=" + encodeURIComponent(a.crumb),
+    {muteHttpExceptions: true, headers: {"User-Agent": a.ua, "Cookie": a.cookie}});
+  if (r.getResponseCode() !== 200) return null;
+  var res = JSON.parse(r.getContentText()).quoteSummary.result;
+  var sector = res && res[0] && res[0].assetProfile ? res[0].assetProfile.sector : null, def = sector ? YH_SECTOR[sector] : null;
+  if (!def) return null;
+  var pe = _yhSectorPe()[def[0]];
+  return {name: def[1], pe: pe || null};
+}
