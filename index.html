@@ -152,13 +152,19 @@
     .pfTag.warn { background: rgba(255,170,60,.15); color: #ffb44d; }
     .pfTag.stop { background: rgba(255,90,106,.18); color: #ff7a88; font-weight: bold; }
     #analysisText .anBlock { white-space: pre-wrap; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.6; }
+    .anText .anBlock { white-space: pre-wrap; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.6; }
     #analysisText .anBlock:last-child { border-bottom: none; }
+    .anText .anBlock:last-child { border-bottom: none; }
     #analysisText .anMore { margin-top: 6px; }
+    .anText .anMore { margin-top: 6px; }
     #analysisText .anMore summary { cursor: pointer; padding: 12px; text-align: center; border-radius: 10px;
                                     background: var(--card2); color: var(--accent2); font-weight: bold; list-style: none; }
     #analysisText .anMore summary::-webkit-details-marker { display: none; }
+    .anText .anMore summary::-webkit-details-marker { display: none; }
     #analysisText .anMore[open] summary { margin-bottom: 4px; }
+    .anText .anMore[open] summary { margin-bottom: 4px; }
     #analysisText .anMore .anBlock { font-size: 13px; color: var(--sub); }
+    .anText .anMore .anBlock { font-size: 13px; color: var(--sub); }
     #btView select { padding: 10px; font-size: 15px; background: var(--card); color: var(--txt); border: 1px solid var(--line); border-radius: 10px; }
     #btView .btGo { background: linear-gradient(90deg, #3ddc97, #5b8cff); color: #07210f; border: none; font-weight: bold; }
     .btNote { font-size: 12px; color: var(--sub); line-height: 1.6; }
@@ -559,6 +565,7 @@
     .rrMid { flex: 1; min-width: 0; } .rrMid b { font-size: 17px; cursor: pointer; } .rrMid .sub { display: block; font-size: 12px; color: var(--sub); margin-top: 3px; }
     .rrVal { font-size: 16px; font-weight: 800; color: #3cc88c; white-space: nowrap; }
     html[data-theme="light"] .rrCard { background: #f2f4f8; } html[data-theme="light"] .rrNo { background: #fff; }
+    .pkSess { font-size: 10px; color: var(--sub); margin-top: 2px; }
     .pkBadge.cls { color: var(--accent2); }
     html[data-theme="light"] .pkBadge { background: #eef1f6; }
 
@@ -763,20 +770,34 @@
 
     /* ===== 종목 분석: 핵심만 요약, 나머지는 자세히 보기 ===== */
     #analysisText .anTop { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; }
+    .anText .anTop { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; }
     #analysisText .anSym { font-size: 22px; font-weight: 800; color: var(--accent2); }
+    .anText .anSym { font-size: 22px; font-weight: 800; color: var(--accent2); }
     #analysisText .anPx { font-size: 22px; font-weight: 800; }
+    .anText .anPx { font-size: 22px; font-weight: 800; }
     #analysisText .anSig { display: inline-block; margin-top: 10px; padding: 7px 14px; border-radius: 999px; font-size: 14px; font-weight: 800; background: var(--card2); }
+    .anText .anSig { display: inline-block; margin-top: 10px; padding: 7px 14px; border-radius: 999px; font-size: 14px; font-weight: 800; background: var(--card2); }
     #analysisText .anSig.buy { background: rgba(61,220,151,.15); color: var(--accent); }
+    .anText .anSig.buy { background: rgba(61,220,151,.15); color: var(--accent); }
     #analysisText .anSig.sell { background: rgba(255,90,106,.15); color: #ff7a88; }
+    .anText .anSig.sell { background: rgba(255,90,106,.15); color: #ff7a88; }
     #analysisText .anStats { display: flex; gap: 0; margin-top: 16px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .anText .anStats { display: flex; gap: 0; margin-top: 16px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
     #analysisText .anStats > div { flex: 1; min-width: 0; }
+    .anText .anStats > div { flex: 1; min-width: 0; }
     #analysisText .anStats > div + div { border-left: 1px solid var(--line); padding-left: 14px; }
+    .anText .anStats > div + div { border-left: 1px solid var(--line); padding-left: 14px; }
     #analysisText .anStats small { display: block; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
+    .anText .anStats small { display: block; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
     #analysisText .anStats b { font-size: 16px; font-weight: 800; white-space: nowrap; }
+    .anText .anStats b { font-size: 16px; font-weight: 800; white-space: nowrap; }
     #analysisText .anOne { margin-top: 14px; font-size: 14px; line-height: 1.6; color: var(--txt); }
+    .anText .anOne { margin-top: 14px; font-size: 14px; line-height: 1.6; color: var(--txt); }
 
     #analysisText .anNote { margin-top: 10px; padding: 10px 14px; border-radius: 14px; font-size: 14px; font-weight: 700; background: var(--card2); line-height: 1.5; }
+    .anText .anNote { margin-top: 10px; padding: 10px 14px; border-radius: 14px; font-size: 14px; font-weight: 700; background: var(--card2); line-height: 1.5; }
     #analysisText .anNote.good { background: rgba(61,220,151,.13); color: var(--accent); }
+    .anText .anNote.good { background: rgba(61,220,151,.13); color: var(--accent); }
 
     /* ===== 종목 분석 결과: 하나의 카드로 정돈 (요약 → 차트 → 전략) ===== */
     #analysis { position: relative; margin-top: 18px; padding: 20px 18px 18px; background: var(--card2); border-radius: 22px; flex-direction: column; }
@@ -788,21 +809,29 @@
     #analysis #chartImg { order: 2; margin: 18px 0 4px; border-radius: 14px; }
     #analysis #anaStrat { order: 3; margin-top: 14px; padding: 14px; border: none; background: var(--card); border-radius: 16px; }
     #analysisText .anTop { padding-right: 40px; }
+    .anText .anTop { padding-right: 40px; }
     #analysisText .anMore summary { background: var(--card); margin-top: 12px; }
+    .anText .anMore summary { background: var(--card); margin-top: 12px; }
     #analysisText .anSig { margin-top: 12px; }
+    .anText .anSig { margin-top: 12px; }
     #analysis .stTitle { font-size: 14px; color: var(--sub); font-weight: 700; margin-bottom: 4px; }
     #analysis .stLine select { background: var(--card2); border: none; border-radius: 12px; padding: 12px; font-size: 13px; }
     #analysis .stLine button { border-radius: 12px; background: var(--card2); color: var(--txt); border: none; }
     #analysis .btRec button { border-radius: 12px; }
     html[data-theme="light"] #analysis { background: #f2f4f8; }
     html[data-theme="light"] #analysis #anaStrat, html[data-theme="light"] #analysis #anaClose, html[data-theme="light"] #analysisText .anMore summary { background: #fff; }
+    html[data-theme="light"] #analysis #anaStrat, html[data-theme="light"] #analysis #anaClose, html[data-theme="light"] .anText .anMore summary { background: #fff; }
 
     #analysis #analysisText { background: none !important; padding: 0 !important; border-radius: 0; font-size: 14px; }
     #analysis #analysisText .anStats b { font-size: 15px; }
+    .anText .anStats b { font-size: 15px; }
 
     #analysis #analysisText .anStats > div:last-child { flex: 1.7; }
+    .anText .anStats > div:last-child { flex: 1.7; }
     #analysis #analysisText .anStats b { white-space: normal; font-size: 14.5px; line-height: 1.35; }
+    .anText .anStats b { white-space: normal; font-size: 14.5px; line-height: 1.35; }
     #analysis #analysisText .anStats > div + div { padding-left: 12px; }
+    .anText .anStats > div + div { padding-left: 12px; }
 
     html[data-ud="us"] { --up: #3ddc97; --down: #ff5a6a; }
     html[data-ud="us"][data-theme="light"] { --up: #0fa56c; --down: #e0364a; }
@@ -869,6 +898,12 @@
     .heatTile b { font-weight: 800; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; } .heatTile b.hb { font-size: 18px; } .heatTile span { font-weight: 600; opacity: .95; }
     .heatSub { font-size: 12px; color: var(--sub); margin: 10px 2px 24px; line-height: 1.5; }
     html[data-theme="light"] .heatSeg { background: #eef1f6; } html[data-theme="light"] .heatSeg button.on { background: #fff; }
+
+    .coinAn { margin-top: 12px; padding: 20px 18px 18px; background: var(--card2); border-radius: 22px; }
+    .coinAn h4 { margin: 0 0 4px; font-size: 15px; } .coinAn .caNote { font-size: 12px; color: var(--sub); margin-bottom: 6px; }
+    .coinAn img { width: 100%; display: block; margin-top: 16px; border-radius: 14px; }
+    .coinAn .anText { font-size: 14px; }
+    html[data-theme="light"] .coinAn { background: #f2f4f8; }
 </style>
 </head>
 <body>
@@ -1611,7 +1646,7 @@
       mid.appendChild(head);
       mid.appendChild(mkEl("div", "pkTag", (x.tag || []).join(" · ") + (showGroup && x.g ? " · " + x.g : "")));
       main.appendChild(mid);
-      const rt = mkEl("div", "pkRt");
+      const rt = mkEl("div", "pkRt"); rt.dataset.pks = x.s; rt.dataset.p = x.p; rt.dataset.ch = x.ch;
       rt.appendChild(mkEl("div", "pkPx", fmt(x.p)));
       rt.appendChild(mkEl("div", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
       main.appendChild(rt);
@@ -1667,8 +1702,30 @@
       });
       box.appendChild(card);
     }
+    // 추천 카드 가격에 장외(프리·애프터·데이장) 시세 반영
+    let pickExtT = null;
+    function loadPickExt() {
+      clearTimeout(pickExtT);
+      pickExtT = setTimeout(() => {
+        if (!myToken || $("pickView").style.display === "none") return;
+        const syms = Array.from(new Set(Array.from(document.querySelectorAll("#pickList [data-pks]")).map((e) => e.dataset.pks))).slice(0, 80);
+        for (let i = 0; i < syms.length; i += 40) {
+          api({ action: "getExtPrices", token: myToken, symbols: syms.slice(i, i + 40) }).then((r) => {
+            if (!r || !r.ok) return;
+            document.querySelectorAll("#pickList [data-pks]").forEach((el) => {
+              const x = r.px[el.dataset.pks]; if (!x || !x.px || x.sess === "정규장") return;
+              const ch0 = +el.dataset.ch, tot = x.chg != null ? ((1 + ch0 / 100) * (1 + x.chg / 100) - 1) * 100 : ch0;
+              el.textContent = "";
+              el.appendChild(mkEl("div", "pkPx", fmt(x.px)));
+              el.appendChild(mkEl("div", tot >= 0 ? "up" : "down", (tot >= 0 ? "+" : "") + tot.toFixed(1) + "%"));
+              el.appendChild(mkEl("div", "pkSess", x.sess));
+            });
+          }).catch(() => {});
+        }
+      }, 600);
+    }
     function renderPicks() {
-      renderRrTop();
+      renderRrTop(); loadPickExt();
       const list = $("pickList");
       list.textContent = "";
       // 태그가 하나도 없는 종목은 숨김
@@ -2551,6 +2608,8 @@
         "보유 종목 정렬·평균 수익률 요약·길게 눌러 메뉴·관심→보유 '샀어요'",
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
+        "코인 탭에 차트·신호 분석 추가",
+        "추천 종목 가격에 프리·애프터·데이장 시세 반영",
         "🗺 히트맵 탭 추가 (시총 크기 × 오늘 등락, 서버 업데이트 필요)",
         "시뮬봇 화면 정리 (큰 수익률·예정 주문·성적표), 보유 주수 표시 (서버 업데이트 필요)",
         "추천에 손익비(손절 대비 상승 여력) 표시·정렬, 오늘 손익비 TOP3 (서버 업데이트 필요)",
@@ -3337,6 +3396,25 @@
       fb.onclick = () => { const f = coinFavs().filter((x) => x !== r.sym); if (!isFav) f.unshift(r.sym); lsSet("sigCoinFav", f.slice(0, 12)); renderCoinFav(); paintCoinDet(r, sym); };
       c.appendChild(fb);
       box.appendChild(c);
+      loadCoinAn(r.sym, box);
+    }
+    // 코인 차트·신호 분석: 주식 분석과 같은 엔진을 해외 달러 시세(SYM-USD)로 돌려요
+    function loadCoinAn(sym, box) {
+      const tk = sym + "-USD"; if (tk.length > 10) return;
+      const card = mkEl("div", "coinAn"); card.appendChild(mkEl("h4", null, "📊 " + sym + " 차트·신호 분석")); card.appendChild(mkEl("div", "caNote", "해외 달러 시세 기준"));
+      const txt = mkEl("div", "anText"); txt.appendChild(mkEl("div", "skel")); card.appendChild(txt);
+      const img = document.createElement("img"); img.alt = "차트"; img.style.display = "none"; card.appendChild(img);
+      box.appendChild(card);
+      let shown = false;
+      const show = (t) => { if (shown || coinSel !== sym) return; shown = true; renderAnalysis(txt, t); };
+      const fail = (m) => { if (shown || coinSel !== sym) return; txt.textContent = ""; txt.appendChild(mkEl("div", "alertHint", m || "이 코인은 분석 데이터를 찾지 못했어요.")); };
+      api({ action: "analyzeFast", token: myToken, ticker: tk }).then((r) => { if (r && r.ok) show(r.text); }).catch(() => {});
+      api({ action: "analyze", token: myToken, ticker: tk }).then((r) => {
+        if (coinSel !== sym) return;
+        if (!r || !r.ok) { fail(r && r.msg); return; }
+        show(r.text);
+        if (r.image) { img.src = "data:image/png;base64," + r.image; img.style.display = "block"; }
+      }).catch(() => fail());
     }
     function openCoin(sym) {
       coinSel = sym; $("coinQ").value = ""; $("coinSug").style.display = "none"; renderCoinFav();
