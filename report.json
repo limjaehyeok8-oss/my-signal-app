@@ -1,7 +1,7 @@
 {
-  "updated": "2026-11-16T17:20:34+09:00",
+  "updated": "2026-11-17T08:15:35+09:00",
   "sentiment": {
-    "score": 38,
+    "score": 31,
     "rating": "fear",
     "label": "😨 공포"
   },
@@ -33,46 +33,42 @@
   },
   "macro": {
     "lines": [
-      "10년물 금리 5.15% (+5bp) · ⚠️ 위험 구간",
-      "VIX 19.3 · 안정",
-      "WTI $88.88 (+0.36%) · ⚠️ 인플레 우려",
-      "금 $3,860 (-0.69%) / 달러인덱스 103.45 (+0.04%)",
+      "10년물 금리 5.12% (-3bp) · ⚠️ 위험 구간",
+      "VIX 22.9 · ⚠️ 변동성 확대",
+      "WTI $85.54 (-3.41%) · ⚠️ 인플레 우려",
+      "금 $3,857 (-0.75%) / 달러인덱스 103.58 (+0.17%)",
       "🚨 종합: 위험자산 비우호적 (경계 3개)"
     ],
     "score": 3
   },
   "strong": [
     {
-      "symbol": "LLY",
-      "text": "LLY  3개월 +22.2%"
-    },
-    {
-      "symbol": "TMO",
-      "text": "TMO  3개월 +19.7%"
-    },
-    {
       "symbol": "PG",
-      "text": "PG  3개월 +19.4%"
+      "text": "PG  3개월 +21.4%"
     },
     {
       "symbol": "CME",
-      "text": "CME  3개월 +19.3%"
+      "text": "CME  3개월 +18.2%"
     },
     {
       "symbol": "BRK-B",
-      "text": "BRK-B  3개월 +19.0%"
+      "text": "BRK-B  3개월 +17.9%"
+    },
+    {
+      "symbol": "TMO",
+      "text": "TMO  3개월 +17.5%"
+    },
+    {
+      "symbol": "V",
+      "text": "V  3개월 +17.3%"
     }
   ],
   "value": {
-    "total": 29,
+    "total": 30,
     "items": [
       {
-        "symbol": "SNDK",
-        "star": true
-      },
-      {
         "symbol": "MU",
-        "star": false
+        "star": true
       },
       {
         "symbol": "SMCI",
@@ -93,6 +89,10 @@
       {
         "symbol": "FSLR",
         "star": true
+      },
+      {
+        "symbol": "STX",
+        "star": true
       }
     ]
   },
@@ -100,22 +100,7 @@
     "앨나일램(ALNY): Dir / +$299,526 매수",
     "앨나일램(ALNY): Dir / +$243,600 매수"
   ],
-  "weeklyHA": {
-    "items": [
-      "애플(AAPL)",
-      "브로드컴(AVGO)",
-      "AMD(AMD)",
-      "퀄컴(QCOM)",
-      "아이온큐(IONQ)",
-      "아리스타(ANET)",
-      "케이던스(CDNS)",
-      "클라우드플레어(NET)",
-      "컨스텔레이션(CEG)",
-      "탈렌에너지(TLN)",
-      "파카(PCAR)"
-    ],
-    "failed": 2
-  },
+  "weeklyHA": null,
   "earnings": [],
   "earnCal": [
     {
