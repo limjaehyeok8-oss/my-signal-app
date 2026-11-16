@@ -29,20 +29,21 @@ function _stateText(headline, days, dateMd, sigPrice, cp, notes) {
 }
 
 // ---------- 공통: 일반 매수·매도 신호 ----------
-// 매수 조건 = 하이킨아시 양봉 + 종가가 20일선 위.  매도 조건 = 하이킨아시 음봉 + 종가가 20일선 아래.
-// 조건이 "새로 맞게 된 날"이 신호예요. (예전엔 색이 바뀌는 날에만 봐서, 색이 먼저 바뀌고 20일선을 나중에 넘으면 신호를 놓쳤어요)
+// 매수 = 하이킨아시가 음봉→양봉으로 바뀐 날 + 종가가 20일선 위.  매도 = 양봉→음봉으로 바뀐 날 + 종가가 20일선 아래.
+// (2026-11: "조건이 새로 맞는 날" 방식도 시험했지만, 실제 5년 시세 48종목 비교에서 이 방식이 수익률이 더 높아 되돌림.
+//  비교 스크립트: tools/compare_signals.py)
 function haSignalFlags(dData, haDaily) {
-  var c = dData.closes, n = c.length, buyEv = [], sellEv = [], buy = [], sell = [], sum = 0, holding = false, pe = false, px = false;
+  var c = dData.closes, n = c.length, buyEv = [], sellEv = [], buy = [], sell = [], sum = 0, holding = false;
   for (var k = 0; k < n; k++) {
     sum += c[k]; if (k >= 20) sum -= c[k - 20];
     var ma = k >= 19 ? sum / 20 : null;
     var g = haDaily.closes[k] > haDaily.opens[k];
-    var e = ma !== null && g && c[k] > ma, x = ma !== null && !g && c[k] < ma;
-    buyEv.push(e && !pe); sellEv.push(x && !px);
-    var b = !holding && e && !pe, s = holding && x;
-    if (b) holding = true; else if (s) holding = false;
-    buy.push(b); sell.push(s);
-    pe = e; px = x;
+    var pg = k > 0 ? haDaily.closes[k - 1] > haDaily.opens[k - 1] : false;
+    var be = ma !== null && k > 0 && g && !pg && c[k] > ma, se = ma !== null && k > 0 && !g && pg && c[k] < ma;
+    buyEv.push(be); sellEv.push(se);
+    var b = !holding && be, s2 = holding && se;
+    if (b) holding = true; else if (s2) holding = false;
+    buy.push(b); sell.push(s2);
   }
   return {buyEv: buyEv, sellEv: sellEv, buy: buy, sell: sell, holding: holding};
 }
