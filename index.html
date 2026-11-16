@@ -911,6 +911,12 @@
     #anFund .afG small { display: block; font-size: 12px; color: var(--sub); margin-bottom: 3px; } #anFund .afG b { font-size: 16px; font-weight: 800; white-space: nowrap; }
     #anFund .afN { font-size: 12px; color: var(--sub); margin-top: 10px; }
     html[data-theme="light"] #analysis #anFund { background: #fff; }
+
+    #anFund .afT { display: flex; align-items: center; gap: 8px; }
+    #anFund .afV { font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 999px; background: var(--card2); color: var(--sub); }
+    #anFund .afV.good { background: rgba(61,220,151,.15); color: var(--accent); } #anFund .afV.bad { background: rgba(255,170,60,.18); color: #ffa63c; }
+    #anFund .afW { font-size: 13px; font-weight: 700; margin: -2px 0 12px; }
+    html[data-theme="light"] #anFund .afV.bad { background: #fff1de; color: #c46a00; }
 </style>
 </head>
 <body>
@@ -1814,11 +1820,26 @@
       const cap = f.mcap ? (f.mcap >= 1e12 ? (f.mcap / 1e12).toFixed(2) + "조 달러" : Math.round(f.mcap / 1e8).toLocaleString("ko-KR") + "억 달러") : null;
       const cells = [["PER", f.pe != null ? f.pe + "배" : (f.eps != null && f.eps < 0 ? "적자" : null)], ["예상 PER", f.fpe != null ? f.fpe + "배" : null], ["PBR", f.pbr != null ? f.pbr + "배" : null], ["시가총액", cap], ["배당", f.div ? f.div + "%" : null]].filter((c) => c[1] != null);
       if (!cells.length) return;
-      box.appendChild(mkEl("div", "afT", "기업 가치"));
+      // 저평가·고평가 판정 (단순 규칙, 참고용)
+      let sc = 0; const why = [];
+      const loss = f.pe == null && f.eps != null && f.eps < 0;
+      if (loss) { sc -= 1; why.push("지금은 적자"); }
+      if (f.pe != null) { if (f.pe < 15) { sc += 1; why.push("PER 낮음"); } else if (f.pe > 50) { sc -= 2; why.push("PER 매우 높음"); } else if (f.pe > 30) { sc -= 1; why.push("PER 높음"); } }
+      if (f.fpe != null) {
+        if (f.fpe < 15) { sc += 1; why.push("예상 PER 낮음"); } else if (f.fpe > 35) { sc -= 1; why.push("예상 PER 높음"); }
+        if (f.pe != null) { if (f.fpe < f.pe * 0.8) { sc += 1; why.push("이익 성장 예상"); } else if (f.fpe > f.pe * 1.05) { sc -= 1; why.push("이익 감소 예상"); } }
+      }
+      if (f.pbr != null) { if (f.pbr < 1.5) { sc += 1; why.push("PBR 낮음"); } else if (f.pbr > 10) { sc -= 1; why.push("PBR 높음"); } }
+      const hasVal = f.pe != null || f.fpe != null || f.pbr != null || loss;
+      const vd = sc >= 2 ? ["저평가 쪽", "good"] : sc <= -2 ? ["고평가 쪽", "bad"] : ["적정 수준", "mid"];
+      const tt = mkEl("div", "afT", "기업 가치");
+      if (hasVal) tt.appendChild(mkEl("span", "afV " + vd[1], vd[0]));
+      box.appendChild(tt);
+      if (hasVal && why.length) box.appendChild(mkEl("div", "afW", why.join(" · ")));
       const g = mkEl("div", "afG");
       cells.forEach(([k, v]) => { const d = mkEl("div"); d.appendChild(mkEl("small", null, k)); d.appendChild(mkEl("b", null, v)); g.appendChild(d); });
       box.appendChild(g);
-      if (f.pe != null || f.pbr != null) box.appendChild(mkEl("div", "afN", "PER·PBR은 낮을수록 이익·자산 대비 싼 편이에요"));
+      if (hasVal) box.appendChild(mkEl("div", "afN", "숫자만 본 참고용이에요. 성장주는 원래 PER이 높아요."));
       box.style.display = "block";
     }
     async function analyze(symbol) {
@@ -2633,7 +2654,7 @@
         "관심·추천·친구 로딩 중 회색 틀 표시",
         "관심 종목 누르면 바로 분석",
         "코인 탭에 차트·신호 분석 추가",
-        "종목 분석에 PER·PBR·시가총액·배당 표시",
+        "종목 분석에 PER·PBR·시가총액·배당 + 저평가/고평가 판정",
         "내 종목 추천을 5개로 (오늘 신호 우선)",
         "추천 종목 가격에 프리·애프터·데이장 시세 반영",
         "🗺 히트맵 탭 추가 (시총 크기 × 오늘 등락, 서버 업데이트 필요)",
