@@ -69,7 +69,9 @@ function btPrepare(d, ticker) {
     var wk = botWeeklyHa(dts, d.opens, d.highs, d.lows, d.closes, lastFri);
     wk.end.forEach(function (e, j) { wkEnd[e] = true; wkGreen[e] = wk.green[j]; });
   }
-  return {d: d, n: n, ha: ha, ma20: ma20, buy: buy, sell: sell, clover: clover, haGreen: haGreen, ctxAt: ctxAt, wkEnd: wkEnd, wkGreen: wkGreen};
+  var ma200 = [], s200 = 0;
+  for (var m2 = 0; m2 < n; m2++) { s200 += d.closes[m2]; if (m2 >= 200) s200 -= d.closes[m2 - 200]; ma200.push(m2 >= 199 ? s200 / 200 : null); }
+  return {d: d, n: n, ha: ha, ma20: ma20, ma200: ma200, buy: buy, sell: sell, clover: clover, haGreen: haGreen, ctxAt: ctxAt, wkEnd: wkEnd, wkGreen: wkGreen};
 }
 
 // 전략 정의: sims = 사고 팔기형, holds = 사서 계속 보유형
@@ -134,7 +136,11 @@ function btDefs(p) {
        if (d.closes[i] < pos.info.low) return "손절(첫 바닥 이탈)";
        if (i > pos.i && !haGreen[i] && !haGreen[i - 1]) return "음봉 2연속";
        return null;
-     }}
+     }},
+    {key: "ma200", short: "⑮ 200일선", name: "⑮ 200일선: 위면 보유, 아래면 현금",
+     desc: "종가가 200일 평균선 위에 있으면 사서 들고 있고, 아래로 내려가면 팝니다. 큰 흐름만 따라가서 매매가 적어요. (10년 48종목 비교에서 기본 신호보다 꾸준했던 규칙)",
+     enter: function (i) { return (p.ma200[i] !== null && d.closes[i] > p.ma200[i]) ? {} : null; },
+     exit: function (i, pos) { return (p.ma200[i] !== null && d.closes[i] < p.ma200[i]) ? "200일선 이탈" : null; }}
   ];
   var holds = [
     {key: "hold1", short: "⑩ 첫 저점매수 후 보유", name: "⑩ 첫 저점매수에 사서 계속 보유 (안 팔기)",

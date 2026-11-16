@@ -5,7 +5,7 @@
 //   var ex = handleExtra(data);
 //   if (ex) return json(ex);
 // ==========================================================
-var STRATEGY_KEYS = ["default", "base", "side", "cl1", "cl2", "cl3", "cl4", "cl5", "cl6", "cl7", "wha", "w1234", "hold1", "holdAll", "holdStrong"];
+var STRATEGY_KEYS = ["default", "base", "side", "cl1", "cl2", "cl3", "cl4", "cl5", "cl6", "cl7", "wha", "w1234", "ma200", "hold1", "holdAll", "holdStrong"];
 
 // 새 기능용 action 모음 (doPost에서 한 번에 연결)
 function handleExtra(data) {
