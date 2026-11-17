@@ -240,6 +240,11 @@ function getPicks(token, force) {
     else if (/^\d{4}-\d\d-\d\d \d\d:\d\d/.test(upd)) lastMs = new Date(upd.slice(0, 10) + "T" + upd.slice(11, 16) + ":00+09:00").getTime();
     try { o = JSON.parse(String(v[1] || "{}")); } catch (e) { o = {}; }
   }
+  var bbs = null, bbOld = false;
+  try {
+    if (sh.getLastRow() >= 2) { var bv = String(sh.getRange(2, 3).getValue() || ""); if (bv) bbs = JSON.parse(bv); }
+    bbOld = !!(bbs && bbs.length && !("sw" in bbs[0]));        // 이탈 뒤 성적 계산이 들어가기 전 형식 → 새로 계산 필요
+  } catch (e) {}
   // 새로고침 버튼(force)이거나 아직 결과가 없으면 뒤에서 다시 계산 (10분 안에 또 누르면 무시)
   var refreshing = false;
   try {
@@ -248,14 +253,12 @@ function getPicks(token, force) {
     var done = Number(props.getProperty("PICKS_DONE_AT") || 0);
     var run = Number(props.getProperty("PICKS_RUN_AT") || 0);
     if (run && now - run < 8 * 60 * 1000) refreshing = true;
-    else if ((force && now - done > 10 * 60 * 1000) || !upd || (lastMs && now - lastMs > 10 * 3600 * 1000 && now - done > 10 * 3600 * 1000)) {   // 10시간 넘게 오래됐으면 열 때 자동 갱신
+    else if ((force && now - done > 10 * 60 * 1000) || (bbOld && now - done > 2 * 60 * 1000) || !upd || (lastMs && now - lastMs > 10 * 3600 * 1000 && now - done > 10 * 3600 * 1000)) {   // 10시간 넘게 오래됐으면 열 때 자동 갱신
       props.setProperty("PICKS_RUN_AT", String(now));
       ScriptApp.newTrigger("refreshPicksOnce").timeBased().after(1000).create();
       refreshing = true;
     }
   } catch (e) { /* 트리거를 못 만들어도 기존 결과는 보여줌 */ }
-  var bbs = null;
-  try { if (sh.getLastRow() >= 2) { var bv = String(sh.getRange(2, 3).getValue() || ""); if (bv) bbs = JSON.parse(bv); } } catch (e) {}
   return {ok: true, updated: upd, scanned: o.scanned || 0, total: o.total || 0, items: o.items || [], highs: o.highs || null, bbs: bbs, refreshing: refreshing, groups: Object.keys(PICK_GROUPS)};
 }
 
