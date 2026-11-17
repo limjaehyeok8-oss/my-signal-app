@@ -167,7 +167,7 @@ function refreshPicks() {
   var universe = pickUniverse();
   var items = [], highs = [], bbs = [], scanned = 0, CH = 25;
   for (var i = 0; i < universe.length; i += CH) {
-    if (Date.now() - t0 > 5 * 60 * 1000) break;                 // 6분 제한 전에 멈춤
+    if (Date.now() - t0 > 4.6 * 60 * 1000) break;               // 6분 제한 전에 멈춤 (뒤에 이탈 종목 추가 계산 시간을 남김)
     var chunk = universe.slice(i, i + CH);
     var reqs = [];
     chunk.forEach(function (s) {
@@ -209,7 +209,7 @@ function refreshPicks() {
   sh.getRange(2, 1, 1, 2).setValues([[Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm"), JSON.stringify(out)]]);
   try {                                                    // 볼린저 이탈: 일봉 이탈 종목은 5년 일봉으로 '이탈 뒤 성적'도 계산 (주봉은 위에서 이미 계산)
     var wn = bbs.filter(function (b) { return b.gw != null && b.gw < 0; });   // 주봉 이탈 종목: 10년 주봉으로 '이탈 뒤 성적'과 '자기 이탈 깊이 통계'를 다시 계산
-    for (var q1 = 0; q1 < wn.length && Date.now() - t0 < 5.0 * 60 * 1000; q1 += 25) {
+    for (var q1 = 0; q1 < wn.length && Date.now() - t0 < 5.4 * 60 * 1000; q1 += 25) {
       var pw = wn.slice(q1, q1 + 25), rw = [];
       try { rw = UrlFetchApp.fetchAll(pw.map(function (b) { return {url: "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(b.s) + "?range=10y&interval=1wk", muteHttpExceptions: true}; })); } catch (e) { continue; }
       pw.forEach(function (b, j) {
@@ -217,7 +217,7 @@ function refreshPicks() {
       });
     }
     var dn = bbs.filter(function (b) { return b.gd != null && b.gd < 0; });
-    for (var q0 = 0; q0 < dn.length && Date.now() - t0 < 5.3 * 60 * 1000; q0 += 25) {
+    for (var q0 = 0; q0 < dn.length && Date.now() - t0 < 5.6 * 60 * 1000; q0 += 25) {
       var part = dn.slice(q0, q0 + 25), rs2 = [];
       try { rs2 = UrlFetchApp.fetchAll(part.map(function (b) { return {url: "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(b.s) + "?range=5y&interval=1d", muteHttpExceptions: true}; })); } catch (e) { continue; }
       part.forEach(function (b, j) {
