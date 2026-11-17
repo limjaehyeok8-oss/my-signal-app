@@ -165,7 +165,7 @@ function refreshPicks() {
   var props = PropertiesService.getScriptProperties();
   props.setProperty("PICKS_RUN_AT", String(t0));                // 계산 중 표시
   var universe = pickUniverse();
-  var items = [], highs = [], scanned = 0, CH = 25;
+  var items = [], highs = [], bbs = [], scanned = 0, CH = 25;
   for (var i = 0; i < universe.length; i += CH) {
     if (Date.now() - t0 > 5 * 60 * 1000) break;                 // 6분 제한 전에 멈춤
     var chunk = universe.slice(i, i + CH);
@@ -194,6 +194,10 @@ function refreshPicks() {
               m1: hl > 22 ? Number(((d.closes[hl - 1] / d.closes[hl - 22] - 1) * 100).toFixed(0)) : null});
           }
         } catch (e) {}
+        try {                                              // 볼린저 하단 이탈 (일봉·주봉): 현재가가 하단 밴드 아래인 종목, 괴리율 = 하단 대비 %
+          var gd = _bbGapOf(d.closes), gw = _bbGapOf(w.closes), cl = d.closes[d.closes.length - 1];
+          if (cl >= 3 && ((gd != null && gd < 0) || (gw != null && gw < 0))) bbs.push({s: s, g: PICK_GROUP_OF[s] || "기타", p: Number(cl.toFixed(2)), gd: gd, gw: gw});
+        } catch (e) {}
         var r = pickOne(s, d, w);
         if (r && r.sc >= 1) items.push(r);                 // 점수 1점 이상만 보여줌
       } catch (e) { /* 한 종목 실패는 무시 */ }
@@ -203,6 +207,11 @@ function refreshPicks() {
   var out = {scanned: scanned, total: universe.length, items: _splitPicks(items), highs: highs.slice(0, 150)};
   var sh = getPicksSheet();
   sh.getRange(2, 1, 1, 2).setValues([[Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm"), JSON.stringify(out)]]);
+  try {                                                    // 볼린저 이탈 목록은 칸 길이 제한(5만자) 때문에 따로 저장
+    bbs.sort(function (a, b) { return Math.min(a.gw == null ? 0 : a.gw, a.gd == null ? 0 : a.gd) - Math.min(b.gw == null ? 0 : b.gw, b.gd == null ? 0 : b.gd); });
+    sh.getRange(1, 3).setValue("bbs");
+    sh.getRange(2, 3).setValue(JSON.stringify(bbs.slice(0, 200)));
+  } catch (e) {}
   props.deleteProperty("PICKS_RUN_AT");
   props.setProperty("PICKS_DONE_AT", String(Date.now()));
   return out;
@@ -233,7 +242,9 @@ function getPicks(token, force) {
       refreshing = true;
     }
   } catch (e) { /* 트리거를 못 만들어도 기존 결과는 보여줌 */ }
-  return {ok: true, updated: upd, scanned: o.scanned || 0, total: o.total || 0, items: o.items || [], highs: o.highs || null, refreshing: refreshing, groups: Object.keys(PICK_GROUPS)};
+  var bbs = null;
+  try { if (sh.getLastRow() >= 2) { var bv = String(sh.getRange(2, 3).getValue() || ""); if (bv) bbs = JSON.parse(bv); } } catch (e) {}
+  return {ok: true, updated: upd, scanned: o.scanned || 0, total: o.total || 0, items: o.items || [], highs: o.highs || null, bbs: bbs, refreshing: refreshing, groups: Object.keys(PICK_GROUPS)};
 }
 
 // 한 번짜리 트리거가 부르는 함수: 계산하고 자기 트리거를 지움

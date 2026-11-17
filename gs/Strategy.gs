@@ -40,6 +40,7 @@ function handleExtra(data) {
   if (data.action === "setHoldAlert")  return setHoldAlert(token, data.symbol, data.target, data.stop);
   if (data.action === "getBbAlerts")   return getBbAlerts(token);
   if (data.action === "setBbAlert")    return setBbAlert(token, data.symbol, data.on, data.kind);
+  if (data.action === "getBbChart")    return getBbChart(token, data.symbol, data.kind);
   if (data.action === "getWatch")      return getWatch(token);
   if (data.action === "addWatch")      return addWatch(token, data.symbol, data.target);
   if (data.action === "removeWatch")   return removeWatch(token, data.symbol);

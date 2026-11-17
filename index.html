@@ -864,6 +864,9 @@
     .alIn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; } .alIn label { font-size: 12px; color: var(--sub); } .alIn input { width: 100%; margin-top: 4px; }
     .alTbl { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; } .alTbl th, .alTbl td { padding: 7px 4px; text-align: right; border-bottom: 1px solid var(--line); } .alTbl th:first-child, .alTbl td:first-child { text-align: left; }
     .alTbl th { color: var(--sub); font-weight: 600; font-size: 12px; } .alTbl .more { color: #ff8a96; } .alTbl .less { color: #8cc0ff; }
+    .bbSum { font-size: 13px; color: var(--sub); margin: 2px 0 6px; line-height: 1.5; } .bbSum b { color: var(--down); }
+    .bbChartBox svg { width: 100%; height: auto; display: block; } .bbActs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+    .pkMore .bbActs .pkWatch { display: inline-block; width: auto; margin: 0; padding: 7px 12px; font-size: 12px; } .bbActs button { width: auto; flex: none; } .bbActs .bbWrap { display: contents; } .bbActs .bbPill { margin: 0; } .bbActs .bbMsg { flex-basis: 100%; } .pkBadge.bb { background: rgba(91,168,255,.18); color: var(--down); }
     .bbPill { display: inline-block; margin: 10px 0 0 6px; padding: 6px 12px; font-size: 12px; font-weight: 800; border: none; border-radius: 999px; background: var(--card); color: var(--sub); }
     .bbPill.on { background: var(--accent); color: #06130d; }
     .bbWrap { display: inline; } .bbWrap .bbMsg { display: block; margin-top: 6px; font-size: 12px; color: var(--sub); white-space: pre-line; }
@@ -1217,6 +1220,7 @@
       <button data-f="today" class="on">오늘</button>
       <button data-f="d3">최근 3일</button>
       <button data-f="rr">손익비순</button>
+      <button data-f="bb">📉 볼린저 이탈</button>
     </div>
     <div class="pkChips" id="pickGroups"></div>
     <div id="pickUpd" class="alertHint"></div>
@@ -1752,7 +1756,7 @@
     $("frBox").addEventListener("toggle", () => { if ($("frBox").open) loadFriends(); });
 
     // ===== 추천 탭: 오늘 신호 뜬 종목 =====
-    let pickGroupList = [], pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "";
+    let pickGroupList = [], pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "", pickBbs = null, bbKind = "w";
     function renderGroups() {
       const box = $("pickGroups"); box.textContent = "";
       const cnt = {};
@@ -1775,6 +1779,88 @@
       box.appendChild(btn); box.appendChild(menu);
     }
     let pkGrpOpen = false;
+    // ===== 📉 볼린저 하단 이탈 목록 (일봉·주봉) =====
+    function renderBbList() {
+      const list = $("pickList"); list.textContent = "";
+      const seg = mkEl("div", "pkChips");
+      [["w", "주봉 이탈"], ["d", "일봉 이탈"]].forEach(([k, n]) => { const b = mkEl("button", k === bbKind ? "on" : "", n); b.onclick = () => { bbKind = k; renderBbList(); }; seg.appendChild(b); });
+      list.appendChild(seg);
+      if (!pickBbs) { list.appendChild(mkEl("div", "alertHint", "아직 계산된 결과가 없어요. 아래 새로고침을 눌러 주세요")); return; }
+      const kk = bbKind === "w" ? "gw" : "gd";
+      const items = pickBbs.filter((x) => x[kk] != null && x[kk] < 0).sort((a, b) => a[kk] - b[kk]).slice(0, 40);
+      if (!items.length) { list.appendChild(mkEl("div", "alertHint", "지금 " + (bbKind === "w" ? "주봉" : "일봉") + " 하단을 이탈한 종목이 없어요")); return; }
+      list.appendChild(mkEl("div", "alertHint", "괴리율 = 볼린저 하단에서 벗어난 정도 · 많이 벗어난 순 (" + items.length + "개)"));
+      items.forEach((x, i) => list.appendChild(bbCard(x, i + 1, kk)));
+    }
+    function bbCard(x, rank, kk) {
+      const c = mkEl("div", "pkCard pkRow"), main = mkEl("div", "pkMain");
+      main.appendChild(mkEl("span", "pkRank", String(rank)));
+      const mid = mkEl("div", "pkMid"), head = mkEl("div", "pkHead");
+      const sym = mkEl("span", "sym", x.s);
+      sym.onclick = (e) => { e.stopPropagation(); showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      head.appendChild(sym);
+      head.appendChild(mkEl("span", "pkBadge bb", (kk === "gw" ? "주봉 " : "일봉 ") + x[kk].toFixed(1) + "%"));
+      const ok = kk === "gw" ? "gd" : "gw";
+      if (x[ok] != null && x[ok] < 0) head.appendChild(mkEl("span", "pkBadge", (ok === "gw" ? "주봉 " : "일봉 ") + x[ok].toFixed(1) + "%"));
+      mid.appendChild(head); mid.appendChild(mkEl("div", "pkTag", x.g || "")); main.appendChild(mid);
+      const rt = mkEl("div", "pkRt"); rt.dataset.pks = x.s; rt.dataset.p = x.p; rt.appendChild(mkEl("div", "pkPx", fmt(x.p))); main.appendChild(rt);
+      c.appendChild(main);
+      const more = mkEl("div", "pkMore"); more.style.display = "none";
+      const box = mkEl("div", "bbChartBox"); more.appendChild(box);
+      const acts = mkEl("div", "bbActs");
+      const wb = mkEl("button", "pkWatch", "👀 관심 추가");
+      wb.onclick = async (e) => {
+        e.stopPropagation(); wb.disabled = true; wb.textContent = "추가 중…";
+        try { const r = await api({ action: "addWatch", token: myToken, symbol: x.s }); if (r && r.ok) { wb.textContent = "✓ 추가됨"; loadWatch(true); } else { wb.textContent = (r && r.msg) || "추가 실패"; setTimeout(() => { wb.textContent = "👀 관심 추가"; wb.disabled = false; }, 1800); } }
+        catch (err) { wb.textContent = "👀 관심 추가"; wb.disabled = false; }
+      };
+      const ab = mkEl("button", "pkWatch", "📈 분석 보기");
+      ab.onclick = (e) => { e.stopPropagation(); showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      acts.appendChild(wb); acts.appendChild(ab); acts.appendChild(bbPill(x.s)); acts.addEventListener("click", (e) => e.stopPropagation());
+      more.appendChild(acts); c.appendChild(more);
+      let loaded = false;
+      c.onclick = () => {
+        const open = more.style.display === "none"; more.style.display = open ? "block" : "none";
+        if (open && !loaded) {
+          loaded = true; box.textContent = "차트 불러오는 중…";
+          api({ action: "getBbChart", token: myToken, symbol: x.s, kind: bbKind }).then((d) => { if (d && d.ok) drawBbCandle(box, d); else { box.textContent = (d && d.msg) || "차트를 불러오지 못했어요"; loaded = false; } })
+            .catch(() => { box.textContent = "차트를 불러오지 못했어요"; loaded = false; });
+        }
+      };
+      return c;
+    }
+    function drawBbCandle(box, d) {
+      box.textContent = "";
+      const n = d.c.length, last = n - 1, W = 360, H = 220, L = 6, R = 44, T = 12, B = 20, NS = "http://www.w3.org/2000/svg";
+      const lw = d.lo[last], gp = d.gap;
+      const sum = mkEl("div", "bbSum"); sum.appendChild(document.createTextNode((d.kind === "w" ? "주봉" : "일봉") + " 하단 $" + fmt(lw) + " · 현재 $" + fmt(d.c[last]) + " · 괴리율 "));
+      const gb = document.createElement("b"); gb.textContent = (gp != null ? (gp >= 0 ? "+" : "") + gp.toFixed(1) + "%" : "-"); sum.appendChild(gb); box.appendChild(sum);
+      let lo = Infinity, hi = -Infinity;
+      for (let i = 0; i < n; i++) { lo = Math.min(lo, d.l[i], d.lo[i] == null ? Infinity : d.lo[i]); hi = Math.max(hi, d.h[i], d.up[i] == null ? -Infinity : d.up[i]); }
+      const pd = (hi - lo) * 0.06 || 1; lo -= pd; hi += pd;
+      const X = (i) => L + (W - L - R) * (i + 0.5) / n, Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+      const svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+      const add = (tag, a, text) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (text != null) e.textContent = text; svg.appendChild(e); return e; };
+      for (let g = 0; g <= 3; g++) { const v = lo + (hi - lo) * g / 3, y = Y(v); add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: cvar("--line"), "stroke-width": 0.5 }); add("text", { x: W - R + 3, y: y + 3, fill: cvar("--sub"), "font-size": 9 }, v.toFixed(v >= 100 ? 0 : 1)); }
+      let lastM = -1, lastX = -99;
+      d.t.forEach((t, i) => { const m = new Date(t * 1000).getUTCMonth() + 1; if (m !== lastM) { lastM = m; if (X(i) - lastX >= 34) { lastX = X(i); add("text", { x: X(i), y: H - 6, fill: cvar("--sub"), "font-size": 9 }, m + "월"); } } });
+      const idx = []; for (let i = 0; i < n; i++) if (d.up[i] != null) idx.push(i);
+      if (idx.length > 1) {                                                      // 밴드 영역 + 선
+        const pts = idx.map((i) => X(i).toFixed(1) + "," + Y(d.up[i]).toFixed(1)).concat(idx.slice().reverse().map((i) => X(i).toFixed(1) + "," + Y(d.lo[i]).toFixed(1))).join(" ");
+        add("polygon", { points: pts, fill: "rgba(130,150,255,0.10)" });
+        const line = (arr, col, w, dash) => add("polyline", { points: idx.map((i) => X(i).toFixed(1) + "," + Y(arr[i]).toFixed(1)).join(" "), fill: "none", stroke: col, "stroke-width": w, "stroke-dasharray": dash || "" });
+        line(d.up, "#8a94a6", 1); line(d.ma, "#8a94a6", 1, "3 3"); line(d.lo, "#ffb020", 1.6);
+      }
+      const bw = Math.max(1.5, (W - L - R) / n * 0.62);
+      for (let i = 0; i < n; i++) {
+        const upc = d.c[i] >= d.o[i], col = upc ? cvar("--up") : cvar("--down");
+        add("line", { x1: X(i), x2: X(i), y1: Y(d.h[i]), y2: Y(d.l[i]), stroke: col, "stroke-width": 1 });
+        add("rect", { x: X(i) - bw / 2, y: Math.min(Y(d.o[i]), Y(d.c[i])), width: bw, height: Math.max(1, Math.abs(Y(d.o[i]) - Y(d.c[i]))), fill: col });
+      }
+      if (idx.length) add("text", { x: X(idx[0]) + 2, y: Y(d.lo[idx[0]]) + 11, fill: "#ffb020", "font-size": 9, "font-weight": "bold" }, "하단");
+      if (d.c[last] < lw) add("circle", { cx: X(last), cy: Y(d.c[last]), r: 4, fill: "none", stroke: "#ffb020", "stroke-width": 1.5 });
+      box.appendChild(svg);
+    }
     function pickCard(x, showGroup, rank) {
       const c = mkEl("div", "pkCard pkRow");
       const main = mkEl("div", "pkMain");
@@ -1870,6 +1956,10 @@
       }, 600);
     }
     function renderPicks() {
+      const isBb = pickFilter === "bb";
+      if (isBb) $("pickGroups").style.setProperty("display", "none", "important"); else $("pickGroups").style.removeProperty("display");   // .pkGrpBox 가 display:block !important 라서 같이 눌러줌
+      $("rrTop").style.display = isBb ? "none" : "";
+      if (isBb) { renderBbList(); return; }
       renderRrTop(); loadPickExt();
       const list = $("pickList");
       list.textContent = "";
@@ -1912,6 +2002,7 @@
         if (r.updated) { let t = String(r.updated); if (/GMT|T\d\d:/.test(t)) { const dt = new Date(t); if (!isNaN(dt)) { const z = (n) => String(n).padStart(2, "0"); t = z(dt.getMonth() + 1) + "/" + z(dt.getDate()) + " " + z(dt.getHours()) + ":" + z(dt.getMinutes()); } } updTxt = t + " 기준 · 카드를 누르면 이유가 펼쳐져요"; }
         $("pickUpd").textContent = updTxt;
         pickData = r.items || [];
+        pickBbs = r.bbs || null;
         if (r.groups) pickGroupList = r.groups;
         renderGroups();
         renderPicks();
@@ -2936,6 +3027,7 @@
         "🧭 시장 흐름 탭: 업종 강도 · 52주 신고가 · 실적 일정 (히트맵 탭 확장)",
         "업종 강도에서 업종을 누르면 그 안의 종목 순위",
         "알림 전략을 고르면 바로 그 전략의 타점 차트로 바뀜 (저장 전 미리보기)",
+        "추천 탭에 📉 볼린저 이탈 목록: 주봉·일봉 하단을 이탈한 종목을 괴리율 큰 순으로, 누르면 밴드 차트",
         "🧭 월가식 자산배분: 올웨더·영구·60/40 비중과 내 비중 비교 (내 종목 화면 아래)",
         "📉 볼린저 밴드 하단 알림 — 일봉·주봉, 괴리율이 1%씩 깊어질 때마다 단계별 알림 (관심·보유·분석 화면에서 종목별로 켜기)",
         "알림 전략에 ⑮ 200일선 전략 추가",

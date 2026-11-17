@@ -165,3 +165,56 @@ function testBbAlert() {
     });
   });
 }
+
+
+// ===== 추천 탭 '볼린저 이탈' 목록용 =====
+// 마지막 봉 기준 괴리율(%) = 현재가가 하단 밴드보다 얼마나 위(+)/아래(-)인지. 데이터가 모자라면 null
+function _bbGapOf(closes) {
+  var n = closes ? closes.length : 0; if (n < BB_N) return null;
+  var w = closes.slice(n - BB_N), sum = 0, i;
+  for (i = 0; i < BB_N; i++) sum += w[i];
+  var ma = sum / BB_N, v = 0;
+  for (i = 0; i < BB_N; i++) v += (w[i] - ma) * (w[i] - ma);
+  var sd = Math.sqrt(v / BB_N); if (!(sd > 0)) return null;
+  return Number(((closes[n - 1] / (ma - BB_K * sd) - 1) * 100).toFixed(1));
+}
+
+// 봉마다 밴드를 계산한 전체 줄. 앞쪽 19개는 null
+function _bbSeries(closes) {
+  var lo = [], ma = [], up = [], n = closes.length;
+  for (var k = 0; k < n; k++) {
+    if (k < BB_N - 1) { lo.push(null); ma.push(null); up.push(null); continue; }
+    var sum = 0, i;
+    for (i = k - BB_N + 1; i <= k; i++) sum += closes[i];
+    var m = sum / BB_N, v = 0;
+    for (i = k - BB_N + 1; i <= k; i++) v += (closes[i] - m) * (closes[i] - m);
+    var sd = Math.sqrt(v / BB_N);
+    lo.push(m - BB_K * sd); ma.push(m); up.push(m + BB_K * sd);
+  }
+  return {lo: lo, ma: ma, up: up};
+}
+
+// 종목 차트용: 캔들 + 볼린저 밴드. kind "d" 일봉(최근 90봉) / "w" 주봉(최근 80봉). 10분 캐시
+function getBbChart(token, symbol, kind) {
+  if (!isRegistered(token)) return {ok: false};
+  symbol = String(symbol || "").trim().toUpperCase();
+  if (!/^[A-Z0-9.\-]{1,12}$/.test(symbol)) return {ok: false, msg: "티커를 확인하세요"};
+  kind = _bbKind(kind);
+  var cache = CacheService.getScriptCache(), key = "bbc_" + symbol + "_" + kind;
+  try { var hit = cache.get(key); if (hit) return JSON.parse(hit); } catch (e) {}
+  var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(symbol) + (kind === "w" ? "?range=2y&interval=1wk" : "?range=6mo&interval=1d");
+  var resp = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
+  if (resp.getResponseCode() !== 200) return {ok: false, msg: symbol + " 차트를 가져오지 못했어요"};
+  var r = JSON.parse(resp.getContentText()).chart.result[0], q = r.indicators.quote[0], ts = r.timestamp || [];
+  var o = [], h = [], l = [], c = [], t = [];
+  for (var i = 0; i < ts.length; i++) {
+    if (q.close[i] == null || q.open[i] == null || q.high[i] == null || q.low[i] == null) continue;
+    o.push(Number(q.open[i])); h.push(Number(q.high[i])); l.push(Number(q.low[i])); c.push(Number(q.close[i])); t.push(ts[i]);
+  }
+  if (c.length < BB_N) return {ok: false, msg: "차트를 그리기엔 데이터가 모자라요"};
+  var b = _bbSeries(c), keep = kind === "w" ? 80 : 90, from = Math.max(0, c.length - keep);
+  var rd = function (arr) { return arr.slice(from).map(function (x) { return x == null ? null : Number(x.toFixed(2)); }); };
+  var out = {ok: true, s: symbol, kind: kind, t: t.slice(from), o: rd(o), h: rd(h), l: rd(l), c: rd(c), lo: rd(b.lo), ma: rd(b.ma), up: rd(b.up), gap: _bbGapOf(c)};
+  try { cache.put(key, JSON.stringify(out), 600); } catch (e) {}
+  return out;
+}
