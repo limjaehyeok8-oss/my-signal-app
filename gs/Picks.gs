@@ -196,7 +196,7 @@ function refreshPicks() {
         } catch (e) {}
         try {                                              // 볼린저 하단 이탈 (일봉·주봉): 현재가가 하단 밴드 아래인 종목, 괴리율 = 하단 대비 %
           var gd = _bbGapOf(d.closes), gw = _bbGapOf(w.closes), cl = d.closes[d.closes.length - 1];
-          if (cl >= 3 && ((gd != null && gd < 0) || (gw != null && gw < 0))) bbs.push({s: s, g: PICK_GROUP_OF[s] || "기타", p: Number(cl.toFixed(2)), gd: gd, gw: gw, sw: (gw != null && gw < 0) ? _bbStats(w.closes, [2, 4, 8], 8) : null});
+          if (cl >= 3 && ((gd != null && gd < 0) || (gw != null && gw < 0))) bbs.push({s: s, g: PICK_GROUP_OF[s] || "기타", p: Number(cl.toFixed(2)), gd: gd, gw: gw, sw: (gw != null && gw < 0) ? _bbStats(w.closes, [2, 4, 8], 8) : null, ow: null});
         } catch (e) {}
         var r = pickOne(s, d, w);
         if (r && r.sc >= 1) items.push(r);                 // 점수 1점 이상만 보여줌
@@ -208,6 +208,14 @@ function refreshPicks() {
   var sh = getPicksSheet();
   sh.getRange(2, 1, 1, 2).setValues([[Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm"), JSON.stringify(out)]]);
   try {                                                    // 볼린저 이탈: 일봉 이탈 종목은 5년 일봉으로 '이탈 뒤 성적'도 계산 (주봉은 위에서 이미 계산)
+    var wn = bbs.filter(function (b) { return b.gw != null && b.gw < 0; });   // 주봉 이탈 종목: 10년 주봉으로 '이탈 뒤 성적'과 '자기 이탈 깊이 통계'를 다시 계산
+    for (var q1 = 0; q1 < wn.length && Date.now() - t0 < 5.0 * 60 * 1000; q1 += 25) {
+      var pw = wn.slice(q1, q1 + 25), rw = [];
+      try { rw = UrlFetchApp.fetchAll(pw.map(function (b) { return {url: "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(b.s) + "?range=10y&interval=1wk", muteHttpExceptions: true}; })); } catch (e) { continue; }
+      pw.forEach(function (b, j) {
+        try { if (rw[j].getResponseCode() !== 200) return; var ww = processYahooData(JSON.parse(rw[j].getContentText())); if (!ww) return; var st10 = _bbStats(ww.closes, [2, 4, 8], 8); if (st10) b.sw = st10; b.ow = _bbOwn(ww.closes); } catch (e) {}
+      });
+    }
     var dn = bbs.filter(function (b) { return b.gd != null && b.gd < 0; });
     for (var q0 = 0; q0 < dn.length && Date.now() - t0 < 5.3 * 60 * 1000; q0 += 25) {
       var part = dn.slice(q0, q0 + 25), rs2 = [];
@@ -243,7 +251,7 @@ function getPicks(token, force) {
   var bbs = null, bbOld = false;
   try {
     if (sh.getLastRow() >= 2) { var bv = String(sh.getRange(2, 3).getValue() || ""); if (bv) bbs = JSON.parse(bv); }
-    bbOld = !!(bbs && bbs.length && !("sw" in bbs[0]));        // 이탈 뒤 성적 계산이 들어가기 전 형식 → 새로 계산 필요
+    bbOld = !!(bbs && bbs.length && !("ow" in bbs[0]));        // 이탈 뒤 성적 계산이 들어가기 전 형식 → 새로 계산 필요
   } catch (e) {}
   // 새로고침 버튼(force)이거나 아직 결과가 없으면 뒤에서 다시 계산 (10분 안에 또 누르면 무시)
   var refreshing = false;

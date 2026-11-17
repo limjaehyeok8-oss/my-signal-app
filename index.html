@@ -1808,6 +1808,8 @@
       head.appendChild(mkEl("span", "pkBadge bb", (kk === "gw" ? "주봉 " : "일봉 ") + x[kk].toFixed(1) + "%"));
       if (st && st.sc != null) head.appendChild(mkEl("span", "pkBadge rr" + (st.sc >= 3 ? " hi" : ""), "점수 " + (st.sc >= 0 ? "+" : "") + st.sc.toFixed(1)));
       if (st && st.n > 0 && st.n < 5) head.appendChild(mkEl("span", "pkBadge side", "표본 적음"));
+      const ow = kk === "gw" ? x.ow : null;
+      if (ow) { if (ow.rec) head.appendChild(mkEl("span", "pkBadge side", "⚠ 평소보다 깊음")); else if (ow.pct >= 90 && ow.n >= 8) head.appendChild(mkEl("span", "pkBadge rr hi", "바닥권 후보")); }
       const ok = kk === "gw" ? "gd" : "gw";
       if (x[ok] != null && x[ok] < 0) head.appendChild(mkEl("span", "pkBadge", (ok === "gw" ? "주봉 " : "일봉 ") + x[ok].toFixed(1) + "%"));
       const pk = st && st.h && st.h[st.p], pu = (bbHz(kind).find((z) => z[0] === (st && st.p)) || [0, ""])[1];
@@ -1815,6 +1817,14 @@
       const rt = mkEl("div", "pkRt"); rt.dataset.pks = x.s; rt.dataset.p = x.p; rt.appendChild(mkEl("div", "pkPx", fmt(x.p))); main.appendChild(rt);
       c.appendChild(main);
       const more = mkEl("div", "pkMore"); more.style.display = "none";
+      if (ow) {
+        const ob = mkEl("div", "bbSum"); ob.style.marginBottom = "8px";
+        ob.appendChild(mkEl("div", null, "이 종목의 평소 주봉 이탈 깊이 (과거 " + ow.n + "회)"));
+        ob.appendChild(mkEl("div", null, "중앙 -" + ow.med.toFixed(1) + "% · 깊은 편(상위 25%) -" + ow.p75.toFixed(1) + "% · 상위 10% -" + ow.p90.toFixed(1) + "% · 역대 최대 -" + ow.max.toFixed(1) + "%"));
+        ob.appendChild(mkEl("div", null, "지금 -" + ow.cur.toFixed(1) + "% → " + (ow.rec ? "역대 기록보다 더 깊어요. 통계상 이런 구간은 이후에도 더 빠진 경우가 많았어요 (바닥 신호 아님)" : "과거 이탈의 " + ow.pct + "% 보다 깊어요" + (ow.pct >= 90 && ow.n >= 8 ? " · 통계상 반등 확률이 높았던 구간(바닥권 후보)" : ""))));
+        if (ow.n < 8) ob.appendChild(mkEl("div", null, "과거 이탈 횟수가 적어서 참고만 하세요"));
+        more.appendChild(ob);
+      }
       if (st && st.h && Object.keys(st.h).length) {
         const sb = mkEl("div", "bbSum"); sb.style.marginBottom = "8px";
         sb.appendChild(mkEl("div", null, "과거에 이 종목이 " + (kind === "w" ? "주봉" : "일봉") + " 하단을 이탈한 뒤:"));
@@ -3021,7 +3031,8 @@
     // ================= 공지 탭 (업데이트 내역) =================
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
-      { id: "2026-11-14b", date: "11월 14일", title: "업데이트", items: [
+      { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "볼린저 이탈 목록(주봉): 종목마다 자기 과거 이탈 깊이를 기준으로 '바닥권 후보' / '평소보다 깊음' 표시",
         "추천 탭에서 바로 👀 관심 추가",
         "추천 목록 간결화 (5개씩 옆으로 넘기기)",
         "추천 티커 옆에 점수·유형·횡보 표시",

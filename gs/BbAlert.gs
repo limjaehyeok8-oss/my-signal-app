@@ -245,3 +245,22 @@ function _bbStats(closes, hs, primary) {
   if (pr) { out.n = pr[0]; out.sc = r1(pr[1] * pr[0] / (pr[0] + 3)); }
   return out;
 }
+
+// 종목 '자기 자신'의 과거 이탈 깊이 기준 통계 (주봉 10년 권장).
+// 반환: {n: 과거 이탈한 주 수, med: 중앙 깊이%, p75, p90, max, cur: 지금 깊이%, pct: 지금보다 얕았던 비율(%), rec: 역대 기록 갱신 여부}
+// 깊이 = 하단 대비 얼마나 아래인지(양수). 하단이 0 이하면 괴리율이 의미 없어 건너뜀.
+function _bbOwn(closes) {
+  var n = closes ? closes.length : 0; if (n < BB_N + 20) return null;
+  var ser = _bbSeries(closes), deps = [], k, cur = null;
+  for (k = 0; k < n; k++) {
+    var lo = ser.lo[k]; if (lo == null || !(lo > 0)) continue;
+    if (closes[k] < lo) { var d = -(closes[k] / lo - 1) * 100; deps.push(d); if (k === n - 1) cur = d; }
+  }
+  if (cur == null || deps.length < 5) return null;
+  var past = deps.slice(0, deps.length - 1), s = past.slice().sort(function (a, b) { return a - b; });
+  var q = function (p) { return s.length ? s[Math.min(s.length - 1, Math.floor(p * s.length))] : 0; };
+  var le = 0; past.forEach(function (x) { if (x <= cur) le++; });
+  var r1 = function (x) { return Math.round(x * 10) / 10; };
+  return {n: past.length, med: r1(q(0.5)), p75: r1(q(0.75)), p90: r1(q(0.9)), max: r1(s.length ? s[s.length - 1] : 0), cur: r1(cur),
+          pct: past.length ? Math.round(le / past.length * 100) : 0, rec: !!(s.length && cur > s[s.length - 1])};
+}
