@@ -30,17 +30,18 @@ function fetchPreMarket(symbols) {
 
 // 트리거가 부르는 함수. 미국 동부시간 기준 개장 직전(08:45~09:29)에만 실제로 보냄
 function checkPreMarketAlert(e) {
-  var force = (e === true);
+  var force = (e === true), quiet = !!(e && e.catchup);
   var now = new Date();
   var etDate = Utilities.formatDate(now, "America/New_York", "yyyy-MM-dd");
   var etHm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
   var etDow = Number(Utilities.formatDate(now, "America/New_York", "u")); // 1=월 ... 7=일
 
   if (!force) {
-    if (etDow >= 6) { runLog("pre", "미국 주말이라 건너뜀"); return; }                       // 미국 주말
-    if (etHm < 845 || etHm > 929) { runLog("pre", "시간대 아님 ET " + etHm + " (08:45~09:29만 보냄)"); return; }         // 개장 직전 시간대가 아님
+    if (etDow >= 6) { if (!quiet) runLog("pre", "미국 주말이라 건너뜀"); return; }                       // 미국 주말
+    if (etHm < 845 || etHm > 929) { if (!quiet) runLog("pre", "시간대 아님 ET " + etHm + " (08:45~09:29만 보냄)"); return; }         // 개장 직전 시간대가 아님
     var cache = CacheService.getScriptCache();
-    if (cache.get("pre_sent_" + etDate)) { runLog("pre", "오늘 이미 보냄"); return; }  // 오늘 이미 보냄
+    if (cache.get("pre_sent_" + etDate)) { if (!quiet) runLog("pre", "오늘 이미 보냄"); return; }
+    if (quiet) runLog("pre", "시간 트리거가 못 보내서 10분 확인이 대신 실행");  // 오늘 이미 보냄
     cache.put("pre_sent_" + etDate, "1", 21600);
   }
 
@@ -209,17 +210,18 @@ function preMarketLine(symbol, avgPrice, pm, etDate, etDow, strategy, ownStop) {
 
 // 정규장 마감 직후(ET 16:05~16:50)에 오늘 일봉 기준 신호를 보냄. 신호 있는 종목만.
 function checkPostCloseAlert(e) {
-  var force = (e === true);
+  var force = (e === true), quiet = !!(e && e.catchup);
   var now = new Date();
   var etDate = Utilities.formatDate(now, "America/New_York", "yyyy-MM-dd");
   var etHm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
   var etDow = Number(Utilities.formatDate(now, "America/New_York", "u"));
 
   if (!force) {
-    if (etDow >= 6) { runLog("post", "미국 주말이라 건너뜀"); return; }
-    if (etHm < 1605 || etHm > 1650) { runLog("post", "시간대 아님 ET " + etHm + " (16:05~16:50만 보냄)"); return; }
+    if (etDow >= 6) { if (!quiet) runLog("post", "미국 주말이라 건너뜀"); return; }
+    if (etHm < 1605 || etHm > (quiet ? 1900 : 1650)) { if (!quiet) runLog("post", "시간대 아님 ET " + etHm + " (16:05~16:50만 보냄)"); return; }
     var cache = CacheService.getScriptCache();
-    if (cache.get("post_sent_" + etDate)) { runLog("post", "오늘 이미 보냄"); return; }
+    if (cache.get("post_sent_" + etDate)) { if (!quiet) runLog("post", "오늘 이미 보냄"); return; }
+    if (quiet) runLog("post", "시간 트리거가 못 보내서 10분 확인이 대신 실행");
     cache.put("post_sent_" + etDate, "1", 21600);
   }
 
@@ -306,4 +308,14 @@ function testPreMarket() {
 function testPostClose() {
   checkPostCloseAlert(true);
   Logger.log("마감 후 테스트 완료");
+}
+
+// 10분마다 도는 확인(checkWatchTargets)이 같이 부르는 보조 실행: 개장 전·마감 후 알림이 시간 트리거 때문에 못 나갔으면 대신 보냄.
+// 하루에 이미 보냈으면(캐시 표시) 바로 돌아가고, 시간대가 아니면 아무것도 안 함. 기록(runLog)도 실제로 보낼 때만 남김.
+function catchUpAlerts() {
+  var now = new Date();
+  var dow = Number(Utilities.formatDate(now, "America/New_York", "u")), hm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
+  if (dow >= 6) return;
+  if (hm >= 845 && hm <= 929) checkPreMarketAlert({catchup: true});
+  else if (hm >= 1605 && hm <= 1900) checkPostCloseAlert({catchup: true});
 }
