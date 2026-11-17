@@ -1756,7 +1756,7 @@
     $("frBox").addEventListener("toggle", () => { if ($("frBox").open) loadFriends(); });
 
     // ===== 추천 탭: 오늘 신호 뜬 종목 =====
-    let pickGroupList = [], pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "", pickBbs = null, bbKind = "w";
+    let pickGroupList = [], pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "", pickBbs = null, bbKind = "w", bbSort = "sc";
     function renderGroups() {
       const box = $("pickGroups"); box.textContent = "";
       const cnt = {};
@@ -1784,14 +1784,20 @@
       const list = $("pickList"); list.textContent = "";
       const seg = mkEl("div", "pkChips");
       [["w", "주봉 이탈"], ["d", "일봉 이탈"]].forEach(([k, n]) => { const b = mkEl("button", k === bbKind ? "on" : "", n); b.onclick = () => { bbKind = k; renderBbList(); }; seg.appendChild(b); });
+      [["sc", "성적순"], ["gap", "괴리율순"]].forEach(([k, n]) => { const b = mkEl("button", k === bbSort ? "on" : "", n); b.style.marginLeft = k === "sc" ? "10px" : ""; b.onclick = () => { bbSort = k; renderBbList(); }; seg.appendChild(b); });
       list.appendChild(seg);
       if (!pickBbs) { list.appendChild(mkEl("div", "alertHint", "아직 계산된 결과가 없어요. 아래 새로고침을 눌러 주세요")); return; }
-      const kk = bbKind === "w" ? "gw" : "gd";
-      const items = pickBbs.filter((x) => x[kk] != null && x[kk] < 0).sort((a, b) => a[kk] - b[kk]).slice(0, 40);
+      const kk = bbKind === "w" ? "gw" : "gd", sk = bbKind === "w" ? "sw" : "sd";
+      const scOf = (x) => (x[sk] && x[sk].sc != null ? x[sk].sc : -1e9);
+      const items = pickBbs.filter((x) => x[kk] != null && x[kk] < 0)
+        .sort(bbSort === "sc" ? (a, b) => scOf(b) - scOf(a) || a[kk] - b[kk] : (a, b) => a[kk] - b[kk]).slice(0, 40);
       if (!items.length) { list.appendChild(mkEl("div", "alertHint", "지금 " + (bbKind === "w" ? "주봉" : "일봉") + " 하단을 이탈한 종목이 없어요")); return; }
-      list.appendChild(mkEl("div", "alertHint", "괴리율 = 볼린저 하단에서 벗어난 정도 · 많이 벗어난 순 (" + items.length + "개)"));
+      list.appendChild(mkEl("div", "alertHint", bbSort === "sc" ? "점수 = 이 종목이 과거에 같은 이탈을 한 뒤의 평균 수익 (횟수가 적으면 깎아요) · 앞날을 보장하진 않아요" : "괴리율 = 볼린저 하단에서 벗어난 정도 · 많이 벗어난 순"));
       items.forEach((x, i) => list.appendChild(bbCard(x, i + 1, kk)));
     }
+    // 이탈 뒤 성적 글자: [횟수, 평균%, 승률%, 최악%]
+    const bbHz = (kind) => kind === "w" ? [[2, "2주"], [4, "4주"], [8, "8주"]] : [[5, "5일"], [10, "10일"], [20, "20일"]];
+    const sg = (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%";
     function bbCard(x, rank, kk) {
       const c = mkEl("div", "pkCard pkRow"), main = mkEl("div", "pkMain");
       main.appendChild(mkEl("span", "pkRank", String(rank)));
@@ -1799,13 +1805,23 @@
       const sym = mkEl("span", "sym", x.s);
       sym.onclick = (e) => { e.stopPropagation(); showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
       head.appendChild(sym);
+      const st = kk === "gw" ? x.sw : x.sd, kind = kk === "gw" ? "w" : "d";
       head.appendChild(mkEl("span", "pkBadge bb", (kk === "gw" ? "주봉 " : "일봉 ") + x[kk].toFixed(1) + "%"));
+      if (st && st.sc != null) head.appendChild(mkEl("span", "pkBadge rr" + (st.sc >= 3 ? " hi" : ""), "점수 " + (st.sc >= 0 ? "+" : "") + st.sc.toFixed(1)));
+      if (st && st.n > 0 && st.n < 5) head.appendChild(mkEl("span", "pkBadge side", "표본 적음"));
       const ok = kk === "gw" ? "gd" : "gw";
       if (x[ok] != null && x[ok] < 0) head.appendChild(mkEl("span", "pkBadge", (ok === "gw" ? "주봉 " : "일봉 ") + x[ok].toFixed(1) + "%"));
-      mid.appendChild(head); mid.appendChild(mkEl("div", "pkTag", x.g || "")); main.appendChild(mid);
+      const pk = st && st.h && st.h[st.p], pu = (bbHz(kind).find((z) => z[0] === (st && st.p)) || [0, ""])[1];
+      mid.appendChild(head); mid.appendChild(mkEl("div", "pkTag", (pk ? "과거 " + pk[0] + "회 · " + pu + " 뒤 평균 " + sg(pk[1]) + " · 승률 " + pk[2] + "%" : "과거 기록 없음") + " · " + (x.g || ""))); main.appendChild(mid);
       const rt = mkEl("div", "pkRt"); rt.dataset.pks = x.s; rt.dataset.p = x.p; rt.appendChild(mkEl("div", "pkPx", fmt(x.p))); main.appendChild(rt);
       c.appendChild(main);
       const more = mkEl("div", "pkMore"); more.style.display = "none";
+      if (st && st.h && Object.keys(st.h).length) {
+        const sb = mkEl("div", "bbSum"); sb.style.marginBottom = "8px";
+        sb.appendChild(mkEl("div", null, "과거에 이 종목이 " + (kind === "w" ? "주봉" : "일봉") + " 하단을 이탈한 뒤:"));
+        bbHz(kind).forEach(([h, nm]) => { const v = st.h[h]; if (v) sb.appendChild(mkEl("div", null, nm + " 뒤 평균 " + sg(v[1]) + " · 승률 " + v[2] + "% · 최악 " + sg(v[3]) + " (" + v[0] + "회)")); });
+        more.appendChild(sb);
+      } else more.appendChild(mkEl("div", "bbSum", "과거 이탈 기록이 부족해서 성적을 계산하지 못했어요"));
       const box = mkEl("div", "bbChartBox"); more.appendChild(box);
       const acts = mkEl("div", "bbActs");
       const wb = mkEl("button", "pkWatch", "👀 관심 추가");
@@ -3027,7 +3043,7 @@
         "🧭 시장 흐름 탭: 업종 강도 · 52주 신고가 · 실적 일정 (히트맵 탭 확장)",
         "업종 강도에서 업종을 누르면 그 안의 종목 순위",
         "알림 전략을 고르면 바로 그 전략의 타점 차트로 바뀜 (저장 전 미리보기)",
-        "추천 탭에 📉 볼린저 이탈 목록: 주봉·일봉 하단을 이탈한 종목을 괴리율 큰 순으로, 누르면 밴드 차트",
+        "추천 탭에 📉 볼린저 이탈 목록: 주봉·일봉 하단을 이탈한 종목을 \"과거 이탈 뒤 성적\" 점수순(또는 괴리율순)으로, 누르면 밴드 차트",
         "🧭 월가식 자산배분: 올웨더·영구·60/40 비중과 내 비중 비교 (내 종목 화면 아래)",
         "📉 볼린저 밴드 하단 알림 — 일봉·주봉, 괴리율이 1%씩 깊어질 때마다 단계별 알림 (관심·보유·분석 화면에서 종목별로 켜기)",
         "알림 전략에 ⑮ 200일선 전략 추가",

@@ -196,7 +196,7 @@ function refreshPicks() {
         } catch (e) {}
         try {                                              // 볼린저 하단 이탈 (일봉·주봉): 현재가가 하단 밴드 아래인 종목, 괴리율 = 하단 대비 %
           var gd = _bbGapOf(d.closes), gw = _bbGapOf(w.closes), cl = d.closes[d.closes.length - 1];
-          if (cl >= 3 && ((gd != null && gd < 0) || (gw != null && gw < 0))) bbs.push({s: s, g: PICK_GROUP_OF[s] || "기타", p: Number(cl.toFixed(2)), gd: gd, gw: gw});
+          if (cl >= 3 && ((gd != null && gd < 0) || (gw != null && gw < 0))) bbs.push({s: s, g: PICK_GROUP_OF[s] || "기타", p: Number(cl.toFixed(2)), gd: gd, gw: gw, sw: (gw != null && gw < 0) ? _bbStats(w.closes, [2, 4, 8], 8) : null});
         } catch (e) {}
         var r = pickOne(s, d, w);
         if (r && r.sc >= 1) items.push(r);                 // 점수 1점 이상만 보여줌
@@ -207,10 +207,22 @@ function refreshPicks() {
   var out = {scanned: scanned, total: universe.length, items: _splitPicks(items), highs: highs.slice(0, 150)};
   var sh = getPicksSheet();
   sh.getRange(2, 1, 1, 2).setValues([[Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm"), JSON.stringify(out)]]);
-  try {                                                    // 볼린저 이탈 목록은 칸 길이 제한(5만자) 때문에 따로 저장
+  try {                                                    // 볼린저 이탈: 일봉 이탈 종목은 5년 일봉으로 '이탈 뒤 성적'도 계산 (주봉은 위에서 이미 계산)
+    var dn = bbs.filter(function (b) { return b.gd != null && b.gd < 0; });
+    for (var q0 = 0; q0 < dn.length && Date.now() - t0 < 5.3 * 60 * 1000; q0 += 25) {
+      var part = dn.slice(q0, q0 + 25), rs2 = [];
+      try { rs2 = UrlFetchApp.fetchAll(part.map(function (b) { return {url: "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(b.s) + "?range=5y&interval=1d", muteHttpExceptions: true}; })); } catch (e) { continue; }
+      part.forEach(function (b, j) {
+        try { if (rs2[j].getResponseCode() !== 200) return; var dd = processYahooData(JSON.parse(rs2[j].getContentText())); if (dd) b.sd = _bbStats(dd.closes, [5, 10, 20], 20); } catch (e) {}
+      });
+    }
+  } catch (e) {}
+  try {                                                    // 목록은 칸 길이 제한(5만자) 때문에 따로 저장
     bbs.sort(function (a, b) { return Math.min(a.gw == null ? 0 : a.gw, a.gd == null ? 0 : a.gd) - Math.min(b.gw == null ? 0 : b.gw, b.gd == null ? 0 : b.gd); });
+    var bl = bbs.slice(0, 200), bj = JSON.stringify(bl);
+    while (bj.length > 45000 && bl.length > 20) { bl.pop(); bj = JSON.stringify(bl); }
     sh.getRange(1, 3).setValue("bbs");
-    sh.getRange(2, 3).setValue(JSON.stringify(bbs.slice(0, 200)));
+    sh.getRange(2, 3).setValue(bj);
   } catch (e) {}
   props.deleteProperty("PICKS_RUN_AT");
   props.setProperty("PICKS_DONE_AT", String(Date.now()));

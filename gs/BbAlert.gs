@@ -218,3 +218,30 @@ function getBbChart(token, symbol, kind) {
   try { cache.put(key, JSON.stringify(out), 600); } catch (e) {}
   return out;
 }
+
+
+// ===== 볼린저 하단 이탈 뒤 성적 (과거 통계) =====
+// 이탈 첫 봉(밴드 위 → 아래로 내려온 봉)의 종가를 사서 h봉 뒤 종가로 팔았다면 얼마였는지. 이탈이 이어지는 동안은 한 번으로 셈.
+// 반환: {n: 기준 기간 횟수, sc: 점수, p: 기준 기간, h: {기간: [횟수, 평균%, 승률%, 최악%]}}
+// 점수 = 기준 기간 평균수익(%) × 횟수/(횟수+3) → 횟수가 적으면 깎아서 우연히 좋았던 종목이 위로 오지 않게 함
+function _bbStats(closes, hs, primary) {
+  var n = closes ? closes.length : 0; if (n < BB_N + 5) return null;
+  var ser = _bbSeries(closes), ev = [], prev = false, k;
+  for (k = 0; k < n; k++) {
+    var below = ser.lo[k] != null && closes[k] < ser.lo[k];
+    if (below && !prev) ev.push(k);
+    prev = below;
+  }
+  var r1 = function (x) { return Math.round(x * 10) / 10; }, out = {h: {}, p: primary, n: 0, sc: null};
+  hs.forEach(function (h) {
+    var rs = [];
+    ev.forEach(function (e) { if (e + h < n) rs.push((closes[e + h] / closes[e] - 1) * 100); });
+    if (!rs.length) return;
+    var sum = 0, win = 0, worst = Infinity;
+    rs.forEach(function (x) { sum += x; if (x > 0) win++; if (x < worst) worst = x; });
+    out.h[h] = [rs.length, r1(sum / rs.length), Math.round(win / rs.length * 100), r1(worst)];
+  });
+  var pr = out.h[primary];
+  if (pr) { out.n = pr[0]; out.sc = r1(pr[1] * pr[0] / (pr[0] + 3)); }
+  return out;
+}
