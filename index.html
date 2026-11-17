@@ -39,7 +39,7 @@
     td.sym { color: #1565c0; text-decoration: underline; cursor: pointer; }
     .up { color: #d32f2f; } .down { color: #1976d2; }
     #status { margin: 12px 0; color: #555; }
-    #analysis, #pfBox { display: none; margin-top: 16px; }
+    #analysis, #pfBox, #allocBox { display: none; margin-top: 16px; }
     #chartImg, .pfImg { display: block; width: 100%; border-radius: 6px; }
     #chartImg { display: none; }
     #analysisText { white-space: pre-wrap; font-family: inherit; font-size: 13px; line-height: 1.5; margin-top: 8px; }
@@ -616,6 +616,9 @@
     #wList .wItem b { font-size: 18px; font-weight: 800; }
     #wList .wItem .sub { font-size: 13px; margin-top: 4px; }
     #wList .wItem button { width: 30px; height: 30px; padding: 0; border-radius: 50%; background: var(--card2); font-size: 13px; flex: none; }
+    #wList .wItem .buyPill, #wList .wItem .bbPill { width: auto; height: auto; padding: 6px 12px; border-radius: 999px; font-size: 12px; background: var(--card2); white-space: nowrap; }
+    #wList .wItem .bbPill.on { background: var(--accent); color: #06130d; } #wList .wItem .buyPill { color: var(--accent); }
+    #wList .wItem .bbWrap { display: inline; } #wList .wItem > div:first-child { min-width: 0; flex: 1; }
     html[data-theme="light"] #list .frCard, html[data-theme="light"] #wList .wItem { background: none !important; box-shadow: none !important; }
     html[data-theme="light"] #list .frRow .pnl { background: #eef1f6; }
     html[data-theme="light"] #list .frRow .pnl.up { background: #ffe9ec; }
@@ -852,6 +855,18 @@
     .emptyBox .emBtn { margin-top: 16px; padding: 12px 20px; border-radius: 999px; border: none; font-weight: 800; font-size: 14px; background: var(--card2); color: var(--accent); }
     .skel { height: 92px; border-radius: 18px; margin: 0 0 10px; background: linear-gradient(90deg, var(--card2) 25%, var(--line) 50%, var(--card2) 75%); background-size: 200% 100%; animation: skelMove 1.2s infinite linear; }
     @keyframes skelMove { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .alTabs { display: flex; gap: 6px; margin: 10px 0; } .alTabs button { flex: 1; padding: 9px 4px; font-size: 13px; font-weight: 800; border: none; border-radius: 12px; background: var(--card); color: var(--sub); }
+    .alTabs button.on { background: var(--accent); color: #06130d; }
+    .alBar { display: flex; height: 30px; border-radius: 10px; overflow: hidden; margin: 8px 0; background: var(--card); }
+    .alBar i { display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 11px; font-weight: 800; color: #fff; min-width: 0; overflow: hidden; white-space: nowrap; }
+    .alBar .stock { background: #3182f6; } .alBar .bond { background: #12a37f; } .alBar .gold { background: #d99a1c; } .alBar .cash { background: #7b8597; }
+    .alLine { font-size: 13px; color: var(--sub); margin: 4px 0; line-height: 1.5; } .alLine b { color: var(--text, inherit); }
+    .alIn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; } .alIn label { font-size: 12px; color: var(--sub); } .alIn input { width: 100%; margin-top: 4px; }
+    .alTbl { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; } .alTbl th, .alTbl td { padding: 7px 4px; text-align: right; border-bottom: 1px solid var(--line); } .alTbl th:first-child, .alTbl td:first-child { text-align: left; }
+    .alTbl th { color: var(--sub); font-weight: 600; font-size: 12px; } .alTbl .more { color: #ff8a96; } .alTbl .less { color: #8cc0ff; }
+    .bbPill { display: inline-block; margin: 10px 0 0 6px; padding: 6px 12px; font-size: 12px; font-weight: 800; border: none; border-radius: 999px; background: var(--card); color: var(--sub); }
+    .bbPill.on { background: var(--accent); color: #06130d; }
+    .bbWrap { display: inline; } .bbWrap .bbMsg { display: block; margin-top: 6px; font-size: 12px; color: var(--sub); white-space: pre-line; }
     .buyPill { display: inline-block; margin-top: 10px; padding: 6px 12px; font-size: 12px; font-weight: 800; border: none; border-radius: 999px; background: var(--card); color: var(--accent); }
     .buyForm { display: flex; gap: 6px; margin-top: 10px; }
     .buyForm input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: none; background: var(--card); color: var(--txt); font-size: 14px; }
@@ -865,7 +880,7 @@
     #actSheet #actBtns .danger { color: #ff6b79; } #actSheet #actBtns .cancel { background: none; color: var(--sub); margin: 0; }
     html[data-theme="light"] .sortBtn, html[data-theme="light"] .emptyBox .emBtn { background: #eef1f6; }
     html[data-theme="light"] #actSheet .actBox { background: #fff; } html[data-theme="light"] #actSheet #actBtns button { background: #f2f4f8; }
-    html[data-theme="light"] .buyPill, html[data-theme="light"] .buyForm input { background: #fff; }
+    html[data-theme="light"] .buyPill, html[data-theme="light"] .buyForm input, html[data-theme="light"] .bbPill:not(.on) { background: #fff; }
 
     .botNote { font-size: 12px; color: var(--sub); text-align: center; background: none; padding: 0 0 10px; margin: 0; }
     .botHero { background: var(--card2); border-radius: 24px; padding: 22px 20px; margin-bottom: 12px; }
@@ -1054,6 +1069,7 @@
       <div class="ctaRow">
         <button id="pfBtn" class="pfCta"><span class="pfI">📋</span><span class="pfT">내 포트폴리오</span><span class="pfS">수익률·차트 보기</span></button>
         <button id="botBtn" class="pfCta"><span class="pfI">🤖</span><span class="pfT">시뮬봇</span><span class="pfS" id="botBtnS">봇 성적 보기</span></button>
+        <button id="allocBtn" class="pfCta" style="grid-column: 1 / -1"><span class="pfI">🧭</span><span class="pfT">월가식 자산배분</span><span class="pfS">올웨더 · 영구 · 60/40 · 내 비중 비교</span></button>
       </div>
 
       <div id="pfBox">
@@ -1061,6 +1077,10 @@
         <div id="pfCards"></div>
         <p id="pfInfo"></p>
         <div id="pfCharts"></div>
+      </div>
+      <div id="allocBox">
+        <div class="secHead"><h3>🧭 월가식 자산배분</h3><button id="allocClose" style="font-size:13px;padding:6px 12px">✕ 닫기</button></div>
+        <div id="allocBody"></div>
       </div>
       </div>
 
@@ -1317,7 +1337,7 @@
 
     // 읽기 전용 요청은 잠깐 기억해 두고(같은 요청이 진행 중이면 합침), 쓰기 요청이 오면 기억을 비워요
     const API_TTL = { listHoldings: 20, getStrategies: 30, getPicks: 120, getPosts: 20, getComments: 15,
-                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60, getFund: 3600, getHoldAlerts: 60, getOversold: 3600, getSectors: 600, getSectorStocks: 600 };
+                      getFriendInfo: 60, friendHoldings: 60, friendStates: 120, holdingStates: 60, getAlerts: 30, getBriefing: 60, getMarket: 600, getCoins: 30, getBot: 120, getCoinMarkets: 3600, getCoinDetail: 20, getBbAlerts: 30, getWatch: 60, getPhotos: 300, analyze: 300, analyzeFast: 300, getExtPrices: 60, getHeat: 60, getFund: 3600, getHoldAlerts: 60, getOversold: 3600, getSectors: 600, getSectorStocks: 600 };
     const apiMemo = {};
     async function api(body) {
       const ttl = API_TTL[body.action];
@@ -1486,6 +1506,7 @@
       const tpBtn = mkEl("button", null, "📈 타점 차트 보기");
       acts.appendChild(rec); acts.appendChild(tpBtn);
       box.appendChild(acts);
+      const bbRow = mkEl("div"); bbRow.style.margin = "4px 0 2px"; bbRow.appendChild(bbPill(symbol)); box.appendChild(bbRow);
       const recOut = mkEl("div");
       const tpOut = mkEl("div");
       box.appendChild(recOut); box.appendChild(tpOut); box.appendChild(msg);
@@ -2219,9 +2240,11 @@
         haRow.appendChild(inT); haRow.appendChild(inS); haRow.appendChild(haSave); haBox.appendChild(haRow); haBox.appendChild(haMsg);
         haBox.addEventListener("click", (e) => e.stopPropagation());
         det.appendChild(haBox);
+        const bbRow = mkEl("div"); bbRow.style.marginBottom = "8px"; bbRow.appendChild(bbPill(h.symbol)); bbRow.addEventListener("click", (e) => e.stopPropagation()); det.appendChild(bbRow);
         const del = mkEl("button", "linkBtn", "이 종목 삭제");
         del.onclick = async () => {
           if (!confirm(h.symbol + " 을(를) 보유 종목에서 삭제할까요?")) return;
+          bbOffQuiet(h.symbol);
           const x = await api({ action: "removeHolding", token: myToken, symbol: h.symbol });
           if ((holdAl || {})[h.symbol]) { try { await api({ action: "setHoldAlert", token: myToken, symbol: h.symbol, target: "", stop: "" }); } catch (e) {} }
           log(x.msg); loadHoldings();
@@ -2241,7 +2264,7 @@
       const cb = lsGet("sigBadges");
       if (cb) document.querySelectorAll("#list [data-sym]").forEach((el) => { if (cb[el.dataset.sym]) el.textContent = cb[el.dataset.sym]; });
       if (!fromCache) loadHoldingBadges(hsSeq);
-      updateSummary(); applyHoldAl(); loadHoldAl();
+      updateSummary(); applyHoldAl(); loadHoldAl(); applyBb(); loadBb();
       loadExt();
     }
 
@@ -2354,6 +2377,81 @@
         if (seq === pfSeq) pfBtn.disabled = false;
       }
     }
+    // ================= 🧭 월가식 자산배분 (올웨더·영구·60/40) =================
+    const AL_CLS = [["stock", "주식"], ["bond", "채권"], ["gold", "금·원자재"], ["cash", "현금"]];
+    const AL_MODELS = [
+      { k: "all", n: "올웨더", who: "레이 달리오", mix: { stock: 30, bond: 55, gold: 15, cash: 0 }, etf: "SPY 30 · TLT 40 · IEI 15 · GLD 7.5 · DBC 7.5",
+        stat: "연 약 6% (2008~) · 금융위기 때 낙폭이 60/40의 절반 이하", tip: "경기 4국면에 다 대비해요. 금리가 급등한 해(2022)엔 약했어요." },
+      { k: "perm", n: "영구", who: "해리 브라운", mix: { stock: 25, bond: 25, gold: 25, cash: 25 }, etf: "VT 25 · TLT 25 · GLD 25 · SGOV 25",
+        stat: "연 6.4% · 최대 낙폭 -10.6% (2007~2026, 유로 기준)", tip: "단순하고 방어적이에요. 2022년엔 큰 도움이 안 됐어요." },
+      { k: "6040", n: "60/40", who: "전통 기본형", mix: { stock: 60, bond: 40, gold: 0, cash: 0 }, etf: "SPY 60 · AGG 40",
+        stat: "연 7.1% · 최대 낙폭 -26% (같은 기간)", tip: "가장 흔한 기본형이에요. 주식·채권이 같이 빠지면 방어가 약해요." }
+    ];
+    const AL_SET = { bond: "TLT IEF IEI SHY BND AGG TLH LQD HYG VGSH VGIT VGLT TIP SCHZ GOVT BNDX EDV SPTL VCSH VCIT MBB JNK", gold: "GLD IAU GLDM SGOL BAR OUNZ SLV PDBC DBC GSG DBA USO UNG CPER PPLT",
+                     cash: "BIL SGOV SHV USFR TFLO JPST MINT ICSH", etc: "IBIT FBTC GBTC BITO ETHE ARKB BITB" };
+    function alClassOf(sym) { sym = String(sym).toUpperCase(); for (const k in AL_SET) if (AL_SET[k].split(" ").indexOf(sym) > -1) return k; return "stock"; }
+    function renderAlloc() {
+      const body = $("allocBody"); body.textContent = "";
+      let cur = pref("sigAlModel", "all"); if (!AL_MODELS.some((m) => m.k === cur)) cur = "all";
+      const saved = lsGet("sigAlloc") || {};
+      const tabs = mkEl("div", "alTabs"), info = mkEl("div"), cmp = mkEl("div");
+      const paintInfo = () => {
+        const m = AL_MODELS.find((x) => x.k === cur); info.textContent = "";
+        tabs.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.k === cur));
+        info.appendChild(mkEl("div", "alLine", m.who + " 방식"));
+        const bar = mkEl("div", "alBar");
+        AL_CLS.forEach(([c, n]) => { const v = m.mix[c]; if (!v) return; const seg = mkEl("i", c, n + " " + v + "%"); seg.style.flex = v + " 1 0"; bar.appendChild(seg); });
+        info.appendChild(bar);
+        info.appendChild(mkEl("div", "alLine", "예시 ETF: " + m.etf));
+        info.appendChild(mkEl("div", "alLine", "📊 " + m.stat));
+        info.appendChild(mkEl("div", "alLine", m.tip));
+        info.appendChild(mkEl("div", "alLine", "참고: 주식 100%는 연 9.0% · 최대 낙폭 -49% (같은 기간)"));
+      };
+      AL_MODELS.forEach((m) => { const b = mkEl("button", "", m.n); b.dataset.k = m.k; b.onclick = () => { cur = m.k; try { localStorage.setItem("sigAlModel", cur); } catch (e) {} paintInfo(); paintCmp(); }; tabs.appendChild(b); });
+      body.appendChild(tabs); body.appendChild(info);
+
+      body.appendChild(mkEl("div", "alLine", "내 비중과 비교 — 자산별 금액을 넣어 보세요 (단위는 아무거나, 원·달러 섞지만 않으면 돼요)"));
+      const grid = mkEl("div", "alIn"), ins = {};
+      AL_CLS.forEach(([c, n]) => {
+        const lb = document.createElement("label"); lb.textContent = n;
+        const i = document.createElement("input"); i.type = "number"; i.step = "any"; i.inputMode = "decimal"; i.placeholder = "0"; i.value = saved[c] || "";
+        i.oninput = () => { const o = {}; AL_CLS.forEach(([k]) => { o[k] = +ins[k].value || 0; }); lsSet("sigAlloc", o); paintCmp(); };
+        ins[c] = i; lb.appendChild(i); grid.appendChild(lb);
+      });
+      body.appendChild(grid);
+      try {                                                            // 보유 종목을 자산군으로 나눠서 힌트만 보여줌 (수량 정보가 없어 금액은 직접 입력)
+        const hc = lsGet("sigHold"), hs = (hc && hc.r && hc.r.holdings) || [];
+        if (hs.length) {
+          const n = { stock: 0, bond: 0, gold: 0, cash: 0, etc: 0 }; hs.forEach((h) => { n[alClassOf(h.symbol)]++; });
+          body.appendChild(mkEl("div", "alLine", "내 보유 " + hs.length + "종목: 주식 " + n.stock + " · 채권 " + n.bond + " · 금·원자재 " + n.gold + " · 현금성 " + n.cash + (n.etc ? " · 코인 " + n.etc : "") + " (수량은 몰라서 금액은 직접 넣어야 해요)"));
+        }
+      } catch (e) {}
+      body.appendChild(cmp);
+      body.appendChild(mkEl("div", "alLine", "정보 제공용이에요. 투자 권유가 아니고, 과거 성과가 앞으로를 보장하진 않아요."));
+
+      function paintCmp() {
+        const m = AL_MODELS.find((x) => x.k === cur); cmp.textContent = "";
+        const v = {}; let tot = 0; AL_CLS.forEach(([c]) => { v[c] = +ins[c].value || 0; tot += v[c]; });
+        if (tot <= 0) return;
+        const t = document.createElement("table"); t.className = "alTbl";
+        const hr = document.createElement("tr"); ["", "내 비중", m.n, "차이", "맞추려면"].forEach((x) => { const th = document.createElement("th"); th.textContent = x; hr.appendChild(th); }); t.appendChild(hr);
+        const fm = (x) => Math.round(Math.abs(x)).toLocaleString("ko-KR");
+        AL_CLS.forEach(([c, n]) => {
+          const mine = v[c] / tot * 100, tg = m.mix[c], diff = mine - tg, adj = tg / 100 * tot - v[c];
+          const tr = document.createElement("tr");
+          [n, mine.toFixed(0) + "%", tg + "%", (diff >= 0 ? "+" : "") + diff.toFixed(0) + "%p", Math.abs(adj) < tot * 0.005 ? "-" : (adj > 0 ? fm(adj) + " 늘리기" : fm(adj) + " 줄이기")].forEach((x, i) => {
+            const td = document.createElement("td"); td.textContent = x; if (i === 3 && Math.abs(diff) >= 5) td.className = diff > 0 ? "more" : "less"; tr.appendChild(td);
+          });
+          t.appendChild(tr);
+        });
+        cmp.appendChild(t);
+        const sd = v.stock / tot * 100 - m.mix.stock;
+        cmp.appendChild(mkEl("div", "alLine", sd >= 15 ? "주식이 목표보다 " + sd.toFixed(0) + "%p 많아요. 하락장에서 낙폭이 커질 수 있어요." : sd <= -15 ? "주식이 목표보다 " + (-sd).toFixed(0) + "%p 적어요. 상승장 수익은 줄 수 있어요." : "주식 비중은 목표와 비슷해요."));
+      }
+      paintInfo(); paintCmp();
+    }
+    $("allocBtn").onclick = () => { const bx = $("allocBox"); if (bx.style.display === "block") bx.style.display = "none"; else { renderAlloc(); bx.style.display = "block"; bx.scrollIntoView({ behavior: "smooth", block: "nearest" }); } };
+    $("allocClose").onclick = () => { $("allocBox").style.display = "none"; };
     pfBtn.onclick = () => { const bx = $("pfBox"); if (bx.style.display === "block" && !pfBtn.disabled) { pfSeq++; bx.style.display = "none"; } else loadPortfolio(); };
     $("pfClose").onclick = () => { pfSeq++; $("pfBox").style.display = "none"; pfBtn.disabled = false; };
 
@@ -2838,6 +2936,8 @@
         "🧭 시장 흐름 탭: 업종 강도 · 52주 신고가 · 실적 일정 (히트맵 탭 확장)",
         "업종 강도에서 업종을 누르면 그 안의 종목 순위",
         "알림 전략을 고르면 바로 그 전략의 타점 차트로 바뀜 (저장 전 미리보기)",
+        "🧭 월가식 자산배분: 올웨더·영구·60/40 비중과 내 비중 비교 (내 종목 화면 아래)",
+        "📉 볼린저 밴드 하단 알림 — 일봉·주봉, 괴리율 표시 (관심·보유·분석 화면에서 종목별로 켜기)",
         "알림 전략에 ⑮ 200일선 전략 추가",
         "설정에 탈퇴 기능 추가",
         "아이폰: 카톡 링크는 사파리로 열고, 설치 방법 안내 창 표시",
@@ -3525,6 +3625,42 @@
       f.appendChild(inp); f.appendChild(ok); f.appendChild(no); host.appendChild(f); host.appendChild(msg); inp.focus();
       f.addEventListener("click", (e) => e.stopPropagation());
     }
+    // 📉 볼린저 하단 알림 — 일봉·주봉 (관심·보유·분석 화면 공용 버튼)
+    var bbMap = {};
+    const BB_KINDS = [["d", "일봉"], ["w", "주봉"]];
+    function paintBbPill(b) { const on = !!(bbMap[b.dataset.bb] && bbMap[b.dataset.bb][b.dataset.k]); b.classList.toggle("on", on); b.textContent = "📉 볼린저 " + b.dataset.kn + (on ? " 켜짐" : ""); }
+    function applyBb() { document.querySelectorAll(".bbPill").forEach(paintBbPill); }
+    function loadBb(fresh) {
+      if (!myToken) return;
+      if (fresh) Object.keys(apiMemo).forEach((k) => { if (k.indexOf("getBbAlerts") > -1) delete apiMemo[k]; });
+      api({ action: "getBbAlerts", token: myToken }).then((r) => { if (r && r.ok && r.map) { bbMap = r.map; applyBb(); } }).catch(() => {});
+    }
+    function bbPill(sym) {
+      const wrap = mkEl("span", "bbWrap"), msg = mkEl("span", "bbMsg");
+      BB_KINDS.forEach(([k, kn]) => {
+        const b = mkEl("button", "bbPill"); b.dataset.bb = sym; b.dataset.k = k; b.dataset.kn = kn; paintBbPill(b);
+        b.onclick = async (e) => {
+          e.stopPropagation();
+          if (!myToken) { msg.textContent = "먼저 '알림 받기'로 등록하세요"; return; }
+          const want = !(bbMap[sym] && bbMap[sym][k]); b.disabled = true; msg.textContent = want ? "켜는 중…" : "끄는 중…";
+          try {
+            const r = await api({ action: "setBbAlert", token: myToken, symbol: sym, on: want, kind: k });
+            msg.textContent = (r && r.msg) || "처리하지 못했어요";
+            if (r && r.ok) { bbMap[sym] = bbMap[sym] || {}; if (want) bbMap[sym][k] = 1; else delete bbMap[sym][k]; applyBb(); }
+          } catch (err) { msg.textContent = "오류가 났어요"; }
+          b.disabled = false;
+        };
+        wrap.appendChild(b);
+      });
+      wrap.appendChild(msg);
+      return wrap;
+    }
+    function bbOffQuiet(sym) {
+      const m = bbMap[sym]; if (!m || !myToken) return;
+      Object.keys(m).forEach((k) => api({ action: "setBbAlert", token: myToken, symbol: sym, on: false, kind: k }).catch(() => {}));
+      delete bbMap[sym];
+    }
+
     // 보유 종목 목표가·손절가 알림
     var holdAl = {};
     function applyHoldAl() {
@@ -3629,10 +3765,10 @@
         l.dataset.xsym = x.s; l.dataset.xin = "1";
         const buy = mkEl("button", "buyPill", "✅ 샀어요");
         buy.onclick = (e) => { e.stopPropagation(); openBuyForm(x.s, buy); };
-        l.appendChild(buy);
+        l.appendChild(buy); l.appendChild(bbPill(x.s));
         it.appendChild(l);
         const del = mkEl("button", null, "✕"); del.title = "관심 종목에서 빼기";
-        del.onclick = async () => { it.style.opacity = ".4"; try { await api({ action: "removeWatch", token: myToken, symbol: x.s }); } catch (e) {} loadWatch(true); };
+        del.onclick = async () => { it.style.opacity = ".4"; bbOffQuiet(x.s); try { await api({ action: "removeWatch", token: myToken, symbol: x.s }); } catch (e) {} loadWatch(true); };
         it.appendChild(del); box.appendChild(it);
         const goAn = () => { symbolEl.value = x.s; analyze(x.s); const b = document.querySelector("#pgNav button:nth-child(1)"); if (b) b.click(); window.scrollTo({ top: 0, behavior: "smooth" }); };
         it.style.cursor = "pointer";
@@ -3643,7 +3779,7 @@
           ["🗑 관심에서 빼기", () => del.onclick(), true]
         ]));
       });
-      loadExt();
+      applyBb(); loadBb(); loadExt();
     }
     function loadWatch(fresh) {
       if (!myToken) return;

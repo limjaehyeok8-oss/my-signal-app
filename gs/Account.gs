@@ -1,5 +1,5 @@
 // ===== Account.gs : 탈퇴 (이 기기의 모든 정보 삭제) =====
-// 지우는 것: 알림 등록, 보유 종목, 관심 종목, 가격 알림, 프로필(닉네임·사진), 친구 연결, 알림 기록
+// 지우는 것: 알림 등록, 보유 종목, 관심 종목, 가격 알림, 볼린저 알림, 프로필(닉네임·사진), 친구 연결, 알림 기록
 // 커뮤니티 글·댓글은 내용을 비우고 삭제 처리해요. 되돌릴 수 없어요.
 function deleteAccount(token, confirm) {
   if (!isRegistered(token)) return {ok: false, msg: "등록된 기기가 아니에요"};
@@ -8,7 +8,7 @@ function deleteAccount(token, confirm) {
   var lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     // [시트 이름, 토큰이 들어 있는 칸(0부터)…]
-    [["holdings", 0], ["watch", 0], ["holdAlert", 0], ["profiles", 0], ["links", 0, 1], ["alerts", 1], ["tokens", 0]].forEach(function (def) {
+    [["holdings", 0], ["watch", 0], ["holdAlert", 0], ["bbAlert", 0], ["profiles", 0], ["links", 0, 1], ["alerts", 1], ["tokens", 0]].forEach(function (def) {
       var sh = ss.getSheetByName(def[0]); if (!sh) return;
       var last = sh.getLastRow(); if (last < 2) return;
       var vals = sh.getRange(2, 1, last - 1, Math.max(sh.getLastColumn(), 2)).getValues(), n = 0;

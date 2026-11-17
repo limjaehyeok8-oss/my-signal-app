@@ -81,6 +81,7 @@ function checkWatchTargets(force) {
   var now = new Date();
   var dow = Number(Utilities.formatDate(now, "America/New_York", "u")), hm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
   try { if (typeof checkHoldAlerts === "function") checkHoldAlerts(); } catch (e) {}      // 보유 종목 목표가·손절가 (장외 시간 포함)
+  try { if (typeof checkBbAlerts === "function") checkBbAlerts(); } catch (e) {}          // 볼린저 하단 터치 (정규장)
   if (force !== true && (dow >= 6 || hm < 930 || hm > 1605)) return "장 시간이 아님";
   var sh = _watchSheet(), rows = _watchRows(), todo = [], set = {};
   rows.forEach(function (r, i) { if (r[0] && r[1] && Number(r[2]) > 0 && !r[5]) { todo.push(i); set[String(r[1])] = 1; } });
