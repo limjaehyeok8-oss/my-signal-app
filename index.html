@@ -2150,7 +2150,7 @@
       let shown = false;
       const showText = (text) => { if (shown) return; shown = true; renderAnalysis(pre, text); renderStratPanel(symbol, seq); };
       // 글(빠름)과 차트 포함 전체(느림)를 동시에 요청 → 글이 먼저 뜨고 차트는 도착하면 붙임
-      const full = api({ action: "analyze", token: myToken, ticker: symbol });
+      const full = api({ action: "analyze", token: myToken, ticker: symbol, cb: document.documentElement.getAttribute("data-ud") === "cb" ? 1 : 0 });
       $("anFund").style.display = "none"; $("anOvs").style.display = "none";
       api({ action: "getOversold", token: myToken, symbol }).then((o) => { if (seq === analyzeSeq) paintOversold($("anOvs"), o); }).catch(() => {});
       api({ action: "getFund", token: myToken, symbol }).then((f) => { if (seq === analyzeSeq) paintFund($("anFund"), f); }).catch(() => {});
@@ -3054,6 +3054,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "색약 모드를 켜면 종목 분석 차트(AI 타점 차트)의 캔들·표시 색도 파랑/주황으로 바뀌어요",
         "받은 알림 화면에 📋 '최근 3일 신호 다시 받기' 버튼 (내 종목·관심 종목의 최근 매수·매도 신호를 모아서 알림으로 보내줘요)",
         "설정에 👁 색약 모드 추가: 상승 파랑 · 하락 주황 (캔들은 상승=속이 빈 모양)",
         "종목 분석 '기업 가치'에 공매도 비중·청산까지 일수 추가 (야후 기준, 2주마다 갱신)",

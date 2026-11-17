@@ -230,9 +230,24 @@ function buildChartImage2(ticker, dates, opens, highs, lows, closes, volumes, ma
   var response = UrlFetchApp.fetch('https://quickchart.io/chart', {
     method: 'post',
     contentType: 'application/json',
-    payload: JSON.stringify({version: '3', chart: chartConfig, width: 800, height: 820, backgroundColor: '#131722'}),
+    payload: JSON.stringify({version: '3', chart: (typeof _CHART_CB !== 'undefined' && _CHART_CB) ? JSON.parse(chartCbRemap(JSON.stringify(chartConfig))) : chartConfig, width: 800, height: 820, backgroundColor: '#131722'}),
     muteHttpExceptions: true
   });
   if (response.getResponseCode() !== 200) return null;
   return Utilities.base64Encode(response.getBlob().getBytes());
+}
+
+// 색약 모드 차트: 빨강·초록 계열을 파랑(상승·매수)/주황(하락·매도)으로 바꿈. 20일선·MACD 선은 주황과 겹치지 않게 흰색 계열로.
+function chartCbRemap(js) {
+  var m = [
+    ["#26a69a", "#56b4e9"], ["rgba(38,166,154,", "rgba(86,180,233,"],          // 상승 캔들·거래량·MACD 양수 / 장기지지선
+    ["#ef5350", "#e69f00"], ["rgba(239,83,80,", "rgba(230,159,0,"],            // 하락 캔들·거래량·MACD 음수
+    ["#00e676", "#56b4e9"], ["rgba(0,230,118,", "rgba(86,180,233,"],           // 매수 타점 / 과매도 영역
+    ["#ff5252", "#e69f00"], ["rgba(255,82,82,", "rgba(230,159,0,"],            // 매도 타점 / 과매수 영역 / 장기저항선
+    ["#64dd17", "#3d8bff"], ["#81c784", "#7fc4ea"],                            // 저점매수 / 단기지지선
+    ["#d50000", "#ffffff"],                                                     // 장기손절가 선
+    ["#f5a623", "#e8ecf2"], ["#ffb74d", "#f0d9a8"]                              // 20일선·MACD 선 / 단기저항선
+  ];
+  for (var i = 0; i < m.length; i++) js = js.split(m[i][0]).join(m[i][1]);
+  return js;
 }

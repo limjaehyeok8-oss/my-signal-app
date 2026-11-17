@@ -51,7 +51,7 @@ function doPost(e) {
     if (data.action === "removeHolding") return json(removeHolding(token, data.symbol));
     if (data.action === "listHoldings")  return json(listHoldings(token));
     if (data.action === "search")        return json(searchSymbols(token, data.query));
-    if (data.action === "analyze")       return json(analyzeCachedWeb(token, data.ticker));
+    if (data.action === "analyze")       return json(analyzeCachedWeb(token, data.ticker, data.cb === 1));
     if (data.action === "portfolio")     return json(portfolioForWeb(token));
     if (data.action === "backtest")      return json(backtestForWeb(token, data.ticker, data.years));
 

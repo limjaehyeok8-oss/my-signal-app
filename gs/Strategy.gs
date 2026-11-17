@@ -356,14 +356,17 @@ function analyzeFastWeb(token, ticker) {
   return out;
 }
 // 차트 포함 전체 분석 (Code.gs 의 analyze 가 이걸 불러요). 5분 저장.
-function analyzeCachedWeb(token, ticker) {
+var _CHART_CB = false;      // 색약 모드로 차트를 그릴지 (analyzeCachedWeb 이 잠깐 켬)
+function analyzeCachedWeb(token, ticker, cb) {
   if (!isRegistered(token)) return {ok: false, msg: "먼저 '알림 받기'로 등록하세요"};
   var t = _okTicker(ticker);
   if (!t) return {ok: false, msg: "티커 형식이 올바르지 않아요"};
-  var c = CacheService.getScriptCache(), k = "anf_" + t;
+  var c = CacheService.getScriptCache(), k = "anf_" + t + (cb ? "_cb" : "");
   var hit = c.get(k);
   if (hit) { try { return JSON.parse(hit); } catch (e) {} }
-  var r = analyzeForWeb(token, t);
+  _CHART_CB = !!cb;
+  var r;
+  try { r = analyzeForWeb(token, t); } finally { _CHART_CB = false; }
   if (r && r.ok) { try { var js = JSON.stringify(r); if (js.length < 95000) c.put(k, js, 300); } catch (e) {} }
   return r;
 }
