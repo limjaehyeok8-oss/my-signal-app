@@ -1489,11 +1489,13 @@
       const recOut = mkEl("div");
       const tpOut = mkEl("div");
       box.appendChild(recOut); box.appendChild(tpOut); box.appendChild(msg);
+      let btP = null;   // 백테스트 결과 재사용 (맞는 전략 찾기·타점 차트 공용)
+      const getBt = () => btP || (btP = api({ action: "backtest", token: myToken, ticker: symbol, years: 5 }).then((r) => { if (!r || !r.ok) btP = null; return r; }, (e) => { btP = null; throw e; }));
 
       rec.onclick = async () => {
         rec.disabled = true; recOut.textContent = "계산 중... (10~30초)";
         try {
-          const r = await api({ action: "backtest", token: myToken, ticker: symbol, years: 5 });
+          const r = await getBt();
           if (!r.ok) { recOut.textContent = r.msg || "실패"; return; }
           const cand = r.strategies.filter((x) => x.n >= 5 && x.mdd >= -50);
           recOut.textContent = "";
@@ -1507,20 +1509,26 @@
           recOut.appendChild(ap);
         } catch (e) { recOut.textContent = "오류: " + e.message; } finally { rec.disabled = false; }
       };
-      tpBtn.onclick = async () => {
-        tpBtn.disabled = true; tpOut.textContent = "계산 중...";
+      // 전략을 고르면 바로 그 전략의 타점 차트로 바뀜 (계산은 한 번만 하고 재사용)
+      let tpSeq = 0;
+      const showTp = async () => {
+        const my = ++tpSeq;
+        tpOut.textContent = "계산 중...";
         try {
-          const r = await api({ action: "backtest", token: myToken, ticker: symbol, years: 5 });
+          const r = await getBt();
+          if (my !== tpSeq) return;
           if (!r.ok) { tpOut.textContent = r.msg || "실패"; return; }
           const key = sel.value === "default" ? "base" : sel.value;
           const st = r.strategies.find((x) => x.key === key);
           tpOut.textContent = "";
           if (!st) { tpOut.textContent = "이 전략 결과를 찾지 못했어요"; return; }
-          tpOut.appendChild(mkEl("div", null, st.name + " — 거래 " + st.n + "회 · 총수익 " + pct(st.total, 0) + " · 최대 낙폭 " + pct(st.mdd, 0) + (sel.value === "default" ? " (기본은 ①번 기준)" : "")));
+          tpOut.appendChild(mkEl("div", null, st.name + " — 거래 " + st.n + "회 · 총수익 " + pct(st.total, 0) + " · 최대 낙폭 " + pct(st.mdd, 0) + (sel.value === "default" ? " (기본은 ①번 기준)" : "") + (sel.value !== cur ? " · 미리보기" : "")));
           const cb = mkEl("div"); tpOut.appendChild(cb);
           drawBtChart(cb, r.series, st.trades);
-        } catch (e) { tpOut.textContent = "오류: " + e.message; } finally { tpBtn.disabled = false; }
+        } catch (e) { if (my === tpSeq) tpOut.textContent = "오류: " + e.message; }
       };
+      tpBtn.onclick = showTp;
+      sel.onchange = showTp;
     }
 
     $("copyLink").onclick = async () => {
@@ -2829,6 +2837,7 @@
         "관심 종목 누르면 바로 분석",
         "🧭 시장 흐름 탭: 업종 강도 · 52주 신고가 · 실적 일정 (히트맵 탭 확장)",
         "업종 강도에서 업종을 누르면 그 안의 종목 순위",
+        "알림 전략을 고르면 바로 그 전략의 타점 차트로 바뀜 (저장 전 미리보기)",
         "알림 전략에 ⑮ 200일선 전략 추가",
         "설정에 탈퇴 기능 추가",
         "아이폰: 카톡 링크는 사파리로 열고, 설치 방법 안내 창 표시",
