@@ -1212,8 +1212,9 @@
 
   <!-- ===== 탭: 추천 ===== -->
   <div id="pickView" style="display:none">
-    <h3 style="margin:14px 0 4px">🔎 추천</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 4px"><h3 style="margin:0">🔎 추천</h3><button id="pickRefresh" style="font-size:13px;padding:7px 12px">🔄 새로고침</button></div>
     <p class="alertHint">점수는 참고용이고 매수 권유가 아니에요.</p>
+    <div id="pickUpd" class="alertHint"></div>
     <div id="rrTop"></div>
     <div class="pkChips" id="pickChips">
       <button data-f="all">전체</button>
@@ -1223,9 +1224,7 @@
       <button data-f="bb">📉 볼린저 이탈</button>
     </div>
     <div class="pkChips" id="pickGroups"></div>
-    <div id="pickUpd" class="alertHint"></div>
     <div id="pickList"></div>
-    <button id="pickRefresh" style="font-size:12px;padding:8px 10px;margin-top:8px">새로고침</button>
   </div>
 
   <!-- ===== 탭: 백테스트 ===== -->
@@ -3043,6 +3042,7 @@
         "🧭 시장 흐름 탭: 업종 강도 · 52주 신고가 · 실적 일정 (히트맵 탭 확장)",
         "업종 강도에서 업종을 누르면 그 안의 종목 순위",
         "알림 전략을 고르면 바로 그 전략의 타점 차트로 바뀜 (저장 전 미리보기)",
+        "내 종목 추천 화면에 📉 볼린저 이탈 5개, 추천 탭 새로고침 버튼은 위로",
         "추천 탭에 📉 볼린저 이탈 목록: 주봉·일봉 하단을 이탈한 종목을 \"과거 이탈 뒤 성적\" 점수순(또는 괴리율순)으로, 누르면 밴드 차트",
         "🧭 월가식 자산배분: 올웨더·영구·60/40 비중과 내 비중 비교 (내 종목 화면 아래)",
         "📉 볼린저 밴드 하단 알림 — 일봉·주봉, 괴리율이 1%씩 깊어질 때마다 단계별 알림 (관심·보유·분석 화면에서 종목별로 켜기)",
@@ -3820,7 +3820,7 @@
 
     // ===== 👀 관심 종목 =====
     // ===== 💡 오늘 매수 신호 종목 추천 (추천 탭 데이터 재사용) =====
-    let recData = null;
+    let recData = null, recBbs = null;
     function paintTodayRec() {
       const box = $("todayRec"); if (!box) return; box.textContent = "";
       if (!recData) return;
@@ -3830,6 +3830,7 @@
       const cand = recData.filter((x) => !x.lt && (x.tag || []).length && !have[String(x.s).toUpperCase()]).sort((a, b) => b.sc - a.sc || b.ch - a.ch);
       const isToday = (x) => (x.tag || []).some((t) => t.indexOf("오늘") !== -1);
       const list = cand.filter(isToday).concat(cand.filter((x) => !isToday(x))).slice(0, 5);   // 오늘 신호 먼저, 모자라면 최근 신호로 채움
+      paintBbRec(box, have);
       if (!list.length) return;
       const wrap = mkEl("div", "recBox");
       wrap.appendChild(mkEl("h3", null, "💡 추천 종목 " + list.length));
@@ -3848,13 +3849,56 @@
         };
         row.appendChild(sy); row.appendChild(m); row.appendChild(bt); wrap.appendChild(row);
       });
+      box.insertBefore(wrap, box.firstChild);
+    }
+    // 📉 볼린저 하단 이탈 5개 (이탈 뒤 과거 성적 점수가 높은 순, 주봉·일봉 중 더 좋은 쪽으로)
+    function paintBbRec(box, have) {
+      if (!recBbs || !recBbs.length) return;
+      const cand = [];
+      recBbs.forEach((x) => {
+        if (have[String(x.s).toUpperCase()]) return;
+        let best = null;
+        [["w", "gw", "sw", "주봉"], ["d", "gd", "sd", "일봉"]].forEach(([k, g, sk, nm]) => {
+          if (x[g] == null || x[g] >= 0) return;
+          const st = x[sk], sc = st && st.sc != null ? st.sc : -1e9;
+          if (!best || sc > best.sc || (sc === best.sc && x[g] < best.gap)) best = { x, k, nm, gap: x[g], st, sc };
+        });
+        if (best) cand.push(best);
+      });
+      cand.sort((a, b) => b.sc - a.sc || a.gap - b.gap);
+      const list = cand.slice(0, 5);
+      if (!list.length) return;
+      const wrap = mkEl("div", "recBox");
+      const hd = mkEl("div"); hd.style.cssText = "display:flex;align-items:center;justify-content:space-between";
+      const h3 = mkEl("h3", null, "📉 볼린저 이탈 " + list.length); h3.style.margin = "0";
+      const more = mkEl("button", null, "전체 보기 ›"); more.style.cssText = "font-size:12px;padding:6px 10px";
+      more.onclick = () => { showPick(); pickFilter = "bb"; document.querySelectorAll("#pickChips button").forEach((b) => b.classList.toggle("on", b.dataset.f === "bb")); renderPicks(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      hd.appendChild(h3); hd.appendChild(more); wrap.appendChild(hd);
+      wrap.appendChild(mkEl("div", "alertHint", "볼린저 하단 아래로 내려온 종목 · 과거 이탈 뒤 성적이 좋았던 순"));
+      list.forEach((c) => {
+        const x = c.x, row = mkEl("div", "recRow");
+        const sy = mkEl("span", "rs", x.s);
+        sy.onclick = () => { symbolEl.value = x.s; analyze(x.s); const pb = document.querySelector("#pgNav button:nth-child(1)"); if (pb) pb.click(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+        const m = mkEl("div", "rm");
+        const b = mkEl("b", null, "$" + fmt(x.p) + " "); b.appendChild(mkEl("span", "down", c.nm + " " + c.gap.toFixed(1) + "%"));
+        m.appendChild(b);
+        const pk = c.st && c.st.h && c.st.h[c.st.p], unit = c.k === "w" ? "주" : "일";
+        m.appendChild(mkEl("div", null, pk ? "점수 " + (c.sc >= 0 ? "+" : "") + c.sc.toFixed(1) + " · 과거 " + pk[0] + "회 · " + c.st.p + unit + " 뒤 평균 " + (pk[1] >= 0 ? "+" : "") + pk[1].toFixed(1) + "% · 승률 " + pk[2] + "%" : "과거 기록 없음"));
+        const bt = mkEl("button", null, "👀 관심");
+        bt.onclick = async () => {
+          bt.disabled = true; bt.textContent = "추가 중…";
+          try { const r = await api({ action: "addWatch", token: myToken, symbol: x.s }); if (r && r.ok) { bt.textContent = "추가됨"; loadWatch(true); } else { bt.textContent = "👀 관심"; bt.disabled = false; } }
+          catch (e) { bt.textContent = "👀 관심"; bt.disabled = false; }
+        };
+        row.appendChild(sy); row.appendChild(m); row.appendChild(bt); wrap.appendChild(row);
+      });
       box.appendChild(wrap);
     }
     function skelFill(box, n, h) { if (!box || box.childElementCount) return; for (let i = 0; i < n; i++) { const d = mkEl("div", "skel"); if (h) d.style.height = h + "px"; box.appendChild(d); } }
     function loadTodayRec() {
       if (!myToken) return;
       skelFill($("todayRec"), 1, 120);
-      api({ action: "getPicks", token: myToken }).then((r) => { if (r && r.ok) { recData = r.items || []; paintTodayRec(); } }).catch(() => {});
+      api({ action: "getPicks", token: myToken }).then((r) => { if (r && r.ok) { recData = r.items || []; recBbs = r.bbs || null; paintTodayRec(); } }).catch(() => {});
     }
     function paintWatch(r) {
       const box = $("wList"); box.textContent = "";
