@@ -40,3 +40,13 @@ function getAlertLog(token, limit) {
   }
   return {ok: true, alerts: out};
 }
+
+// ===== 발송 점검 기록 ("runLog" 시트): 개장 전·마감 후 알림이 돌 때마다 무엇을 했는지(건너뜀 이유 포함) 한 줄씩 남김 =====
+function runLog(fn, note) {
+  try {
+    var ss = getSheet().getParent(), sh = ss.getSheetByName("runLog");
+    if (!sh) { sh = ss.insertSheet("runLog"); sh.appendRow(["time", "function", "note"]); }
+    sh.appendRow([Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm:ss"), fn, String(note || "")]);
+    if (sh.getLastRow() > 400) sh.deleteRows(2, 150);
+  } catch (e) {}
+}

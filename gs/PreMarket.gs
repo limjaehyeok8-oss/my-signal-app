@@ -37,10 +37,10 @@ function checkPreMarketAlert(e) {
   var etDow = Number(Utilities.formatDate(now, "America/New_York", "u")); // 1=월 ... 7=일
 
   if (!force) {
-    if (etDow >= 6) return;                       // 미국 주말
-    if (etHm < 845 || etHm > 929) return;         // 개장 직전 시간대가 아님
+    if (etDow >= 6) { runLog("pre", "미국 주말이라 건너뜀"); return; }                       // 미국 주말
+    if (etHm < 845 || etHm > 929) { runLog("pre", "시간대 아님 ET " + etHm + " (08:45~09:29만 보냄)"); return; }         // 개장 직전 시간대가 아님
     var cache = CacheService.getScriptCache();
-    if (cache.get("pre_sent_" + etDate)) return;  // 오늘 이미 보냄
+    if (cache.get("pre_sent_" + etDate)) { runLog("pre", "오늘 이미 보냄"); return; }  // 오늘 이미 보냄
     cache.put("pre_sent_" + etDate, "1", 21600);
   }
 
@@ -65,26 +65,29 @@ function checkPreMarketAlert(e) {
   var anyToday = symbols.some(function (s) {
     return pre[s] && Utilities.formatDate(new Date(pre[s].ts * 1000), "America/New_York", "yyyy-MM-dd") === etDate;
   });
-  if (!anyToday && !force) return;
+  if (!anyToday && !force) { runLog("pre", "휴장일 판단: 오늘 프리장 데이터 없음"); return; }
 
   byToken = _regroupByDevice(byToken);
-  var paused = getPausedSet();
+  var paused = getPausedSet(), nSig = 0, nSent = 0, nTok = 0;
   _signalCache = {};
   for (var token in byToken) {
     if (paused[token]) continue;
+    nTok++;
     var withSignal = [];
     byToken[token].forEach(function (h) {
       try {
         var r = preMarketLine(h.symbol, h.avgPrice, pre[h.symbol], etDate, etDow, h.strategy, _ownStop(token, h.symbol));
         if (r.hasSignal) withSignal.push((h.watch ? "👀 관심 종목\n" : "") + r.text);
       } catch (err) {
-        console.error(h.symbol + " 체크 실패: " + err.message);
+        console.error(h.symbol + " 체크 실패: " + err.message); runLog("err", h.symbol + " 체크 실패: " + err.message);
       }
     });
     if (withSignal.length) {
+      nSig += withSignal.length; nSent++;
       sendToToken(token, "🌅 개장 전 신호 " + withSignal.length + "건", withSignal.join("\n\n"));
     }
   }
+  runLog("pre", "기기 " + nTok + "대 확인, 신호 " + nSig + "건, 발송 " + nSent + "대 / 종목 " + symbols.length + "개");
 }
 
 // 프리장 가격을 "오늘의 임시 일봉"으로 붙여서 기존 매수/매도/저점 로직을 그대로 다시 계산
@@ -213,10 +216,10 @@ function checkPostCloseAlert(e) {
   var etDow = Number(Utilities.formatDate(now, "America/New_York", "u"));
 
   if (!force) {
-    if (etDow >= 6) return;
-    if (etHm < 1605 || etHm > 1650) return;
+    if (etDow >= 6) { runLog("post", "미국 주말이라 건너뜀"); return; }
+    if (etHm < 1605 || etHm > 1650) { runLog("post", "시간대 아님 ET " + etHm + " (16:05~16:50만 보냄)"); return; }
     var cache = CacheService.getScriptCache();
-    if (cache.get("post_sent_" + etDate)) return;
+    if (cache.get("post_sent_" + etDate)) { runLog("post", "오늘 이미 보냄"); return; }
     cache.put("post_sent_" + etDate, "1", 21600);
   }
 
@@ -229,7 +232,7 @@ function checkPostCloseAlert(e) {
     try {
       var r = UrlFetchApp.fetch("https://query1.finance.yahoo.com/v8/finance/chart/SPY?range=1d&interval=1d", {muteHttpExceptions: true});
       var t = JSON.parse(r.getContentText()).chart.result[0].meta.regularMarketTime;
-      if (Utilities.formatDate(new Date(t * 1000), "America/New_York", "yyyy-MM-dd") !== etDate) return;
+      if (Utilities.formatDate(new Date(t * 1000), "America/New_York", "yyyy-MM-dd") !== etDate) { runLog("post", "휴장일 판단: SPY 마지막 거래일이 오늘이 아님"); return; }
     } catch (err) {}
   }
 
@@ -241,23 +244,27 @@ function checkPostCloseAlert(e) {
 
   if (typeof _watchForAlerts === "function") { try { _watchForAlerts(byToken, null); } catch (err) {} }       // 관심 종목도 같이
   byToken = _regroupByDevice(byToken);
-  var paused = getPausedSet();
+  var paused = getPausedSet(), nSig = 0, nSent = 0, nTok = 0, nSym = 0;
   _signalCache = {};
   for (var token in byToken) {
     if (paused[token]) continue;
+    nTok++;
     var withSignal = [];
     byToken[token].forEach(function (h) {
+      nSym++;
       try {
         var res = postCloseLine(h.symbol, h.avgPrice, h.strategy, _ownStop(token, h.symbol));
         if (res.hasSignal) withSignal.push((h.watch ? "👀 관심 종목\n" : "") + res.text);
       } catch (err) {
-        console.error(h.symbol + " 체크 실패: " + err.message);
+        console.error(h.symbol + " 체크 실패: " + err.message); runLog("err", h.symbol + " 체크 실패: " + err.message);
       }
     });
     if (withSignal.length) {
+      nSig += withSignal.length; nSent++;
       sendToToken(token, "🔔 장 마감 신호 " + withSignal.length + "건", withSignal.join("\n\n"));
     }
   }
+  runLog("post", "기기 " + nTok + "대 확인, 종목 " + nSym + "개, 신호 " + nSig + "건, 발송 " + nSent + "대");
 }
 
 // 마감 후 알림 한 줄 (신호 있을 때만 hasSignal)
