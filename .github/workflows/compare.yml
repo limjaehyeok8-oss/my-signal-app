@@ -11,4 +11,4 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install yfinance pandas numpy
-      - run: python tools/bbdepth.py
+      - run: python tools/bbown.py
