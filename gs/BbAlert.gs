@@ -2,9 +2,10 @@
 // 관심·보유·분석 화면에서 종목별·봉 종류별로 켜고 끄는 알림. 10분마다 확인(checkWatchTargets에 같이 물려 있음).
 // 볼린저 밴드 = 20개 봉 평균 ± 2 표준편차. 정규장 중에 이번 봉의 가격(저가 포함)이 하단에 닿거나 내려가면 알려줘요.
 // 괴리율 = 현재가가 하단에서 얼마나 벗어났는지(%). 하단 아래면 마이너스.
-// 같은 구간에서 계속 울리지 않게, 하단 아래에 머무는 동안은 한 번만 울리고 밴드 위로 올라와야 다시 울려요.
-// 시트 "bbAlert": [token, symbol, state, firedAt, kind]   state: 1 = 지금 하단 아래(이미 알림), 0 = 위 / kind: "d" 일봉(빈칸 포함), "w" 주봉
-var BB_SHEET = "bbAlert", BB_N = 20, BB_K = 2, BB_MAX = 40;
+// 단계 알림: 처음 닿을 때 한 번, 그 뒤 괴리율이 -1%, -2%, -3%… 더 깊어질 때마다 한 번씩. 다시 올라와도 같은 단계는 반복하지 않고,
+// 밴드 위로 올라와야 처음부터 다시 시작해요.
+// 시트 "bbAlert": [token, symbol, state, firedAt, kind]   state: 0 = 밴드 위, 1 = 터치 알림 보냄, 2 = -1% 알림 보냄, 3 = -2% … (깊이+1) / kind: "d" 일봉(빈칸 포함), "w" 주봉
+var BB_SHEET = "bbAlert", BB_N = 20, BB_K = 2, BB_MAX = 40, BB_STEP = 1;
 var BB_NAME = {d: "일봉", w: "주봉"};
 
 function _bbSheet() {
@@ -56,16 +57,18 @@ function setBbAlert(token, symbol, on, kind) {
     }
     if (found >= 0) return {ok: true, on: true, msg: symbol + " " + nm + " 볼린저 알림이 이미 켜져 있어요"};
     if (mine >= BB_MAX) return {ok: false, msg: "볼린저 알림은 " + BB_MAX + "개까지 켤 수 있어요"};
-    var b = _bbBands(info, kind), below = b && b.touch ? 1 : 0;     // 이미 하단 아래면 새로 닿을 때까지 기다림
+    var b = _bbBands(info, kind), below = _bbState(b);     // 이미 하단 아래면 지금 단계부터 기록 → 더 깊어질 때부터 알림
     sh.appendRow([token, symbol, below, "", kind]);
     var m = symbol + " " + nm + " 볼린저 하단 알림을 켰어요";
     if (b) m += " · 하단 $" + b.lower.toFixed(2) + " (괴리율 " + _bbGap(b) + ")";
-    if (below) m += "\n지금 이미 하단 아래예요. 밴드 위로 올라왔다가 다시 닿으면 알려드려요";
+    if (below) m += "\n지금 이미 하단 아래예요. 괴리율이 " + BB_STEP + "%씩 더 깊어질 때마다 알려드려요";
     return {ok: true, on: true, msg: m};
   } finally { lock.releaseLock(); }
 }
 
 // 괴리율 글자: 현재가가 하단보다 얼마나 위/아래인지
+// 지금 깊이 단계: 0 = 터치(하단 위에서 저가만 닿음 포함), n = 괴리율이 -n×STEP% 이하. 상태값(state)은 깊이+1
+function _bbState(b) { if (!b || !b.touch) return 0; var g = (b.px / b.lower - 1) * 100; return 1 + (g < 0 ? Math.floor(-g / BB_STEP) : 0); }
 function _bbGap(b) { var g = (b.px / b.lower - 1) * 100; return (g >= 0 ? "+" : "") + g.toFixed(1) + "%"; }
 
 // 일봉(3개월) 또는 주봉(1년) + 현재가. 반환: {SYM: {closes, lows, ts: [초], px: 현재가}}
@@ -135,19 +138,19 @@ function checkBbAlerts(force) {
     var s = String(r[1]).toUpperCase(), kd = _bbKind(r[4]);
     if (!(s in bands[kd])) bands[kd][s] = _bbBands(data[kd][s], kd);
     var b = bands[kd][s]; if (!b) return;
-    var state = Number(r[2]) === 1 ? 1 : 0;
-    if (b.touch && state === 0) {
-      sh.getRange(i + 2, 3).setValue(1); sh.getRange(i + 2, 4).setValue(new Date());
+    var state = Math.max(0, Math.floor(Number(r[2]) || 0)), now = _bbState(b);
+    if (now > state) {
+      sh.getRange(i + 2, 3).setValue(now); sh.getRange(i + 2, 4).setValue(new Date());
       var c = cur[_dev(r[0])] || {t: String(r[0]), paused: false};
       if (!c.paused) {
-        var below = b.px < b.lower;
-        sendToToken(c.t, "📉 " + BB_NAME[kd] + " 볼린저 하단 " + (below ? "이탈: " : "터치: ") + s,
+        var below = b.px < b.lower, lv = now - 1;
+        sendToToken(c.t, "📉 " + BB_NAME[kd] + " 볼린저 하단 " + (lv >= 1 ? "괴리율 -" + (lv * BB_STEP) + "% 돌파: " : below ? "이탈: " : "터치: ") + s,
           s + " 현재 $" + b.px.toFixed(2) + " · " + BB_NAME[kd] + " 하단 $" + b.lower.toFixed(2) + " · 괴리율 " + _bbGap(b) + " (" + BB_NAME[kd] + " 20선 $" + b.ma.toFixed(2) + " 대비 " + ((b.px / b.ma - 1) * 100).toFixed(1) + "%)\n" +
           "많이 빠진 자리예요. 반등할 수도, 더 빠질 수도 있어서 추세 확인 후 판단하세요.");
         sent++;
       }
-    } else if (!b.touch && state === 1) {
-      sh.getRange(i + 2, 3).setValue(0);                                  // 밴드 위로 올라옴 → 다시 알림 가능
+    } else if (now === 0 && state > 0) {
+      sh.getRange(i + 2, 3).setValue(0);                                  // 밴드 위로 올라옴 → 처음부터 다시
     }
   });
   return "볼린저 알림 " + sent + "건";
