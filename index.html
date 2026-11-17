@@ -838,6 +838,10 @@
 
     html[data-ud="us"] { --up: #3ddc97; --down: #ff5a6a; }
     html[data-ud="us"][data-theme="light"] { --up: #0fa56c; --down: #e0364a; }
+    html[data-ud="cb"] { --up: #56b4e9; --down: #e69f00; --accent: #56b4e9; }                       /* 색약 모드: 파랑(상승) · 주황(하락) — 빨강/초록을 쓰지 않음 */
+    html[data-ud="cb"][data-theme="light"] { --up: #0072b2; --down: #d55e00; --accent: #0072b2; }
+    html[data-ud="cb"] .afV.good, html[data-ud="cb"] #anOvs .afV.good { background: rgba(86,180,233,.18); color: var(--accent); }
+    html[data-ud="cb"] .pkBadge.rr.hi { background: rgba(86,180,233,.18); color: var(--accent); }
     html[data-ud="us"] #list .frCard > div:not(.frName) .pnl.up { background: rgba(61,220,151,.16); }
     html[data-ud="us"] #list .frCard > div:not(.frName) .pnl.down { background: rgba(255,90,106,.16); }
     html[data-font="l"] body { zoom: 1.12; }
@@ -1177,7 +1181,7 @@
       </div>
     </div>
     <div class="setRow"><h4>등락 색상</h4>
-      <div class="setOpts" id="udOpts"><button data-v="kr">🇰🇷 상승 빨강 · 하락 파랑</button><button data-v="us">🇺🇸 상승 초록 · 하락 빨강</button></div>
+      <div class="setOpts" id="udOpts"><button data-v="kr">🇰🇷 상승 빨강 · 하락 파랑</button><button data-v="us">🇺🇸 상승 초록 · 하락 빨강</button><button data-v="cb">👁 색약 모드 · 상승 파랑 · 하락 주황</button></div>
     </div>
     <div class="setRow"><h4>글자 크기</h4>
       <div class="setOpts" id="fontOpts"><button data-v="n">보통</button><button data-v="l">크게</button></div>
@@ -1880,7 +1884,8 @@
       for (let i = 0; i < n; i++) {
         const upc = d.c[i] >= d.o[i], col = upc ? cvar("--up") : cvar("--down");
         add("line", { x1: X(i), x2: X(i), y1: Y(d.h[i]), y2: Y(d.l[i]), stroke: col, "stroke-width": 1 });
-        add("rect", { x: X(i) - bw / 2, y: Math.min(Y(d.o[i]), Y(d.c[i])), width: bw, height: Math.max(1, Math.abs(Y(d.o[i]) - Y(d.c[i]))), fill: col });
+        const hollow = upc && document.documentElement.getAttribute("data-ud") === "cb";     // 색약 모드: 상승은 속이 빈 캔들, 하락은 채움 → 색 없이도 구분
+        add("rect", { x: X(i) - bw / 2, y: Math.min(Y(d.o[i]), Y(d.c[i])), width: bw, height: Math.max(1, Math.abs(Y(d.o[i]) - Y(d.c[i]))), fill: hollow ? "none" : col, stroke: col, "stroke-width": 1 });
       }
       if (idx.length) add("text", { x: X(idx[0]) + 2, y: Y(d.lo[idx[0]]) + 11, fill: "#ffb020", "font-size": 9, "font-weight": "bold" }, "하단");
       if (d.c[last] < lw) add("circle", { cx: X(last), cy: Y(d.c[last]), r: 4, fill: "none", stroke: "#ffb020", "stroke-width": 1.5 });
@@ -3038,6 +3043,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "설정에 👁 색약 모드 추가: 상승 파랑 · 하락 주황 (캔들은 상승=속이 빈 모양)",
         "종목 분석 '기업 가치'에 공매도 비중·청산까지 일수 추가 (야후 기준, 2주마다 갱신)",
         "볼린저 이탈 목록(주봉): 종목마다 자기 과거 이탈 깊이를 기준으로 '바닥권 후보' / '평소보다 깊음' 표시",
         "추천 탭에서 바로 👀 관심 추가",
@@ -3415,11 +3421,12 @@
         trades.forEach((t) => {
           const i0 = Math.max(t.i, from), i1 = Math.min(t.o, n - 1);
           if (i1 < from || i0 > n - 1 || t.o < from) return;
-          const col = t.ret > 0 ? "255,90,106" : "91,168,255";
+          const cbm = document.documentElement.getAttribute("data-ud") === "cb", light = document.documentElement.getAttribute("data-theme") === "light";
+          const col = cbm ? (t.ret > 0 ? (light ? "0,114,178" : "86,180,233") : (light ? "213,94,0" : "230,159,0")) : (t.ret > 0 ? "255,90,106" : "91,168,255");
           const x0 = X(i0), x1 = Math.max(X(i1), x0 + 1.5);
           add("rect", { x: x0, y: T, width: x1 - x0, height: H - T - B, fill: "rgba(" + col + ",0.22)" });
           if (x1 - x0 > 26) {
-            add("text", { x: (x0 + x1) / 2, y: T + 10, fill: t.ret > 0 ? "#ff8a96" : "#8cc0ff", "font-size": 9,
+            add("text", { x: (x0 + x1) / 2, y: T + 10, fill: cbm ? (t.ret > 0 ? "#8fd0f5" : "#f5c04d") : (t.ret > 0 ? "#ff8a96" : "#8cc0ff"), "font-size": 9,
                           "text-anchor": "middle", "font-weight": "bold" }, (t.ret >= 0 ? "+" : "") + t.ret.toFixed(0) + "%");
           }
         });
@@ -3432,7 +3439,7 @@
         trades.forEach((t) => {
           if (t.i >= from) {
             const x = X(t.i), y = Y(c[t.i]);
-            add("path", { d: "M" + x + "," + (y + 1) + " l-3.5,6 h7 z", fill: "#3ddc97" });
+            add("path", { d: "M" + x + "," + (y + 1) + " l-3.5,6 h7 z", fill: document.documentElement.getAttribute("data-ud") === "cb" ? "#56b4e9" : "#3ddc97" });
           }
           if (!t.open && t.o >= from) {
             const x = X(Math.min(t.o, n - 1)), y = Y(c[Math.min(t.o, n - 1)]);
