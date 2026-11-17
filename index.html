@@ -1169,6 +1169,8 @@
     <div class="alertHint" style="margin:0 0 10px">알림을 실수로 지워도 여기서 다시 볼 수 있어요. 최근 20개까지 보여줘요.</div>
     <div id="alertList"><div class="alertHint">현재는 알림이 없어요</div></div>
     <button id="alertRefresh" style="font-size:13px;padding:10px 14px;margin-top:12px">새로고침</button>
+    <button id="alertRecent" style="font-size:13px;padding:10px 14px;margin-top:12px;margin-left:6px">📋 최근 3일 신호 다시 받기</button>
+    <div id="alertRecentMsg" class="alertHint" style="margin-top:8px"></div>
   </div>
 
   <div id="actSheet"><div class="actBox"><div class="actTitle" id="actTitle"></div><div id="actBtns"></div></div></div>
@@ -1626,6 +1628,15 @@
       } catch (e) { none(); }
     }
     $("alertRefresh").onclick = loadAlerts;
+    $("alertRecent").onclick = async () => {
+      const b = $("alertRecent"), m = $("alertRecentMsg"); b.disabled = true; m.textContent = "신호 모으는 중… (몇 초 걸려요)";
+      try {
+        const r = await api({ action: "sendRecentSignals", token: myToken, days: 3 });
+        m.textContent = (r && r.msg) || "실패했어요. 잠시 뒤 다시 해 보세요";
+        if (r && r.ok && r.n) setTimeout(loadAlerts, 800);
+      } catch (e) { m.textContent = "실패했어요: " + e.message; }
+      setTimeout(() => { b.disabled = false; }, 3000);
+    };
     $("refBtn").onclick = () => { $("refBtn").style.opacity = ".5"; location.reload(); };
     $("bellBtn").onclick = () => {
       alViewOpen = true; $("alertView").style.display = "block"; history.pushState({ al: 1 }, "");
@@ -3043,6 +3054,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "받은 알림 화면에 📋 '최근 3일 신호 다시 받기' 버튼 (내 종목·관심 종목의 최근 매수·매도 신호를 모아서 알림으로 보내줘요)",
         "설정에 👁 색약 모드 추가: 상승 파랑 · 하락 주황 (캔들은 상승=속이 빈 모양)",
         "종목 분석 '기업 가치'에 공매도 비중·청산까지 일수 추가 (야후 기준, 2주마다 갱신)",
         "볼린저 이탈 목록(주봉): 종목마다 자기 과거 이탈 깊이를 기준으로 '바닥권 후보' / '평소보다 깊음' 표시",

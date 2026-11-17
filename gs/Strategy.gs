@@ -54,6 +54,7 @@ function handleExtra(data) {
   if (data.action === "deletePost")    return deletePost(token, data.id);
   if (data.action === "deleteComment") return deleteComment(token, data.id);
   if (data.action === "getAlerts")     return getAlertLog(token, data.limit);
+  if (data.action === "sendRecentSignals") return sendRecentSignals(token, data.days);
   return null;
 }
 
