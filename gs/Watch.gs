@@ -257,7 +257,7 @@ function getFund(token, symbol) {
   if (!isRegistered(token)) return {ok: false};
   var s = String(symbol || "").trim().toUpperCase();
   if (!/^[A-Z0-9.\-]{1,12}$/.test(s)) return {ok: false, msg: "티커 형식이 올바르지 않아요"};
-  var cache = CacheService.getScriptCache(), ck = "fund2_" + s, hit = cache.get(ck);
+  var cache = CacheService.getScriptCache(), ck = "fund3_" + s, hit = cache.get(ck);
   if (hit) { try { return JSON.parse(hit); } catch (e) {} }
   var q;
   try { q = _yhQuote([s]); } catch (e) { return {ok: false, msg: "가치 지표 오류: " + e.message}; }
@@ -266,7 +266,9 @@ function getFund(token, symbol) {
   var x = q[0], n = function (v, d) { return (typeof v === "number" && isFinite(v)) ? Number(v.toFixed(d == null ? 2 : d)) : null; };
   var sec = null;
   try { sec = _yhSector(s); } catch (e) {}
-  var out = {ok: true, s: s, sec: sec ? sec.name : null, secPe: sec ? sec.pe : null, type: x.quoteType || "", pe: n(x.trailingPE, 1), fpe: n(x.forwardPE, 1), pbr: n(x.priceToBook, 1), eps: n(x.epsTrailingTwelveMonths),
+  var sh = null;
+  try { sh = _yhShort(s); } catch (e) {}
+  var out = {ok: true, s: s, sp: sh ? sh.sp : null, sr: sh ? sh.sr : null, sch: sh ? sh.ch : null, sdt: sh ? sh.dt : null, sec: sec ? sec.name : null, secPe: sec ? sec.pe : null, type: x.quoteType || "", pe: n(x.trailingPE, 1), fpe: n(x.forwardPE, 1), pbr: n(x.priceToBook, 1), eps: n(x.epsTrailingTwelveMonths),
              mcap: n(x.marketCap, 0), div: n(x.trailingAnnualDividendYield != null ? x.trailingAnnualDividendYield * 100 : null, 1)};
   try { cache.put(ck, JSON.stringify(out), 3600); } catch (e) {}
   return out;
@@ -286,6 +288,19 @@ function _yhSectorPe() {
   (q || []).forEach(function (x) { if (typeof x.trailingPE === "number" && x.trailingPE > 0) m[x.symbol] = Number(x.trailingPE.toFixed(1)); });
   if (Object.keys(m).length) { try { cache.put("yh_secpe", JSON.stringify(m), 21600); } catch (e) {} }
   return m;
+}
+// 공매도(숏) 비중: 유통주식 대비 공매도 잔량 %, 청산까지 걸리는 일수(Days to cover), 직전 집계 대비 변화. 야후는 2주마다 갱신(거래소 공시 기준)이라 며칠~2주 늦어요
+function _yhShort(s) {
+  var a = _yhAuth(false); if (!a) return null;
+  var r = UrlFetchApp.fetch("https://query2.finance.yahoo.com/v10/finance/quoteSummary/" + encodeURIComponent(s) + "?modules=defaultKeyStatistics&crumb=" + encodeURIComponent(a.crumb),
+    {muteHttpExceptions: true, headers: {"User-Agent": a.ua, "Cookie": a.cookie}});
+  if (r.getResponseCode() !== 200) return null;
+  var res = JSON.parse(r.getContentText()).quoteSummary.result, k = res && res[0] ? res[0].defaultKeyStatistics : null; if (!k) return null;
+  var raw = function (o) { return o && typeof o.raw === "number" && isFinite(o.raw) ? o.raw : null; };
+  var spf = raw(k.shortPercentOfFloat), sh = raw(k.sharesShort), pr = raw(k.sharesShortPriorMonth), sr = raw(k.shortRatio), dt = raw(k.dateShortInterest);
+  if (spf == null && sh == null) return null;
+  return {sp: spf != null ? Number((spf * 100).toFixed(1)) : null, sr: sr != null ? Number(sr.toFixed(1)) : null,
+          ch: (sh != null && pr) ? Number(((sh / pr - 1) * 100).toFixed(0)) : null, dt: dt ? Utilities.formatDate(new Date(dt * 1000), "UTC", "MM/dd") : null};
 }
 function _yhSector(s) {
   var a = _yhAuth(false); if (!a) return null;
