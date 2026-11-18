@@ -201,22 +201,34 @@ function getBbChart(token, symbol, kind) {
   symbol = String(symbol || "").trim().toUpperCase();
   if (!/^[A-Z0-9.\-]{1,12}$/.test(symbol)) return {ok: false, msg: "티커를 확인하세요"};
   kind = kind === "m" ? "m" : _bbKind(kind);                                   // 차트에서만 월봉(m)도 허용 (알림은 일봉·주봉만)
-  var cache = CacheService.getScriptCache(), key = "bbc_" + symbol + "_" + kind;
+  var cache = CacheService.getScriptCache(), key = "bbc2_" + symbol + "_" + kind;
   try { var hit = cache.get(key); if (hit) return JSON.parse(hit); } catch (e) {}
-  var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(symbol) + (kind === "m" ? "?range=10y&interval=1mo" : kind === "w" ? "?range=2y&interval=1wk" : "?range=6mo&interval=1d");
+  var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(symbol) + (kind === "m" ? "?range=10y&interval=1mo" : kind === "w" ? "?range=2y&interval=1wk" : "?range=5y&interval=1d");
   var resp = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
   if (resp.getResponseCode() !== 200) return {ok: false, msg: symbol + " 차트를 가져오지 못했어요"};
   var r = JSON.parse(resp.getContentText()).chart.result[0], q = r.indicators.quote[0], ts = r.timestamp || [];
-  var o = [], h = [], l = [], c = [], t = [];
+  var o = [], h = [], l = [], c = [], t = [], vv = [];
   for (var i = 0; i < ts.length; i++) {
     if (q.close[i] == null || q.open[i] == null || q.high[i] == null || q.low[i] == null) continue;
-    o.push(Number(q.open[i])); h.push(Number(q.high[i])); l.push(Number(q.low[i])); c.push(Number(q.close[i])); t.push(ts[i]);
+    o.push(Number(q.open[i])); h.push(Number(q.high[i])); l.push(Number(q.low[i])); c.push(Number(q.close[i])); t.push(ts[i]); vv.push(Number((q.volume && q.volume[i]) || 0));
   }
   _mergeLastPeriod(r.meta && r.meta.dataGranularity, t, o, h, l, c);                 // 야후가 따로 준 '오늘' 봉을 이번 주·달 봉에 합침
   if (c.length < BB_N) return {ok: false, msg: "차트를 그리기엔 데이터가 모자라요"};
   var b = _bbSeries(c), keep = kind === "m" ? 60 : kind === "w" ? 80 : 90, from = Math.max(0, c.length - keep);
   var rd = function (arr) { return arr.slice(from).map(function (x) { return x == null ? null : Number(x.toFixed(2)); }); };
   var out = {ok: true, s: symbol, kind: kind, t: t.slice(from), o: rd(o), h: rd(h), l: rd(l), c: rd(c), lo: rd(b.lo), ma: rd(b.ma), up: rd(b.up), gap: _bbGapOf(c)};
+  if (kind === "d") {                                                             // 일봉만: 거래량 배수 + 이 종목이 하단 이탈 뒤 하단보다 더 내려간 폭(과거 중앙값)
+    var vr = [], k, s20;
+    for (k = 0; k < c.length; k++) { if (k < 20) { vr.push(null); continue; } s20 = 0; for (var j = k - 20; j < k; j++) s20 += vv[j]; vr.push(s20 > 0 ? Math.round(vv[k] / (s20 / 20) * 10) / 10 : null); }
+    out.vr = vr.slice(from);
+    var drops = [], prev = false, lastEv = -99;
+    for (k = 0; k < c.length - 60; k++) {
+      var bl = b.lo[k] != null && b.lo[k] > 0 && c[k] < b.lo[k];
+      if (bl && !prev && k - lastEv >= 10) { lastEv = k; var mn = Infinity; for (var m2 = k + 1; m2 <= k + 60; m2++) mn = Math.min(mn, l[m2]); drops.push(Math.min(0, mn / b.lo[k] - 1)); }
+      prev = bl;
+    }
+    if (drops.length >= 5) { drops.sort(function (x, y) { return x - y; }); out.dn = drops.length; out.dm = Math.round(drops[Math.floor(drops.length / 2)] * 1000) / 1000; out.d75 = Math.round(drops[Math.floor(drops.length * 0.25)] * 1000) / 1000; }
+  }
   try { cache.put(key, JSON.stringify(out), 600); } catch (e) {}
   return out;
 }
