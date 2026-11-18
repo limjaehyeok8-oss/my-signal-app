@@ -2167,6 +2167,20 @@
           d.appendChild(mkEl("em", null, "상승 " + r.win + "%")); g.appendChild(d);
         });
         sec.appendChild(g);
+        if (st.at && st.at.n) {                                                    // 지금 RSI 근처였던 때 / RSI 구간별 통계
+          const at = st.at, l = mkEl("div", "afW", "📊 " + nm + " RSI가 지금(" + st.rsiX + ") 근처 ±2였던 때 " + at.n + "번");
+          l.style.marginTop = "10px"; sec.appendChild(l);
+          const gg = mkEl("div", "ovG");
+          at.r.filter((x) => x[1] > 0).forEach((x) => { const d = mkEl("div"); d.appendChild(mkEl("small", null, x[0] + u + " 뒤")); d.appendChild(mkEl("b", x[3] >= 0 ? "up" : "down", (x[3] >= 0 ? "+" : "") + x[3] + "%")); d.appendChild(mkEl("em", null, "상승 " + x[2] + "%")); gg.appendChild(d); });
+          sec.appendChild(gg);
+        }
+        if (st.bk && st.bk.some((b) => b.n)) {
+          const tb = mkEl("div", "afN"); tb.style.marginTop = "10px"; tb.style.whiteSpace = "pre-line";
+          const hs = st.bk[0].r.map((x) => x[0]), mid = hs.slice(1, 3);
+          tb.textContent = "RSI 구간별 · 오른 비율(평균) — " + mid.map((h) => h + u + " 뒤").join(" / ") + "\n" +
+            st.bk.filter((b) => b.n).map((b) => "RSI " + (b.lo === 0 ? "20 미만" : b.lo + "~" + b.hi) + " (" + b.n + u + "): " + mid.map((h) => { const x = b.r.find((y) => y[0] === h); return x && x[1] ? x[2] + "% (" + (x[3] >= 0 ? "+" : "") + x[3] + "%)" : "-"; }).join(" / ")).join("\n");
+          sec.appendChild(tb);
+        }
         const w2 = rows[rows.length - 2] || rows[rows.length - 1];
         sec.appendChild(mkEl("div", "afN", "가장 나빴던 때는 " + w2.h + u + " 뒤 " + w2.worst + "%였어요. 과거 기록일 뿐이에요."));
         box.appendChild(sec);
@@ -3107,6 +3121,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "'과매도 뒤 성적'에 지금 RSI 근처였을 때 며칠 뒤 올랐는지, RSI 구간별 표 추가",
         "'과매도 뒤 성적'은 일봉 또는 주봉 RSI가 30 이하일 때만 보여줘요 (주봉 성적도 추가)",
         "볼린저 차트: 하단에 아직 안 닿았으면 '하단까지 N% 더 내려가면 닿아요'를 보여줘요",
         "종목 분석 화면 차트 위에서 '볼린저 일봉·주봉·월봉'을 누르면 차트가 그 볼린저 밴드 차트로 바뀌어요",
