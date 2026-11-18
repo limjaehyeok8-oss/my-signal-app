@@ -367,6 +367,6 @@ function analyzeCachedWeb(token, ticker, cb, wb) {
   _CHART_CB = !!cb; _CHART_WHITE = !!wb;
   var r;
   try { r = analyzeForWeb(token, t); } finally { _CHART_CB = false; _CHART_WHITE = false; }
-  if (r && r.ok) { try { var js = JSON.stringify(r); if (js.length < 95000) c.put(k, js, 300); } catch (e) {} }
+  if (r && r.ok && r.image) { try { var js = JSON.stringify(r); if (js.length < 95000) c.put(k, js, 300); } catch (e) {} }   // 차트가 없는 응답은 캐시하지 않음(실패가 5분간 굳지 않게)
   return r;
 }

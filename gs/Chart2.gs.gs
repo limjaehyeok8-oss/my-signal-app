@@ -229,13 +229,18 @@ function buildChartImage2(ticker, dates, opens, highs, lows, closes, volumes, ma
     }
   };
 
-  var response = UrlFetchApp.fetch('https://quickchart.io/chart', {
+  var qcReq = function () { return UrlFetchApp.fetch('https://quickchart.io/chart', {
     method: 'post',
     contentType: 'application/json',
     payload: JSON.stringify({version: '3', chart: ((typeof _CHART_CB !== 'undefined' && _CHART_CB) || (typeof _CHART_WHITE !== 'undefined' && _CHART_WHITE)) ? JSON.parse(chartRemap(JSON.stringify(chartConfig), (typeof _CHART_CB !== 'undefined' && _CHART_CB), (typeof _CHART_WHITE !== 'undefined' && _CHART_WHITE))) : chartConfig, width: 800, height: 820, backgroundColor: (typeof _CHART_WHITE !== 'undefined' && _CHART_WHITE) ? '#ffffff' : '#131722'}),
     muteHttpExceptions: true
-  });
-  if (response.getResponseCode() !== 200) return null;
+  }); };
+  var response = null;
+  for (var qn = 0; qn < 2; qn++) {                                                // 한 번 실패하면 잠깐 뒤 한 번 더
+    try { response = qcReq(); if (response.getResponseCode() === 200) break; } catch (e) { response = null; }
+    Utilities.sleep(700);
+  }
+  if (!response || response.getResponseCode() !== 200) return null;
   return Utilities.base64Encode(response.getBlob().getBytes());
 }
 
