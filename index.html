@@ -1938,9 +1938,21 @@
         add("rect", { x: X(i) - bw / 2, y: Math.min(Y(d.o[i]), Y(d.c[i])), width: bw, height: Math.max(1, Math.abs(Y(d.o[i]) - Y(d.c[i]))), fill: hollow ? "none" : col, stroke: col, "stroke-width": 1 });
       }
       if (idx.length) add("text", { x: X(idx[0]) + 2, y: Y(d.lo[idx[0]]) + 11, fill: cLo, "font-size": 9, "font-weight": "bold" }, "하단");
+      // 거래량 '삐죽' 판정: 이 차트 안에서 상위 8%이면서, 앞뒤 5봉 중 가장 크고, 중앙값의 1.8배 이상 (고정 배수 대신 눈에 띄는 봉만)
+      const spike = new Array(n).fill(false);
+      if (d.v && d.v.length === n) {
+        const vs = d.v.slice().sort((a, b) => a - b), med = vs[Math.floor(n / 2)], p92 = vs[Math.floor(n * 0.92)];
+        let vmax = vs[n - 1] || 1;
+        for (let i = 0; i < n; i++) {
+          let pk = true; for (let j = Math.max(0, i - 5); j <= Math.min(n - 1, i + 5); j++) if (d.v[j] > d.v[i]) { pk = false; break; }
+          spike[i] = pk && d.v[i] >= p92 && d.v[i] >= med * 1.8;
+          const vh = (d.v[i] / vmax) * (H - T - B) * 0.16;                                   // 바닥에 작은 거래량 막대 (삐죽 튀는 봉은 진하게)
+          if (vh > 0) add("rect", { x: X(i) - bw / 2, y: H - B - vh, width: bw, height: vh, fill: spike[i] ? (cbm ? "#4da3ff" : "#3cb371") : (cbw ? "#9aa3b5" : "#5b6578"), opacity: spike[i] ? 0.85 : 0.35 });
+        }
+      }
       let bx = null;
       if (d.vr && d.dm != null) {                                                   // 거래량 터진 하단 이탈 구간(마지막 1곳) → 박스: 위=그 봉의 하단, 아래=이 종목의 과거 '하단 대비 추가 하락' 중앙값
-        let bi = -1; for (let i = n - 1; i >= 0; i--) if (d.vr[i] != null && d.vr[i] >= 2 && d.lo[i] > 0 && d.c[i] < d.lo[i]) { bi = i; break; }
+        let bi = -1; for (let i = n - 1; i >= 0; i--) if (spike[i] && d.lo[i] > 0 && d.c[i] < d.lo[i]) { bi = i; break; }
         if (bi >= 0) {
           const top = d.lo[bi], bot = top * (1 + d.dm), x0 = X(bi) - bw, x1 = W - R;
           add("rect", { x: x0, y: Y(top), width: x1 - x0, height: Math.max(2, Y(Math.max(bot, lo)) - Y(top)), fill: cbm ? "rgba(77,163,255,0.13)" : "rgba(80,200,120,0.13)", stroke: cbm ? "#4da3ff" : "#3cb371", "stroke-width": 1, "stroke-dasharray": "3 2", rx: 2 });
@@ -1953,7 +1965,7 @@
       if (d.c[last] < lw) add("circle", { cx: X(last), cy: Y(d.c[last]), r: 4, fill: "none", stroke: cLo, "stroke-width": 1.5 });
       box.appendChild(svg);
       if (bx) {
-        const nb = mkEl("div", "bbSum", "🟩 거래량 " + bx.vr + "배로 터지며 하단 아래로 내려온 구간이에요. 이 종목은 과거 하단 이탈 뒤 하단보다 중앙값 " + (d.dm * 100).toFixed(1) + "% (4분의 1은 " + (d.d75 * 100).toFixed(1) + "% 이상) 더 내려갔어요(" + d.dn + "번 기준). 박스 아래끝 $" + fmt(bx.bot) + "까지는 평소 흔들림, 그 아래는 평소보다 깊은 하락이에요. 참고용이에요.");
+        const nb = mkEl("div", "bbSum", "🟩 거래량이 삐죽 튀어나온 봉(평소의 " + bx.vr + "배)에서 하단 아래로 내려온 구간이에요. 바닥의 초록 막대가 그 거래량이에요. 이 종목은 과거 하단 이탈 뒤 하단보다 중앙값 " + (d.dm * 100).toFixed(1) + "% (4분의 1은 " + (d.d75 * 100).toFixed(1) + "% 이상) 더 내려갔어요(" + d.dn + "번 기준). 박스 아래끝 $" + fmt(bx.bot) + "까지는 평소 흔들림, 그 아래는 평소보다 깊은 하락이에요. 참고용이에요.");
         nb.style.cssText = "font-size:11px;margin-top:4px;opacity:.85"; box.appendChild(nb);
       }
       if (zone) {
@@ -3149,7 +3161,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
-        "볼린저 일봉: 거래량 2배 이상 터지며 하단 아래로 내려온 구간에 '단기 매수구간' 박스 (아래끝 = 이 종목이 과거 하단 이탈 뒤 더 내려간 폭의 중앙값)",
+        "볼린저 일봉: 차트에서 거래량이 삐죽 튀어나온 봉이 하단 아래에 있으면 '단기 매수구간' 박스 + 바닥에 거래량 막대 (아래끝 = 이 종목이 과거 하단 이탈 뒤 더 내려간 폭의 중앙값)",
         "종목 분석: '과매도 뒤 성적(RSI)'을 차트 바로 아래로 옮겼어요",
         "볼린저 차트: 종가가 하단 아래인 봉에 ▲ 표시 + 과거 통계 한 줄 (참고용, 매수 신호 아님)",
         "'과매도 뒤 성적'에 지금 RSI 근처였을 때 며칠 뒤 올랐는지, RSI 구간별 표 추가",

@@ -220,7 +220,7 @@ function getBbChart(token, symbol, kind) {
   if (kind === "d") {                                                             // 일봉만: 거래량 배수 + 이 종목이 하단 이탈 뒤 하단보다 더 내려간 폭(과거 중앙값)
     var vr = [], k, s20;
     for (k = 0; k < c.length; k++) { if (k < 20) { vr.push(null); continue; } s20 = 0; for (var j = k - 20; j < k; j++) s20 += vv[j]; vr.push(s20 > 0 ? Math.round(vv[k] / (s20 / 20) * 10) / 10 : null); }
-    out.vr = vr.slice(from);
+    out.vr = vr.slice(from); out.v = vv.slice(from).map(function (x) { return Math.round(x); });
     var drops = [], prev = false, lastEv = -99;
     for (k = 0; k < c.length - 60; k++) {
       var bl = b.lo[k] != null && b.lo[k] > 0 && c[k] < b.lo[k];
