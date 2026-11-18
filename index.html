@@ -870,6 +870,7 @@
     .alIn { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; } .alIn label { font-size: 12px; color: var(--sub); } .alIn input { width: 100%; margin-top: 4px; }
     .alTbl { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; } .alTbl th, .alTbl td { padding: 7px 4px; text-align: right; border-bottom: 1px solid var(--line); } .alTbl th:first-child, .alTbl td:first-child { text-align: left; }
     .alTbl th { color: var(--sub); font-weight: 600; font-size: 12px; } .alTbl .more { color: #ff8a96; } .alTbl .less { color: #8cc0ff; }
+    .tfBar { margin: 4px 0 6px; } .tfBar button { font-size: 12px; padding: 5px 14px; border-radius: 999px; } .tfBar button.on { background: var(--accent); color: #0b1220; font-weight: 700; }
     .bbSum { font-size: 13px; color: var(--sub); margin: 2px 0 6px; line-height: 1.5; } .bbSum b { color: var(--down); }
     .bbChartBox svg { width: 100%; height: auto; display: block; } .bbActs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
     .pkMore .bbActs .pkWatch { display: inline-block; width: auto; margin: 0; padding: 7px 12px; font-size: 12px; } .bbActs button { width: auto; flex: none; } .bbActs .bbWrap { display: contents; } .bbActs .bbPill { margin: 0; } .bbActs .bbMsg { flex-basis: 100%; } .pkBadge.bb { background: rgba(91,168,255,.18); color: var(--down); }
@@ -1854,7 +1855,18 @@
         bbHz(kind).forEach(([h, nm]) => { const v = st.h[h]; if (v) sb.appendChild(mkEl("div", null, nm + " 뒤 평균 " + sg(v[1]) + " · 승률 " + v[2] + "% · 최악 " + sg(v[3]) + " (" + v[0] + "회)")); });
         more.appendChild(sb);
       } else more.appendChild(mkEl("div", "bbSum", "과거 이탈 기록이 부족해서 성적을 계산하지 못했어요"));
-      const box = mkEl("div", "bbChartBox"); more.appendChild(box);
+      const box = mkEl("div", "bbChartBox");
+      let curTf = bbKind;                                                      // 차트 기간: 목록 기준(일봉/주봉)으로 시작, 누르면 일봉·주봉·월봉 전환
+      const tfBar = mkEl("div", "pkChips tfBar");
+      const tfBtns = [["d", "일봉"], ["w", "주봉"], ["m", "월봉"]].map(([k, nm]) => { const b = mkEl("button", k === curTf ? "on" : "", nm); b.dataset.k = k; tfBar.appendChild(b); return b; });
+      tfBar.addEventListener("click", (e) => e.stopPropagation());
+      more.appendChild(tfBar); more.appendChild(box);
+      const loadTf = (k) => {
+        curTf = k; tfBtns.forEach((b) => b.classList.toggle("on", b.dataset.k === k)); box.textContent = "차트 불러오는 중…";
+        api({ action: "getBbChart", token: myToken, symbol: x.s, kind: k }).then((d) => { if (curTf !== k) return; if (d && d.ok) drawBbCandle(box, d); else { box.textContent = (d && d.msg) || "차트를 불러오지 못했어요"; loaded = false; } })
+          .catch(() => { if (curTf === k) { box.textContent = "차트를 불러오지 못했어요"; loaded = false; } });
+      };
+      tfBtns.forEach((b) => { b.onclick = (e) => { e.stopPropagation(); loadTf(b.dataset.k); }; });
       const acts = mkEl("div", "bbActs");
       const wb = mkEl("button", "pkWatch", "👀 관심 추가");
       wb.onclick = async (e) => {
@@ -1870,9 +1882,7 @@
       c.onclick = () => {
         const open = more.style.display === "none"; more.style.display = open ? "block" : "none";
         if (open && !loaded) {
-          loaded = true; box.textContent = "차트 불러오는 중…";
-          api({ action: "getBbChart", token: myToken, symbol: x.s, kind: bbKind }).then((d) => { if (d && d.ok) drawBbCandle(box, d); else { box.textContent = (d && d.msg) || "차트를 불러오지 못했어요"; loaded = false; } })
-            .catch(() => { box.textContent = "차트를 불러오지 못했어요"; loaded = false; });
+          loaded = true; loadTf(curTf);
         }
       };
       return c;
@@ -1881,7 +1891,7 @@
       box.textContent = "";
       const n = d.c.length, last = n - 1, W = 360, H = 220, L = 6, R = 44, T = 12, B = 20, NS = "http://www.w3.org/2000/svg";
       const lw = d.lo[last], gp = d.gap;
-      const sum = mkEl("div", "bbSum"); sum.appendChild(document.createTextNode((d.kind === "w" ? "주봉" : "일봉") + " 하단 $" + fmt(lw) + " · 현재 $" + fmt(d.c[last]) + " · 괴리율 "));
+      const sum = mkEl("div", "bbSum"); sum.appendChild(document.createTextNode((d.kind === "w" ? "주봉" : d.kind === "m" ? "월봉" : "일봉") + " 하단 $" + fmt(lw) + " · 현재 $" + fmt(d.c[last]) + " · 괴리율 "));
       const gb = document.createElement("b"); gb.textContent = (gp != null ? (gp >= 0 ? "+" : "") + gp.toFixed(1) + "%" : "-"); sum.appendChild(gb); box.appendChild(sum);
       let lo = Infinity, hi = -Infinity;
       for (let i = 0; i < n; i++) { lo = Math.min(lo, d.l[i], d.lo[i] == null ? Infinity : d.lo[i]); hi = Math.max(hi, d.h[i], d.up[i] == null ? -Infinity : d.up[i]); }
@@ -1895,7 +1905,7 @@
       if (cbw) { add("rect", { x: 0, y: 0, width: W, height: H, fill: "#ffffff", rx: 8 }); }
       for (let g = 0; g <= 3; g++) { const v = lo + (hi - lo) * g / 3, y = Y(v); add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: cLine, "stroke-width": 0.5 }); add("text", { x: W - R + 3, y: y + 3, fill: cSub, "font-size": 9 }, v.toFixed(v >= 100 ? 0 : 1)); }
       let lastM = -1, lastX = -99;
-      d.t.forEach((t, i) => { const m = new Date(t * 1000).getUTCMonth() + 1; if (m !== lastM) { lastM = m; if (X(i) - lastX >= 34) { lastX = X(i); add("text", { x: X(i), y: H - 6, fill: cSub, "font-size": 9 }, m + "월"); } } });
+      d.t.forEach((t, i) => { const dt = new Date(t * 1000), m = dt.getUTCMonth() + 1, key = d.kind === "m" ? dt.getUTCFullYear() : m; if (key !== lastM) { lastM = key; if (X(i) - lastX >= 34) { lastX = X(i); add("text", { x: X(i), y: H - 6, fill: cSub, "font-size": 9 }, d.kind === "m" ? String(dt.getUTCFullYear()).slice(2) + "년" : m + "월"); } } });
       const idx = []; for (let i = 0; i < n; i++) if (d.up[i] != null) idx.push(i);
       if (idx.length > 1) {                                                      // 밴드 영역 + 선
         const pts = idx.map((i) => X(i).toFixed(1) + "," + Y(d.up[i]).toFixed(1)).concat(idx.slice().reverse().map((i) => X(i).toFixed(1) + "," + Y(d.lo[i]).toFixed(1))).join(" ");
@@ -3066,6 +3076,8 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "볼린저 이탈 차트에서 일봉 · 주봉 · 월봉을 눌러 바꿔 볼 수 있어요",
+        "캔들 테두리를 없애서 차트가 더 또렷해요 (모든 차트)",
         "색약 모드를 상승 노랑 · 하락 파랑으로 바꿨어요 (캔들은 상승=속이 빈 모양)",
         "설정에 '차트 배경' 추가 (검정/하양)",
         "설정에 '옆으로 밀어서 넘기기' 켜기/끄기 추가 (끄면 버튼으로만 넘어가요)",

@@ -199,10 +199,10 @@ function getBbChart(token, symbol, kind) {
   if (!isRegistered(token)) return {ok: false};
   symbol = String(symbol || "").trim().toUpperCase();
   if (!/^[A-Z0-9.\-]{1,12}$/.test(symbol)) return {ok: false, msg: "티커를 확인하세요"};
-  kind = _bbKind(kind);
+  kind = kind === "m" ? "m" : _bbKind(kind);                                   // 차트에서만 월봉(m)도 허용 (알림은 일봉·주봉만)
   var cache = CacheService.getScriptCache(), key = "bbc_" + symbol + "_" + kind;
   try { var hit = cache.get(key); if (hit) return JSON.parse(hit); } catch (e) {}
-  var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(symbol) + (kind === "w" ? "?range=2y&interval=1wk" : "?range=6mo&interval=1d");
+  var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(symbol) + (kind === "m" ? "?range=10y&interval=1mo" : kind === "w" ? "?range=2y&interval=1wk" : "?range=6mo&interval=1d");
   var resp = UrlFetchApp.fetch(url, {muteHttpExceptions: true});
   if (resp.getResponseCode() !== 200) return {ok: false, msg: symbol + " 차트를 가져오지 못했어요"};
   var r = JSON.parse(resp.getContentText()).chart.result[0], q = r.indicators.quote[0], ts = r.timestamp || [];
@@ -212,7 +212,7 @@ function getBbChart(token, symbol, kind) {
     o.push(Number(q.open[i])); h.push(Number(q.high[i])); l.push(Number(q.low[i])); c.push(Number(q.close[i])); t.push(ts[i]);
   }
   if (c.length < BB_N) return {ok: false, msg: "차트를 그리기엔 데이터가 모자라요"};
-  var b = _bbSeries(c), keep = kind === "w" ? 80 : 90, from = Math.max(0, c.length - keep);
+  var b = _bbSeries(c), keep = kind === "m" ? 60 : kind === "w" ? 80 : 90, from = Math.max(0, c.length - keep);
   var rd = function (arr) { return arr.slice(from).map(function (x) { return x == null ? null : Number(x.toFixed(2)); }); };
   var out = {ok: true, s: symbol, kind: kind, t: t.slice(from), o: rd(o), h: rd(h), l: rd(l), c: rd(c), lo: rd(b.lo), ma: rd(b.ma), up: rd(b.up), gap: _bbGapOf(c)};
   try { cache.put(key, JSON.stringify(out), 600); } catch (e) {}
