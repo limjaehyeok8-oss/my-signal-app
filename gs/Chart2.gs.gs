@@ -167,7 +167,9 @@ function buildChartImage2(ticker, dates, opens, highs, lows, closes, volumes, ma
       labels: dates,
       datasets: [
         {type: 'candlestick', label: '주가', data: candle, yAxisID: 'y',
-         color: {up: '#26a69a', down: '#ef5350', unchanged: '#787b86'}, barPercentage: 0.35, categoryPercentage: 0.45},
+         color: {up: '#26a69a', down: '#ef5350', unchanged: '#787b86'}, barPercentage: 0.35, categoryPercentage: 0.45,
+         // 색약 모드: 캔들 테두리를 몸통과 같은 색으로 (검정 테두리 없앰). 색은 아래 chartRemap 이 노랑/파랑으로 바꿈
+         borderColor: (typeof _CHART_CB !== 'undefined' && _CHART_CB) ? {up: '#26a69a', down: '#ef5350', unchanged: '#787b86'} : undefined, borderWidth: (typeof _CHART_CB !== 'undefined' && _CHART_CB) ? 1 : undefined},
         line('20일선', ma, '#f5a623', 1.5),
         line('1차 진입후보', z1, '#00bcd4', 1.8),
         line('2차 진입후보', z2, '#0091ea', 1.8, [4, 3]),
