@@ -569,7 +569,33 @@ function processYahooData(data) {
       f.timestamps.push(timestamps[i]);
     }
   }
+  var gran = res.meta && res.meta.dataGranularity;
+  if (gran === "1wk" || gran === "1mo") {                  // 야후는 주봉·월봉 끝에 '오늘' 봉을 따로 하나 더 줌 → 같은 주·달이면 한 봉으로 합침
+    var L = f.closes.length - 1;
+    while (L >= 1 && _samePeriod(f.timestamps[L - 1], f.timestamps[L], gran)) {
+      f.closes[L - 1] = f.closes[L]; f.highs[L - 1] = Math.max(f.highs[L - 1], f.highs[L]); f.lows[L - 1] = Math.min(f.lows[L - 1], f.lows[L]);
+      f.volumes[L - 1] += f.volumes[L]; f.dates[L - 1] = f.dates[L]; f.timestamps[L - 1] = f.timestamps[L];
+      ["opens", "closes", "highs", "lows", "volumes", "dates", "timestamps"].forEach(function (k) { f[k].pop(); });
+      L--;
+    }
+  }
   return (f.closes.length > 0) ? f : null;
+}
+
+// 두 시각(초)이 같은 주(월요일 시작) / 같은 달인지 (gran: "1wk" | "1mo")
+function _samePeriod(t1, t2, gran) {
+  if (gran === "1mo") { var a = new Date(t1 * 1000), b = new Date(t2 * 1000); return a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth(); }
+  return Math.floor((Math.floor(t1 / 86400) + 3) / 7) === Math.floor((Math.floor(t2 / 86400) + 3) / 7);
+}
+// 직접 만든 배열(o,h,l,c,t)에서 끝의 같은 주·달 봉을 합침 (arr 의 null 은 건너뜀)
+function _mergeLastPeriod(gran, t, o, h, l, c) {
+  if (gran !== "1wk" && gran !== "1mo") return;
+  var L = t.length - 1;
+  while (L >= 1 && _samePeriod(t[L - 1], t[L], gran)) {
+    c[L - 1] = c[L]; if (h) h[L - 1] = Math.max(h[L - 1], h[L]); if (l) l[L - 1] = Math.min(l[L - 1], l[L]); t[L - 1] = t[L];
+    [o, h, l, c, t].forEach(function (a) { if (a) a.pop(); });
+    L--;
+  }
 }
 
 function calculateMA(data, period) {

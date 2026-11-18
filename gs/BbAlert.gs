@@ -88,6 +88,7 @@ function _bbFetch(symbols, kind) {
         if (q.close[i] == null) continue;
         closes.push(Number(q.close[i])); lows.push(q.low[i] == null ? Number(q.close[i]) : Number(q.low[i])); tss.push(ts[i]);
       }
+      _mergeLastPeriod(r.meta && r.meta.dataGranularity, tss, null, null, lows, closes);
       if (closes.length < BB_N) return;
       var px = Number(r.meta && r.meta.regularMarketPrice);
       out[symbols[k]] = {closes: closes, lows: lows, ts: tss, px: px > 0 ? px : closes[closes.length - 1]};
@@ -211,6 +212,7 @@ function getBbChart(token, symbol, kind) {
     if (q.close[i] == null || q.open[i] == null || q.high[i] == null || q.low[i] == null) continue;
     o.push(Number(q.open[i])); h.push(Number(q.high[i])); l.push(Number(q.low[i])); c.push(Number(q.close[i])); t.push(ts[i]);
   }
+  _mergeLastPeriod(r.meta && r.meta.dataGranularity, t, o, h, l, c);                 // 야후가 따로 준 '오늘' 봉을 이번 주·달 봉에 합침
   if (c.length < BB_N) return {ok: false, msg: "차트를 그리기엔 데이터가 모자라요"};
   var b = _bbSeries(c), keep = kind === "m" ? 60 : kind === "w" ? 80 : 90, from = Math.max(0, c.length - keep);
   var rd = function (arr) { return arr.slice(from).map(function (x) { return x == null ? null : Number(x.toFixed(2)); }); };
