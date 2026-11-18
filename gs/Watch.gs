@@ -321,24 +321,33 @@ function getOversold(token, symbol) {
   if (!isRegistered(token)) return {ok: false};
   var s = String(symbol || "").trim().toUpperCase();
   if (!/^[A-Z0-9.\-]{1,12}$/.test(s)) return {ok: false, msg: "티커 형식이 올바르지 않아요"};
-  var cache = CacheService.getScriptCache(), ck = "ovs_" + s, hit = cache.get(ck);
+  var cache = CacheService.getScriptCache(), ck = "ovs2_" + s, hit = cache.get(ck);
   if (hit) { try { return JSON.parse(hit); } catch (e) {} }
-  var r = UrlFetchApp.fetch("https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(s) + "?range=5y&interval=1d", {muteHttpExceptions: true});
-  if (r.getResponseCode() !== 200) return {ok: false, msg: "데이터를 불러오지 못했어요"};
-  var d = processYahooData(JSON.parse(r.getContentText()));
+  var base = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(s);
+  var rs = UrlFetchApp.fetchAll([{url: base + "?range=5y&interval=1d", muteHttpExceptions: true}, {url: base + "?range=10y&interval=1wk", muteHttpExceptions: true}]);
+  if (rs[0].getResponseCode() !== 200) return {ok: false, msg: "데이터를 불러오지 못했어요"};
+  var d = processYahooData(JSON.parse(rs[0].getContentText()));
   if (!d || d.closes.length < 120) return {ok: false, msg: "데이터가 부족해요"};
-  var out = _oversoldStats(d.closes);
-  out.ok = true; out.s = s;
+  var daily = _oversoldStats(d.closes, [5, 10, 20, 60], 10, 252), weekly = null;
+  try {
+    if (rs[1].getResponseCode() === 200) {
+      var w = processYahooData(JSON.parse(rs[1].getContentText()));
+      if (w && w.closes.length >= 60) weekly = _oversoldStats(w.closes, [2, 4, 8, 13], 4, 52);
+    }
+  } catch (e) {}
+  // 일봉이든 주봉이든 RSI 30 이하일 때만 보여줌 (show=false 면 화면에서 숨김)
+  var out = {ok: true, s: s, daily: daily, weekly: weekly, show: !!(daily.now || (weekly && weekly.now))};
   try { cache.put(ck, JSON.stringify(out), 21600); } catch (e) {}
   return out;
 }
-function _oversoldStats(c) {
+// c: 종가 배열, hs: 몇 봉 뒤를 볼지, gap: 같은 과매도로 치는 최소 간격(봉), perYear: 1년이 몇 봉인지
+function _oversoldStats(c, hs, gap, perYear) {
   var rsi = calculateWilderRSI(c, 14), off = c.length - rsi.length, n = c.length, TH = 30, ev = [], last = -99;
   for (var i = Math.max(1, off + 1); i < n; i++) {
     var a = rsi[i - off], b = rsi[i - 1 - off];
-    if (a < TH && b >= TH && i - last >= 10) { ev.push(i); last = i; }      // 30 아래로 "내려간 날". 10거래일 안의 반복은 한 번으로 침
+    if (a <= TH && b > TH && i - last >= gap) { ev.push(i); last = i; }      // 30 이하로 "내려간 봉". 간격(gap) 안의 반복은 한 번으로 침
   }
-  var rows = [5, 10, 20, 60].map(function (h) {
+  var rows = hs.map(function (h) {
     var rets = [];
     ev.forEach(function (i) { if (i + h < n) rets.push((c[i + h] / c[i] - 1) * 100); });
     if (!rets.length) return {h: h, n: 0};
@@ -347,7 +356,7 @@ function _oversoldStats(c) {
     return {h: h, n: rets.length, avg: Number((sum / rets.length).toFixed(1)), win: Math.round(win / rets.length * 100), worst: Number(worst.toFixed(1))};
   });
   var cur = rsi[rsi.length - 1];
-  return {th: TH, cnt: ev.length, rows: rows, rsi: Number(cur.toFixed(0)), now: cur < TH, years: Number((n / 252).toFixed(1))};
+  return {th: TH, cnt: ev.length, rows: rows, rsi: Number(cur.toFixed(0)), now: cur <= TH, years: Number((n / perYear).toFixed(1))};
 }
 
 

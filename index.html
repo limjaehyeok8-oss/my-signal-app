@@ -2148,25 +2148,30 @@
       box.style.display = "block";
     }
     // 과매도 뒤 성적 (최근 5년, RSI 30 아래로 내려간 날 이후)
-    function paintOversold(box, o) {
+    function paintOversold(box, o) {                                              // RSI 30 이하(일봉 또는 주봉)일 때만 표시
       box.textContent = ""; box.style.display = "none";
-      if (!o || !o.ok || !o.rows) return;
-      const tt = mkEl("div", "afT", "과매도 뒤 성적");
-      tt.appendChild(mkEl("span", "afV " + (o.now ? "good" : "mid"), o.now ? "지금 과매도 (RSI " + o.rsi + ")" : "지금 RSI " + o.rsi));
-      box.appendChild(tt);
-      const rows = o.rows.filter((r) => r.n > 0);
-      if (!o.cnt || !rows.length) { box.appendChild(mkEl("div", "afW", "최근 " + o.years + "년 동안 과매도(RSI " + o.th + " 아래)가 없었어요")); box.style.display = "block"; return; }
-      box.appendChild(mkEl("div", "afW", "최근 " + o.years + "년간 과매도 " + o.cnt + "번 · 그 뒤 평균"));
-      const g = mkEl("div", "ovG");
-      rows.forEach((r) => {
-        const d = mkEl("div"); d.appendChild(mkEl("small", null, r.h + "일 뒤"));
-        d.appendChild(mkEl("b", r.avg >= 0 ? "up" : "down", (r.avg >= 0 ? "+" : "") + r.avg + "%"));
-        d.appendChild(mkEl("em", null, "상승 " + r.win + "%")); g.appendChild(d);
+      if (!o || !o.ok || !o.show) return;
+      [[o.daily, "일봉", "일"], [o.weekly, "주봉", "주"]].forEach(([st, nm, u]) => {
+        if (!st || !st.now) return;
+        const sec = mkEl("div"); sec.style.marginTop = box.children.length ? "14px" : "0";
+        const tt = mkEl("div", "afT", nm + " 과매도 뒤 성적");
+        tt.appendChild(mkEl("span", "afV good", "지금 " + nm + " 과매도 (RSI " + st.rsi + ")"));
+        sec.appendChild(tt);
+        const rows = st.rows.filter((r) => r.n > 0);
+        if (!st.cnt || !rows.length) { sec.appendChild(mkEl("div", "afW", "최근 " + st.years + "년 동안 과거 기록이 없어요")); box.appendChild(sec); return; }
+        sec.appendChild(mkEl("div", "afW", "최근 " + st.years + "년간 " + nm + " 과매도 " + st.cnt + "번 · 그 뒤 평균"));
+        const g = mkEl("div", "ovG");
+        rows.forEach((r) => {
+          const d = mkEl("div"); d.appendChild(mkEl("small", null, r.h + u + " 뒤"));
+          d.appendChild(mkEl("b", r.avg >= 0 ? "up" : "down", (r.avg >= 0 ? "+" : "") + r.avg + "%"));
+          d.appendChild(mkEl("em", null, "상승 " + r.win + "%")); g.appendChild(d);
+        });
+        sec.appendChild(g);
+        const w2 = rows[rows.length - 2] || rows[rows.length - 1];
+        sec.appendChild(mkEl("div", "afN", "가장 나빴던 때는 " + w2.h + u + " 뒤 " + w2.worst + "%였어요. 과거 기록일 뿐이에요."));
+        box.appendChild(sec);
       });
-      box.appendChild(g);
-      const w20 = rows.find((r) => r.h === 20) || rows[rows.length - 1];
-      box.appendChild(mkEl("div", "afN", "가장 나빴던 때는 " + w20.h + "일 뒤 " + w20.worst + "%였어요. 과거 기록일 뿐이에요."));
-      box.style.display = "block";
+      if (box.children.length) box.style.display = "block";
     }
     // 분석 화면 차트 전환: AI 타점 차트 ↔ 볼린저 밴드(일봉·주봉·월봉)
     let anaSym = "", anaTab = "ai";
@@ -3102,6 +3107,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "'과매도 뒤 성적'은 일봉 또는 주봉 RSI가 30 이하일 때만 보여줘요 (주봉 성적도 추가)",
         "볼린저 차트: 하단에 아직 안 닿았으면 '하단까지 N% 더 내려가면 닿아요'를 보여줘요",
         "종목 분석 화면 차트 위에서 '볼린저 일봉·주봉·월봉'을 누르면 차트가 그 볼린저 밴드 차트로 바뀌어요",
         "볼린저 이탈 차트에서 일봉 · 주봉 · 월봉을 눌러 바꿔 볼 수 있어요",
