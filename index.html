@@ -1897,7 +1897,13 @@
       const n = d.c.length, last = n - 1, W = 360, H = 220, L = 6, R = 44, T = 12, B = 20, NS = "http://www.w3.org/2000/svg";
       const lw = d.lo[last], gp = d.gap;
       const sum = mkEl("div", "bbSum"); sum.appendChild(document.createTextNode((d.kind === "w" ? "주봉" : d.kind === "m" ? "월봉" : "일봉") + " 하단 $" + fmt(lw) + " · 현재 $" + fmt(d.c[last]) + " · 괴리율 "));
-      const gb = document.createElement("b"); gb.textContent = (gp != null ? (gp >= 0 ? "+" : "") + gp.toFixed(1) + "%" : "-"); sum.appendChild(gb); box.appendChild(sum);
+      const gb = document.createElement("b"); gb.textContent = (gp != null ? (gp >= 0 ? "+" : "") + gp.toFixed(1) + "%" : "-"); sum.appendChild(gb);
+      if (lw != null && d.c[last] > 0) {                                           // 하단에 아직 안 닿았으면: 얼마나 더 내려가야 닿는지(%)
+        const rem = (1 - lw / d.c[last]) * 100;
+        if (rem > 0) { const rb = mkEl("div", null, "📏 하단까지 " + rem.toFixed(1) + "% 더 내려가면 닿아요 (하단 $" + fmt(lw) + ")"); rb.style.marginTop = "2px"; sum.appendChild(rb); }
+        else { const rb = mkEl("div", null, "📏 하단 아래로 " + Math.abs(rem).toFixed(1) + "% 내려와 있어요"); rb.style.marginTop = "2px"; sum.appendChild(rb); }
+      }
+      box.appendChild(sum);
       let lo = Infinity, hi = -Infinity;
       for (let i = 0; i < n; i++) { lo = Math.min(lo, d.l[i], d.lo[i] == null ? Infinity : d.lo[i]); hi = Math.max(hi, d.h[i], d.up[i] == null ? -Infinity : d.up[i]); }
       const pd = (hi - lo) * 0.06 || 1; lo -= pd; hi += pd;
@@ -3096,6 +3102,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "볼린저 차트: 하단에 아직 안 닿았으면 '하단까지 N% 더 내려가면 닿아요'를 보여줘요",
         "종목 분석 화면 차트 위에서 '볼린저 일봉·주봉·월봉'을 누르면 차트가 그 볼린저 밴드 차트로 바뀌어요",
         "볼린저 이탈 차트에서 일봉 · 주봉 · 월봉을 눌러 바꿔 볼 수 있어요",
         "캔들 테두리를 없애서 차트가 더 또렷해요 (모든 차트)",
