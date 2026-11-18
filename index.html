@@ -840,7 +840,7 @@
     html[data-ud="us"][data-theme="light"] { --up: #0fa56c; --down: #e0364a; }
     html[data-ud="cb"] { --up: #ffd43b; --down: #4da3ff; --accent: #4da3ff; }                       /* 색약 모드: 노랑(상승) · 파랑(하락) — 빨강/초록을 쓰지 않음 */
     html[data-ud="cb"][data-theme="light"] { --up: #c98f00; --down: #0072b2; --accent: #0072b2; }
-    html[data-swipe="0"] #pgSlider, html[data-swipe="0"] .frSlider, html[data-swipe="0"] .pkSlider { overflow-x: hidden !important; touch-action: pan-y pinch-zoom; }   /* 옆으로 밀어 넘기기 끄기 (버튼·점은 그대로 동작) */
+    html[data-swipe="0"] #pgSlider, html[data-swipe="0"] .frSlider, html[data-swipe="0"] .pkSlider { overflow-x: hidden !important; touch-action: manipulation; }   /* 옆으로 밀어 넘기기 끄기 (버튼·점은 그대로 동작) */
     html[data-swipe="0"] .frSwipeHint { display: none; }
     html[data-ud="cb"] .afV.good, html[data-ud="cb"] #anOvs .afV.good { background: rgba(77,163,255,.18); color: var(--accent); }
     html[data-ud="cb"] .pkBadge.rr.hi { background: rgba(77,163,255,.18); color: var(--accent); }
