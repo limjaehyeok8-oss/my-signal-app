@@ -1964,14 +1964,15 @@
       for (let i = 0; i < n; i++) if (d.lo[i] != null && d.lo[i] > 0 && d.c[i] < d.lo[i]) { zone++; const x = X(i), y = Y(d.l[i]) + 5; add("polygon", { points: (x - 3.5) + "," + (y + 6) + " " + (x + 3.5) + "," + (y + 6) + " " + x + "," + y, fill: cLo }); }
       if (d.c[last] < lw) add("circle", { cx: X(last), cy: Y(d.c[last]), r: 4, fill: "none", stroke: cLo, "stroke-width": 1.5 });
       box.appendChild(svg);
-      if (bx) {
-        const nb = mkEl("div", "bbSum", "🟩 거래량이 삐죽 튀어나온 봉(평소의 " + bx.vr + "배)에서 하단 아래로 내려온 구간이에요. 바닥의 초록 막대가 그 거래량이에요. 이 종목은 과거 하단 이탈 뒤 하단보다 중앙값 " + (d.dm * 100).toFixed(1) + "% (4분의 1은 " + (d.d75 * 100).toFixed(1) + "% 이상) 더 내려갔어요(" + d.dn + "번 기준). 박스 아래끝 $" + fmt(bx.bot) + "까지는 평소 흔들림, 그 아래는 평소보다 깊은 하락이에요. 참고용이에요.");
-        nb.style.cssText = "font-size:11px;margin-top:4px;opacity:.85"; box.appendChild(nb);
-      }
-      if (zone) {
+      const brief = [];
+      if (bx) brief.push("🟩 박스: 거래량 " + bx.vr + "배로 삐죽 튄 봉이 하단 아래에 있어요. 아래끝 $" + fmt(bx.bot) + " (이 종목은 보통 하단보다 " + Math.abs(d.dm * 100).toFixed(0) + "%까지 더 내려갔어요)");
+      if (zone) brief.push("▲ 하단 아래 봉 · 참고용 (매수 신호 아님)");
+      if (brief.length) {
+        const nb = mkEl("div", "bbSum", brief.join("\n")); nb.style.cssText = "font-size:11.5px;margin-top:6px;white-space:pre-line;opacity:.9"; box.appendChild(nb);
         const st = d.kind === "w" ? "13주 뒤 평균 +9%, 승률 63%" : d.kind === "m" ? "6개월 뒤 평균 +14%, 승률 66%" : "60거래일 뒤 평균 +7.5%, 승률 58%";
-        const nt = mkEl("div", "bbSum", "▲ 하단 아래 구간 · 과거 미국 대형주 통계: " + st + ". 다만 저점을 한 번 더 깨는 경우가 많아(일봉 90%) 나눠서 사는 쪽이 안전해요. 매수 신호가 아니라 참고용이에요.");
-        nt.style.cssText = "font-size:11px;margin-top:4px;opacity:.85"; box.appendChild(nt);
+        const dt = mkEl("details", "anMore"); dt.appendChild(mkEl("summary", null, "기준·통계 자세히"));
+        const body = mkEl("div", "ovNote", "박스 기준: 이 차트(90봉)에서 거래량이 상위 8%이면서 앞뒤 5봉 중 가장 크고 중앙값의 1.8배 이상인 봉 중, 종가가 볼린저 하단 아래인 가장 최근 봉.\n박스 아래끝: 이 종목이 과거 5년간 하단 이탈 뒤 60일 안에 하단보다 더 내려간 폭의 중앙값" + (d.dm != null ? " (" + (d.dm * 100).toFixed(1) + "%, 4분의 1은 " + (d.d75 * 100).toFixed(1) + "% 이상, " + d.dn + "번 기준)" : "") + ". 그 아래로 내려가면 평소보다 깊은 하락이에요.\n▲ 과거 미국 대형주 통계: " + st + ". 저점을 한 번 더 깨는 경우가 많아(일봉 90%) 나눠서 사는 쪽이 안전해요.");
+        body.style.whiteSpace = "pre-line"; dt.appendChild(body); box.appendChild(dt);
       }
     }
     function pickCard(x, showGroup, rank) {
