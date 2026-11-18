@@ -230,14 +230,14 @@ function buildChartImage2(ticker, dates, opens, highs, lows, closes, volumes, ma
   var response = UrlFetchApp.fetch('https://quickchart.io/chart', {
     method: 'post',
     contentType: 'application/json',
-    payload: JSON.stringify({version: '3', chart: (typeof _CHART_CB !== 'undefined' && _CHART_CB) ? JSON.parse(chartCbRemap(JSON.stringify(chartConfig))) : chartConfig, width: 800, height: 820, backgroundColor: '#131722'}),
+    payload: JSON.stringify({version: '3', chart: (typeof _CHART_CB !== 'undefined' && _CHART_CB) ? JSON.parse(chartCbRemap(JSON.stringify(chartConfig))) : chartConfig, width: 800, height: 820, backgroundColor: (typeof _CHART_CB !== 'undefined' && _CHART_CB) ? '#ffffff' : '#131722'}),
     muteHttpExceptions: true
   });
   if (response.getResponseCode() !== 200) return null;
   return Utilities.base64Encode(response.getBlob().getBytes());
 }
 
-// 색약 모드 차트: 빨강·초록 계열을 파랑(상승·매수)/주황(하락·매도)으로 바꿈. 20일선·MACD 선은 주황과 겹치지 않게 흰색 계열로.
+// 색약 모드 차트: 흰 배경 + 빨강·초록 계열을 파랑(상승·매수)/주황(하락·매도)으로 바꿈. 20일선·MACD 선은 주황과 겹치지 않게 짙은 회색으로.
 function chartCbRemap(js) {
   var m = [
     ["#26a69a", "#56b4e9"], ["rgba(38,166,154,", "rgba(86,180,233,"],          // 상승 캔들·거래량·MACD 양수 / 장기지지선
@@ -245,8 +245,11 @@ function chartCbRemap(js) {
     ["#00e676", "#56b4e9"], ["rgba(0,230,118,", "rgba(86,180,233,"],           // 매수 타점 / 과매도 영역
     ["#ff5252", "#e69f00"], ["rgba(255,82,82,", "rgba(230,159,0,"],            // 매도 타점 / 과매수 영역 / 장기저항선
     ["#64dd17", "#3d8bff"], ["#81c784", "#7fc4ea"],                            // 저점매수 / 단기지지선
-    ["#d50000", "#ffffff"],                                                     // 장기손절가 선
-    ["#f5a623", "#e8ecf2"], ["#ffb74d", "#f0d9a8"]                              // 20일선·MACD 선 / 단기저항선
+    ["#d50000", "#000000"],                                                     // 장기손절가 선
+    ["#f5a623", "#444b5e"], ["#ffb74d", "#b8860b"],                             // 20일선·MACD 선 / 단기저항선
+    // 흰 배경용: 글자·눈금·격자를 어둡게, 옅은 색은 진하게
+    ["#d1d4dc", "#1a1f2e"], ["#787b86", "#5a6070"], ["#1e2336", "#e6e9f0"], ["#2b2b43", "#dfe3ea"], ["#3c4256", "#d0d5de"],
+    ["#4dd0e1", "#0097a7"], ["#4aa7b3", "#00838f"], ["#ffd54f", "#e0a800"], ["#ff8ae8", "#c2189e"]
   ];
   for (var i = 0; i < m.length; i++) js = js.split(m[i][0]).join(m[i][1]);
   return js;

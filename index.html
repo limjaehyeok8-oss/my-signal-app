@@ -1881,25 +1881,28 @@
       const X = (i) => L + (W - L - R) * (i + 0.5) / n, Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
       const svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", "0 0 " + W + " " + H);
       const add = (tag, a, text) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (text != null) e.textContent = text; svg.appendChild(e); return e; };
-      for (let g = 0; g <= 3; g++) { const v = lo + (hi - lo) * g / 3, y = Y(v); add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: cvar("--line"), "stroke-width": 0.5 }); add("text", { x: W - R + 3, y: y + 3, fill: cvar("--sub"), "font-size": 9 }, v.toFixed(v >= 100 ? 0 : 1)); }
+      const cbw = document.documentElement.getAttribute("data-ud") === "cb";                 // 색약 모드: 차트는 흰 배경 + 진한 글자
+      const cLine = cbw ? "#dfe3ea" : cvar("--line"), cSub = cbw ? "#5a6070" : cvar("--sub"), cUp = cbw ? "#0072b2" : cvar("--up"), cDn = cbw ? "#d55e00" : cvar("--down"), cLo = cbw ? "#8e44ad" : "#ffb020";
+      if (cbw) { add("rect", { x: 0, y: 0, width: W, height: H, fill: "#ffffff", rx: 8 }); }
+      for (let g = 0; g <= 3; g++) { const v = lo + (hi - lo) * g / 3, y = Y(v); add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: cLine, "stroke-width": 0.5 }); add("text", { x: W - R + 3, y: y + 3, fill: cSub, "font-size": 9 }, v.toFixed(v >= 100 ? 0 : 1)); }
       let lastM = -1, lastX = -99;
-      d.t.forEach((t, i) => { const m = new Date(t * 1000).getUTCMonth() + 1; if (m !== lastM) { lastM = m; if (X(i) - lastX >= 34) { lastX = X(i); add("text", { x: X(i), y: H - 6, fill: cvar("--sub"), "font-size": 9 }, m + "월"); } } });
+      d.t.forEach((t, i) => { const m = new Date(t * 1000).getUTCMonth() + 1; if (m !== lastM) { lastM = m; if (X(i) - lastX >= 34) { lastX = X(i); add("text", { x: X(i), y: H - 6, fill: cSub, "font-size": 9 }, m + "월"); } } });
       const idx = []; for (let i = 0; i < n; i++) if (d.up[i] != null) idx.push(i);
       if (idx.length > 1) {                                                      // 밴드 영역 + 선
         const pts = idx.map((i) => X(i).toFixed(1) + "," + Y(d.up[i]).toFixed(1)).concat(idx.slice().reverse().map((i) => X(i).toFixed(1) + "," + Y(d.lo[i]).toFixed(1))).join(" ");
-        add("polygon", { points: pts, fill: "rgba(130,150,255,0.10)" });
+        add("polygon", { points: pts, fill: cbw ? "rgba(90,110,200,0.10)" : "rgba(130,150,255,0.10)" });
         const line = (arr, col, w, dash) => add("polyline", { points: idx.map((i) => X(i).toFixed(1) + "," + Y(arr[i]).toFixed(1)).join(" "), fill: "none", stroke: col, "stroke-width": w, "stroke-dasharray": dash || "" });
-        line(d.up, "#8a94a6", 1); line(d.ma, "#8a94a6", 1, "3 3"); line(d.lo, "#ffb020", 1.6);
+        line(d.up, cbw ? "#7a8396" : "#8a94a6", 1); line(d.ma, cbw ? "#7a8396" : "#8a94a6", 1, "3 3"); line(d.lo, cLo, 1.6);
       }
       const bw = Math.max(1.5, (W - L - R) / n * 0.62);
       for (let i = 0; i < n; i++) {
-        const upc = d.c[i] >= d.o[i], col = upc ? cvar("--up") : cvar("--down");
+        const upc = d.c[i] >= d.o[i], col = upc ? cUp : cDn;
         add("line", { x1: X(i), x2: X(i), y1: Y(d.h[i]), y2: Y(d.l[i]), stroke: col, "stroke-width": 1 });
         const hollow = upc && document.documentElement.getAttribute("data-ud") === "cb";     // 색약 모드: 상승은 속이 빈 캔들, 하락은 채움 → 색 없이도 구분
         add("rect", { x: X(i) - bw / 2, y: Math.min(Y(d.o[i]), Y(d.c[i])), width: bw, height: Math.max(1, Math.abs(Y(d.o[i]) - Y(d.c[i]))), fill: hollow ? "none" : col, stroke: col, "stroke-width": 1 });
       }
-      if (idx.length) add("text", { x: X(idx[0]) + 2, y: Y(d.lo[idx[0]]) + 11, fill: "#ffb020", "font-size": 9, "font-weight": "bold" }, "하단");
-      if (d.c[last] < lw) add("circle", { cx: X(last), cy: Y(d.c[last]), r: 4, fill: "none", stroke: "#ffb020", "stroke-width": 1.5 });
+      if (idx.length) add("text", { x: X(idx[0]) + 2, y: Y(d.lo[idx[0]]) + 11, fill: cLo, "font-size": 9, "font-weight": "bold" }, "하단");
+      if (d.c[last] < lw) add("circle", { cx: X(last), cy: Y(d.c[last]), r: 4, fill: "none", stroke: cLo, "stroke-width": 1.5 });
       box.appendChild(svg);
     }
     function pickCard(x, showGroup, rank) {
@@ -3054,6 +3057,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "색약 모드에서는 차트 배경이 흰색으로 바뀌어요 (AI 타점 차트·볼린저 차트)",
         "색약 모드를 켜면 종목 분석 차트(AI 타점 차트)의 캔들·표시 색도 파랑/주황으로 바뀌어요",
         "받은 알림 화면에 📋 '최근 3일 신호 다시 받기' 버튼 (내 종목·관심 종목의 최근 매수·매도 신호를 모아서 알림으로 보내줘요)",
         "설정에 👁 색약 모드 추가: 상승 파랑 · 하락 주황 (캔들은 상승=속이 빈 모양)",
