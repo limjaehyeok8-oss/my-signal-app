@@ -2271,7 +2271,7 @@
         wait.style.display = "none";
         if (!r.ok) { if (!shown) pre.textContent = r.msg || "분석에 실패했어요"; return; }
         if (r.image) { img.src = "data:image/png;base64," + r.image; img.style.display = anaTab === "ai" ? "block" : "none"; }
-        else { wait.textContent = "📉 AI 차트를 못 만들었어요 (차트 서버 문제). 위 '볼린저 일봉' 탭은 볼 수 있고, 잠시 뒤 다시 분석하면 돼요"; wait.style.display = "block"; }
+        else { wait.textContent = "📉 AI 차트를 못 만들었어요 (차트 서버 문제). 위 '볼린저 일봉' 탭은 볼 수 있고, 잠시 뒤 다시 분석하면 돼요" + (r.chartErr ? " [" + r.chartErr + "]" : ""); wait.style.display = "block"; }
         showText(r.text);
       } catch (e) {
         if (seq === analyzeSeq) { wait.style.display = "none"; if (!shown) pre.textContent = "오류: " + e.message; }

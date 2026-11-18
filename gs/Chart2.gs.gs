@@ -49,6 +49,7 @@ function getDivergenceView(data, rsi, viewStartIdx, viewLen) {
   return {bull: bull, bear: bear};
 }
 
+var _QC_ERR = "";
 function buildChartImage2(ticker, dates, opens, highs, lows, closes, volumes, ma20, buyMarkers, sellMarkers,
     lResArr, sResArr, sSupArr, lSupArr, lResG, sResG, sSupG, lSupG, highpointSell, volSurge,
     longStopPrice, entryZone1, entryZone2, macdValues, cloverMarkers, rsiValues, stochValues, divView) {
@@ -235,9 +236,9 @@ function buildChartImage2(ticker, dates, opens, highs, lows, closes, volumes, ma
     payload: JSON.stringify({version: '3', chart: ((typeof _CHART_CB !== 'undefined' && _CHART_CB) || (typeof _CHART_WHITE !== 'undefined' && _CHART_WHITE)) ? JSON.parse(chartRemap(JSON.stringify(chartConfig), (typeof _CHART_CB !== 'undefined' && _CHART_CB), (typeof _CHART_WHITE !== 'undefined' && _CHART_WHITE))) : chartConfig, width: 800, height: 820, backgroundColor: (typeof _CHART_WHITE !== 'undefined' && _CHART_WHITE) ? '#ffffff' : '#131722'}),
     muteHttpExceptions: true
   }); };
-  var response = null;
+  var response = null; _QC_ERR = "";
   for (var qn = 0; qn < 2; qn++) {                                                // 한 번 실패하면 잠깐 뒤 한 번 더
-    try { response = qcReq(); if (response.getResponseCode() === 200) break; } catch (e) { response = null; }
+    try { response = qcReq(); if (response.getResponseCode() === 200) break; _QC_ERR = response.getResponseCode() + " " + String(response.getContentText()).slice(0, 160); } catch (e) { response = null; _QC_ERR = "요청 오류 " + e.message; }
     Utilities.sleep(700);
   }
   if (!response || response.getResponseCode() !== 200) return null;

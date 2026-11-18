@@ -517,9 +517,9 @@ function analyzeStock(ticker, skipChart, stratKey) {
       rsi9.slice(-viewLen), stochRSI.slice(-viewLen));
       getDivergenceView(dData, rsi9, viewStartIdx, viewLen)
   } catch (e) {
-    console.error("차트 생성 실패: " + e.message);
+    console.error("차트 생성 실패: " + e.message); _QC_ERR = "차트 만들기 오류: " + e.message;
   }
-  return {ok: true, text: res, image: image, meta: meta};
+  return {ok: true, text: res, image: image, meta: meta, chartErr: image ? "" : String(typeof _QC_ERR !== "undefined" ? _QC_ERR : "").slice(0, 200)};
 }
 
 // ==========================================================
