@@ -1938,14 +1938,14 @@
         add("rect", { x: X(i) - bw / 2, y: Math.min(Y(d.o[i]), Y(d.c[i])), width: bw, height: Math.max(1, Math.abs(Y(d.o[i]) - Y(d.c[i]))), fill: hollow ? "none" : col, stroke: col, "stroke-width": 1 });
       }
       if (idx.length) add("text", { x: X(idx[0]) + 2, y: Y(d.lo[idx[0]]) + 11, fill: cLo, "font-size": 9, "font-weight": "bold" }, "하단");
-      // 거래량 '삐죽' 판정: 이 차트 안에서 상위 8%이면서, 앞뒤 5봉 중 가장 크고, 중앙값의 1.8배 이상 (고정 배수 대신 눈에 띄는 봉만)
+      // 거래량 '삐죽' 판정: 이 차트 안에서 상위 8%이면서, 앞뒤 5봉 중 가장 크고, 중앙값의 1.4배 이상 (고정 배수 대신 눈에 띄는 봉만)
       const spike = new Array(n).fill(false);
       if (d.v && d.v.length === n) {
         const vs = d.v.slice().sort((a, b) => a - b), med = vs[Math.floor(n / 2)], p92 = vs[Math.floor(n * 0.92)];
         let vmax = vs[n - 1] || 1;
         for (let i = 0; i < n; i++) {
           let pk = true; for (let j = Math.max(0, i - 5); j <= Math.min(n - 1, i + 5); j++) if (d.v[j] > d.v[i]) { pk = false; break; }
-          spike[i] = pk && d.v[i] >= p92 && d.v[i] >= med * 1.8;
+          spike[i] = pk && d.v[i] >= p92 && d.v[i] >= med * 1.4;
           const vh = (d.v[i] / vmax) * (H - T - B) * 0.16;                                   // 바닥에 작은 거래량 막대 (삐죽 튀는 봉은 진하게)
           if (vh > 0) add("rect", { x: X(i) - bw / 2, y: H - B - vh, width: bw, height: vh, fill: spike[i] ? (cbm ? "#4da3ff" : "#3cb371") : (cbw ? "#9aa3b5" : "#5b6578"), opacity: spike[i] ? 0.85 : 0.35 });
         }
@@ -1971,7 +1971,7 @@
         const nb = mkEl("div", "bbSum", brief.join("\n")); nb.style.cssText = "font-size:11.5px;margin-top:6px;white-space:pre-line;opacity:.9"; box.appendChild(nb);
         const st = d.kind === "w" ? "13주 뒤 평균 +9%, 승률 63%" : d.kind === "m" ? "6개월 뒤 평균 +14%, 승률 66%" : "60거래일 뒤 평균 +7.5%, 승률 58%";
         const dt = mkEl("details", "anMore"); dt.appendChild(mkEl("summary", null, "기준·통계 자세히"));
-        const body = mkEl("div", "ovNote", "박스 기준: 이 차트(90봉)에서 거래량이 상위 8%이면서 앞뒤 5봉 중 가장 크고 중앙값의 1.8배 이상인 봉 중, 종가가 볼린저 하단 아래인 가장 최근 봉.\n박스 아래끝: 이 종목이 과거 5년간 하단 이탈 뒤 60일 안에 하단보다 더 내려간 폭의 중앙값" + (d.dm != null ? " (" + (d.dm * 100).toFixed(1) + "%, 4분의 1은 " + (d.d75 * 100).toFixed(1) + "% 이상, " + d.dn + "번 기준)" : "") + ". 그 아래로 내려가면 평소보다 깊은 하락이에요.\n▲ 과거 미국 대형주 통계: " + st + ". 저점을 한 번 더 깨는 경우가 많아(일봉 90%) 나눠서 사는 쪽이 안전해요.");
+        const body = mkEl("div", "ovNote", "박스 기준: 이 차트(90봉)에서 거래량이 상위 8%이면서 앞뒤 5봉 중 가장 크고 중앙값의 1.4배 이상인 봉 중, 종가가 볼린저 하단 아래인 가장 최근 봉.\n박스 아래끝: 이 종목이 과거 5년간 하단 이탈 뒤 60일 안에 하단보다 더 내려간 폭의 중앙값" + (d.dm != null ? " (" + (d.dm * 100).toFixed(1) + "%, 4분의 1은 " + (d.d75 * 100).toFixed(1) + "% 이상, " + d.dn + "번 기준)" : "") + ". 그 아래로 내려가면 평소보다 깊은 하락이에요.\n▲ 과거 미국 대형주 통계: " + st + ". 저점을 한 번 더 깨는 경우가 많아(일봉 90%) 나눠서 사는 쪽이 안전해요.");
         body.style.whiteSpace = "pre-line"; dt.appendChild(body); box.appendChild(dt);
       }
     }
