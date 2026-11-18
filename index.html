@@ -958,6 +958,12 @@
     #list .haRow input { background: var(--bg); } #list .hMsg { font-size: 13px; color: var(--sub); margin-top: 6px; }
     html[data-theme="light"] #list .frCard select, html[data-theme="light"] #list .haRow input { background: #fff; }
 
+    .ovSec + .ovSec { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .ovSum { font-size: 13.5px; font-weight: 600; margin: 4px 0 10px; line-height: 1.45; }
+    .ovT { display: grid; gap: 6px 4px; align-items: center; font-size: 12px; }
+    .ovT .h { text-align: center; color: var(--sub); font-size: 11px; } .ovT .lb { color: var(--sub); font-size: 11px; line-height: 1.3; }
+    .ovT .c { text-align: center; line-height: 1.2; } .ovT .c b { display: block; font-size: 13px; } .ovT .c em { font-style: normal; font-size: 10.5px; color: var(--sub); }
+    .ovNote { font-size: 10.5px; color: var(--sub); margin-top: 6px; } #anOvs .anMore { margin-top: 8px; }
     #analysis #anOvs { order: 1; margin-top: 12px; padding: 14px; background: var(--card); border-radius: 16px; }
     #anOvs .afT { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; margin-bottom: 10px; }
     #anOvs .afV { font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 999px; background: var(--card2); color: var(--sub); }
@@ -2148,41 +2154,42 @@
       box.style.display = "block";
     }
     // 과매도 뒤 성적 (최근 5년, RSI 30 아래로 내려간 날 이후)
-    function paintOversold(box, o) {                                              // RSI 30 이하(일봉 또는 주봉)일 때만 표시
+    function paintOversold(box, o) {                                              // RSI 30 이하(일봉 또는 주봉)일 때만 표시 · 요약 한 줄 + 작은 표, 자세한 건 접어둠
       box.textContent = ""; box.style.display = "none";
       if (!o || !o.ok || !o.show) return;
+      const pc = (v) => (v >= 0 ? "+" : "") + v + "%";
       [[o.daily, "일봉", "일"], [o.weekly, "주봉", "주"]].forEach(([st, nm, u]) => {
         if (!st || !st.now) return;
-        const sec = mkEl("div"); sec.style.marginTop = box.children.length ? "14px" : "0";
-        const tt = mkEl("div", "afT", nm + " 과매도 뒤 성적");
-        tt.appendChild(mkEl("span", "afV good", "지금 " + nm + " 과매도 (RSI " + st.rsi + ")"));
+        const sec = mkEl("div", "ovSec");
+        const tt = mkEl("div", "afT", "과매도 뒤 성적");
+        tt.appendChild(mkEl("span", "afV good", nm + " RSI " + st.rsiX));
         sec.appendChild(tt);
-        const rows = st.rows.filter((r) => r.n > 0);
-        if (!st.cnt || !rows.length) { sec.appendChild(mkEl("div", "afW", "최근 " + st.years + "년 동안 과거 기록이 없어요")); box.appendChild(sec); return; }
-        sec.appendChild(mkEl("div", "afW", "최근 " + st.years + "년간 " + nm + " 과매도 " + st.cnt + "번 · 그 뒤 평균"));
-        const g = mkEl("div", "ovG");
-        rows.forEach((r) => {
-          const d = mkEl("div"); d.appendChild(mkEl("small", null, r.h + u + " 뒤"));
-          d.appendChild(mkEl("b", r.avg >= 0 ? "up" : "down", (r.avg >= 0 ? "+" : "") + r.avg + "%"));
-          d.appendChild(mkEl("em", null, "상승 " + r.win + "%")); g.appendChild(d);
-        });
+        const rows = st.rows.filter((r) => r.n > 0), at = st.at && st.at.n ? st.at.r.filter((x) => x[1] > 0) : [];
+        if (!rows.length && !at.length) { sec.appendChild(mkEl("div", "afW", "비교할 과거 기록이 없어요")); box.appendChild(sec); return; }
+        if (at.length) {                                                          // 한 줄 요약: 지금과 비슷한 RSI였을 때 3번째 기간 결과
+          const m = at[Math.min(2, at.length - 1)];
+          sec.appendChild(mkEl("div", "ovSum", "지금과 비슷한 RSI였던 때 " + st.at.n + u + " → " + m[0] + u + " 뒤 " + m[2] + "% 상승 (평균 " + pc(m[3]) + ")"));
+        }
+        const g = mkEl("div", "ovT"), hs = (rows.length ? rows.map((r) => r.h) : at.map((x) => x[0]));
+        g.style.gridTemplateColumns = "minmax(70px,1.6fr) repeat(" + hs.length + ",1fr)";
+        g.appendChild(mkEl("span"));
+        hs.forEach((h) => g.appendChild(mkEl("span", "h", h + u + " 뒤")));
+        const line = (label, cells) => {
+          g.appendChild(mkEl("span", "lb", label));
+          hs.forEach((h) => { const c = cells[h], d = mkEl("span", "c"); if (c) { d.appendChild(mkEl("b", c[0] >= 0 ? "up" : "down", pc(c[0]))); d.appendChild(mkEl("em", null, c[1] + "%")); } else d.textContent = "-"; g.appendChild(d); });
+        };
+        if (at.length) { const m = {}; at.forEach((x) => { m[x[0]] = [x[3], x[2]]; }); line("지금 RSI 근처 (" + st.at.n + u + ")", m); }
+        if (rows.length) { const m = {}; rows.forEach((r) => { m[r.h] = [r.avg, r.win]; }); line("과매도 진입 뒤 (" + st.cnt + "번)", m); }
         sec.appendChild(g);
-        if (st.at && st.at.n) {                                                    // 지금 RSI 근처였던 때 / RSI 구간별 통계
-          const at = st.at, l = mkEl("div", "afW", "📊 " + nm + " RSI가 지금(" + st.rsiX + ") 근처 ±2였던 때 " + at.n + "번");
-          l.style.marginTop = "10px"; sec.appendChild(l);
-          const gg = mkEl("div", "ovG");
-          at.r.filter((x) => x[1] > 0).forEach((x) => { const d = mkEl("div"); d.appendChild(mkEl("small", null, x[0] + u + " 뒤")); d.appendChild(mkEl("b", x[3] >= 0 ? "up" : "down", (x[3] >= 0 ? "+" : "") + x[3] + "%")); d.appendChild(mkEl("em", null, "상승 " + x[2] + "%")); gg.appendChild(d); });
-          sec.appendChild(gg);
+        sec.appendChild(mkEl("div", "ovNote", "큰 글씨는 평균 수익률, 작은 글씨는 오른 비율"));
+        if (st.bk && st.bk.some((b) => b.n)) {                                    // RSI 구간별은 접어둠
+          const dt = mkEl("details", "anMore"); dt.appendChild(mkEl("summary", null, "RSI 구간별 자세히"));
+          const mid = hs.slice(1, 3), pre = mkEl("div", "afN"); pre.style.whiteSpace = "pre-line";
+          pre.textContent = "오른 비율(평균) · " + mid.map((h) => h + u + " 뒤").join(" / ") + "\n" +
+            st.bk.filter((b) => b.n).map((b) => "RSI " + (b.lo === 0 ? "20 미만" : b.lo + "~" + b.hi) + " (" + b.n + u + "): " + mid.map((h) => { const x = b.r.find((y) => y[0] === h); return x && x[1] ? x[2] + "% (" + pc(x[3]) + ")" : "-"; }).join(" / ")).join("\n") +
+            (rows.length ? "\n가장 나빴던 때: " + rows[rows.length - 2 >= 0 ? rows.length - 2 : 0].h + u + " 뒤 " + rows[rows.length - 2 >= 0 ? rows.length - 2 : 0].worst + "%" : "") + "\n과거 기록일 뿐이에요.";
+          dt.appendChild(pre); sec.appendChild(dt);
         }
-        if (st.bk && st.bk.some((b) => b.n)) {
-          const tb = mkEl("div", "afN"); tb.style.marginTop = "10px"; tb.style.whiteSpace = "pre-line";
-          const hs = st.bk[0].r.map((x) => x[0]), mid = hs.slice(1, 3);
-          tb.textContent = "RSI 구간별 · 오른 비율(평균) — " + mid.map((h) => h + u + " 뒤").join(" / ") + "\n" +
-            st.bk.filter((b) => b.n).map((b) => "RSI " + (b.lo === 0 ? "20 미만" : b.lo + "~" + b.hi) + " (" + b.n + u + "): " + mid.map((h) => { const x = b.r.find((y) => y[0] === h); return x && x[1] ? x[2] + "% (" + (x[3] >= 0 ? "+" : "") + x[3] + "%)" : "-"; }).join(" / ")).join("\n");
-          sec.appendChild(tb);
-        }
-        const w2 = rows[rows.length - 2] || rows[rows.length - 1];
-        sec.appendChild(mkEl("div", "afN", "가장 나빴던 때는 " + w2.h + u + " 뒤 " + w2.worst + "%였어요. 과거 기록일 뿐이에요."));
         box.appendChild(sec);
       });
       if (box.children.length) box.style.display = "block";
