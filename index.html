@@ -1938,8 +1938,15 @@
         add("rect", { x: X(i) - bw / 2, y: Math.min(Y(d.o[i]), Y(d.c[i])), width: bw, height: Math.max(1, Math.abs(Y(d.o[i]) - Y(d.c[i]))), fill: hollow ? "none" : col, stroke: col, "stroke-width": 1 });
       }
       if (idx.length) add("text", { x: X(idx[0]) + 2, y: Y(d.lo[idx[0]]) + 11, fill: cLo, "font-size": 9, "font-weight": "bold" }, "하단");
+      let zone = 0;                                                                  // 종가가 하단 아래인 봉 = '과거엔 이 구간에서 사면 대체로 올랐던' 구간 → 캔들 아래에 작은 ▲
+      for (let i = 0; i < n; i++) if (d.lo[i] != null && d.lo[i] > 0 && d.c[i] < d.lo[i]) { zone++; const x = X(i), y = Y(d.l[i]) + 5; add("polygon", { points: (x - 3.5) + "," + (y + 6) + " " + (x + 3.5) + "," + (y + 6) + " " + x + "," + y, fill: cLo }); }
       if (d.c[last] < lw) add("circle", { cx: X(last), cy: Y(d.c[last]), r: 4, fill: "none", stroke: cLo, "stroke-width": 1.5 });
       box.appendChild(svg);
+      if (zone) {
+        const st = d.kind === "w" ? "13주 뒤 평균 +9%, 승률 63%" : d.kind === "m" ? "6개월 뒤 평균 +14%, 승률 66%" : "60거래일 뒤 평균 +7.5%, 승률 58%";
+        const nt = mkEl("div", "bbSum", "▲ 하단 아래 구간 · 과거 미국 대형주 통계: " + st + ". 다만 저점을 한 번 더 깨는 경우가 많아(일봉 90%) 나눠서 사는 쪽이 안전해요. 매수 신호가 아니라 참고용이에요.");
+        nt.style.cssText = "font-size:11px;margin-top:4px;opacity:.85"; box.appendChild(nt);
+      }
     }
     function pickCard(x, showGroup, rank) {
       const c = mkEl("div", "pkCard pkRow");
@@ -3128,6 +3135,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "볼린저 차트: 종가가 하단 아래인 봉에 ▲ 표시 + 과거 통계 한 줄 (참고용, 매수 신호 아님)",
         "'과매도 뒤 성적'에 지금 RSI 근처였을 때 며칠 뒤 올랐는지, RSI 구간별 표 추가",
         "'과매도 뒤 성적'은 일봉 또는 주봉 RSI가 30 이하일 때만 보여줘요 (주봉 성적도 추가)",
         "볼린저 차트: 하단에 아직 안 닿았으면 '하단까지 N% 더 내려가면 닿아요'를 보여줘요",
