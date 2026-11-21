@@ -1957,7 +1957,9 @@
           const top = d.l[bi], bot = top * (1 + d.dm), x0 = X(bi) - bw, x1 = W - R;
           add("rect", { x: x0, y: Y(top), width: x1 - x0, height: Math.max(2, Y(Math.max(bot, lo)) - Y(top)), fill: cbm ? "rgba(77,163,255,0.13)" : "rgba(80,200,120,0.13)", stroke: cbm ? "#4da3ff" : "#3cb371", "stroke-width": 1, "stroke-dasharray": "3 2", rx: 2 });
           add("text", { x: x1 - 3, "text-anchor": "end", y: Math.max(T + 9, Y(top) - 4), fill: cbm ? "#4da3ff" : "#3cb371", "font-size": 9, "font-weight": "bold" }, "단기 매수구간 $" + fmt(bot) + "~" + fmt(top));
-          bx = { top: top, bot: bot, vr: d.vr[bi] };
+          let cf = -1; for (let j = bi + 1; j < n; j++) if (d.c[j] > d.h[j - 1]) { cf = j; break; }      // 반전 확인: 종가가 바로 전 캔들 고점을 넘은 첫 봉
+          if (cf >= 0) add("text", { x: X(cf), y: Math.min(H - B - 14, Y(d.l[cf]) + 20), fill: cbm ? "#ffd43b" : "#3cb371", "font-size": 12, "font-weight": "bold", "text-anchor": "middle" }, "✓");
+          bx = { top: top, bot: bot, vr: d.vr[bi], cf: cf, need: d.h[n - 1] };
         }
       }
       let zone = 0;                                                                  // 종가가 하단 아래인 봉 = '과거엔 이 구간에서 사면 대체로 올랐던' 구간 → 캔들 아래에 작은 ▲
@@ -1966,12 +1968,13 @@
       box.appendChild(svg);
       const brief = [];
       if (bx) brief.push("🟩 박스: 가장 크게 터진 거래량(" + bx.vr + "배) 봉이 하단을 건드렸어요. 아래끝 $" + fmt(bx.bot) + " (이 종목은 보통 하단보다 " + Math.abs(d.dm * 100).toFixed(0) + "%까지 더 내려갔어요)");
+      if (bx) brief.push(bx.cf >= 0 ? "✓ 반전 확인: " + new Date(d.t[bx.cf] * 1000).toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" }) + " 종가가 전 캔들 고점을 넘었어요" : "⏳ 반전 확인 전: 종가가 전 캔들 고점 $" + fmt(d.h[n - 1]) + " 위로 마감하면 ✓");
       if (zone) brief.push("▲ 하단 아래 봉 · 참고용 (매수 신호 아님)");
       if (brief.length) {
         const nb = mkEl("div", "bbSum", brief.join("\n")); nb.style.cssText = "font-size:11.5px;margin-top:6px;white-space:pre-line;opacity:.9"; box.appendChild(nb);
         const st = d.kind === "w" ? "13주 뒤 평균 +9%, 승률 63%" : d.kind === "m" ? "6개월 뒤 평균 +14%, 승률 66%" : "60거래일 뒤 평균 +7.5%, 승률 58%";
         const dt = mkEl("details", "anMore"); dt.appendChild(mkEl("summary", null, "기준·통계 자세히"));
-        const body = mkEl("div", "ovNote", "박스 기준: 이 차트(90봉)에서 거래량이 상위 15%이면서 중앙값의 1.4배 이상인 봉 중, 최근 40봉 중 저가가 볼린저 하단 이하인 봉들 가운데 거래량이 가장 큰 봉.\n박스 위쪽 끝은 그 거래량 큰 봉의 저가, 아래쪽 끝은 이 종목이 과거 5년간 하단 이탈 뒤 60일 안에 하단보다 더 내려간 폭의 중앙값만큼 아래" + (d.dm != null ? " (" + (d.dm * 100).toFixed(1) + "%, 4분의 1은 " + (d.d75 * 100).toFixed(1) + "% 이상, " + d.dn + "번 기준)" : "") + ". 그 아래로 내려가면 평소보다 깊은 하락이에요.\n▲ 과거 미국 대형주 통계: " + st + ". 저점을 한 번 더 깨는 경우가 많아(일봉 90%) 나눠서 사는 쪽이 안전해요.");
+        const body = mkEl("div", "ovNote", "박스 기준: 이 차트(90봉)에서 거래량이 상위 15%이면서 중앙값의 1.4배 이상인 봉 중, 최근 40봉 중 저가가 볼린저 하단 이하인 봉들 가운데 거래량이 가장 큰 봉.\n박스 위쪽 끝은 그 거래량 큰 봉의 저가, 아래쪽 끝은 이 종목이 과거 5년간 하단 이탈 뒤 60일 안에 하단보다 더 내려간 폭의 중앙값만큼 아래" + (d.dm != null ? " (" + (d.dm * 100).toFixed(1) + "%, 4분의 1은 " + (d.d75 * 100).toFixed(1) + "% 이상, " + d.dn + "번 기준)" : "") + ". 그 아래로 내려가면 평소보다 깊은 하락이에요.\n✓ 반전 확인: 기준 봉 이후 종가가 바로 전 캔들 고점을 처음 넘은 봉. 과거 검증(미국 대형주 10년)에서는 이 확인을 기다려도 60일 승률이 같았고(58~59%) 평균은 오히려 낮아서, 승률을 높이는 신호가 아니라 '반등이 시작됐는지 보는 표시'예요.\n▲ 과거 미국 대형주 통계: " + st + ". 저점을 한 번 더 깨는 경우가 많아(일봉 90%) 나눠서 사는 쪽이 안전해요.");
         body.style.whiteSpace = "pre-line"; dt.appendChild(body); box.appendChild(dt);
       }
     }
@@ -3163,6 +3166,7 @@
     // 새 소식은 배열 맨 위에 추가하세요. id가 바뀌면 탭에 빨간 점이 떠요.
     const NOTES = [
       { id: "2026-11-17", date: "11월 17일", title: "업데이트", items: [
+        "볼린저 일봉: 박스 기준 봉 뒤에 종가가 전 캔들 고점을 넘으면 ✓ 반전 확인 표시 (과거 검증상 승률은 그대로 — 확인용)",
         "볼린저 일봉: 차트에서 거래량이 삐죽 튀어나온 봉이 하단 아래에 있으면 '단기 매수구간' 박스 + 바닥에 거래량 막대 (아래끝 = 이 종목이 과거 하단 이탈 뒤 더 내려간 폭의 중앙값)",
         "종목 분석: '과매도 뒤 성적(RSI)'을 차트 바로 아래로 옮겼어요",
         "볼린저 차트: 종가가 하단 아래인 봉에 ▲ 표시 + 과거 통계 한 줄 (참고용, 매수 신호 아님)",
