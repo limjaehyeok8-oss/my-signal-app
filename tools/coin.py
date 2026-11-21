@@ -8,8 +8,11 @@ LEV = set()
 R = {e: {m: [] for m in ("즉시", "꼬리가 전 캔들 고점 돌파", "꼬리가 기준봉 고점 돌파(40일)", "종가가 기준봉 고점 돌파(40일)")} for e in "AB"}
 for t0 in SYMS:
     part = [t0]
-    try: df = yf.download(part[0], period="max", interval="1d", auto_adjust=False, progress=False, group_by="ticker", threads=True); df = {part[0]: df.droplevel(1, axis=1) if hasattr(df.columns, 'nlevels') and df.columns.nlevels > 1 else df}
-    except Exception: continue
+    try:
+        d0 = yf.download(part[0], period="max", interval="1d", auto_adjust=False, progress=False)
+        d0.columns = [c[0] if isinstance(c, tuple) else c for c in d0.columns]; df = {part[0]: d0}
+        print("RES 받은 봉", part[0], len(d0), d0.index[0].date())
+    except Exception as ex: print("RES 오류", ex); continue
     for t in part:
         if t in LEV: continue
         try:
@@ -35,7 +38,7 @@ for t0 in SYMS:
                         if f3 is None and c[j] > h[k]: f3 = j
                     for key, f in (("꼬리가 전 캔들 고점 돌파", f1), ("꼬리가 기준봉 고점 돌파(40일)", f2), ("종가가 기준봉 고점 돌파(40일)", f3)):
                         if f is not None and f + 60 < n: R[e][key].append(res(f))
-        except Exception: pass
+        except Exception as ex: print('RES 처리오류', t, repr(ex))
 for e, lab in [("A", "볼밴 하단 이탈 첫날"), ("B", "거래량 큰 봉이 하단 터치")]:
     N = len(R[e]["즉시"]); print("RES (BTC+ETH 일봉) ===== %s: 이벤트 %d건" % (lab, N))
     for m in ("즉시", "꼬리가 전 캔들 고점 돌파", "꼬리가 기준봉 고점 돌파(40일)", "종가가 기준봉 고점 돌파(40일)"):
