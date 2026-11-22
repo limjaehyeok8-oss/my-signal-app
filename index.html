@@ -4232,6 +4232,7 @@
       const txt = mkEl("div", "anText"); txt.appendChild(mkEl("div", "skel")); card.appendChild(txt);
       const img = document.createElement("img"); img.alt = "차트"; img.style.display = "none"; card.appendChild(img);
       box.appendChild(card);
+      if (sym === "BTC") loadBtcBottom(card);
       let shown = false;
       const show = (t) => { if (shown || coinSel !== sym) return; shown = true; renderAnalysis(txt, t); };
       const fail = (m) => { if (shown || coinSel !== sym) return; txt.textContent = ""; txt.appendChild(mkEl("div", "alertHint", m || "이 코인은 분석 데이터를 찾지 못했어요.")); };
@@ -4242,6 +4243,26 @@
         show(r.text);
         if (r.image) { img.src = "data:image/png;base64," + r.image; img.style.display = "block"; }
       }).catch(() => fail());
+    }
+    // ₿ 바닥 구간 접근 지표 (200주선·Pi Cycle) — 참고용, 매수 신호 아님
+    function loadBtcBottom(card) {
+      const b = mkEl("div", "coinVal"); b.style.cssText = "margin:8px 0;padding:10px 12px;border:1px solid var(--line,#ddd);border-radius:10px";
+      b.appendChild(mkEl("div", "mkTop", "₿ 바닥 구간 지표 불러오는 중…")); card.insertBefore(b, card.children[2] || null);
+      api({ action: "getBtcBottom", token: myToken }).then((r) => {
+        b.textContent = "";
+        if (!r || !r.ok) { b.appendChild(mkEl("div", "caNote", "바닥 구간 지표를 불러오지 못했어요.")); return; }
+        const usd = (v) => "$" + Math.round(v).toLocaleString("en-US"), gap = (r.ratio - 1) * 100;
+        const head = r.level === 2 ? "200주선 아래 — 역사적 바닥 구간" : r.level === 1 ? "바닥 구간 접근 중 (200주선 +10% 이내)" : "200주선보다 위 (" + gap.toFixed(1) + "%)";
+        b.appendChild(mkEl("div", "mkTop", "₿ " + head));
+        const rows = [
+          ["200주선", usd(r.w200) + " (현재가 " + (gap >= 0 ? "+" : "") + gap.toFixed(1) + "%)"],
+          ["Pi Cycle 바닥", (r.pi ? "켜짐 ✅" : "꺼짐") + " · 150일EMA " + usd(r.e150) + " / 기준 " + usd(r.piLine)],
+          ["마이어 배수", r.mayer.toFixed(2) + " (0.7 미만이면 과매도권)"],
+          ["고점 대비", (r.dd * 100).toFixed(1) + "%"]
+        ];
+        rows.forEach((x) => { const t = mkEl("div", "mkTop"); t.appendChild(mkEl("span", null, x[0])); t.appendChild(mkEl("span", null, x[1])); b.appendChild(t); });
+        b.appendChild(mkEl("div", "mkTip", "참고용 지표이며 매수 신호가 아니에요. 표본이 3~4번 사이클뿐이고, 2022년엔 200주선 첫 도달 후 29% 더 내렸어요. 200주선에 닿거나 Pi Cycle이 켜지면 자동으로 알림이 와요."));
+      }).catch(() => { b.textContent = ""; b.appendChild(mkEl("div", "caNote", "바닥 구간 지표를 불러오지 못했어요.")); });
     }
     function openCoin(sym) {
       coinSel = sym; $("coinQ").value = ""; $("coinSug").style.display = "none"; renderCoinFav();

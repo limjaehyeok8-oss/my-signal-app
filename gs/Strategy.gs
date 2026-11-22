@@ -48,6 +48,7 @@ function handleExtra(data) {
   if (data.action === "getCoins")      return getCoins(token);
   if (data.action === "getCoinMarkets") return getCoinMarkets(token);
   if (data.action === "getCoinDetail") return getCoinDetail(token, data.sym);
+  if (data.action === "getBtcBottom")  return getBtcBottom(token);
   if (data.action === "getBot")        return getBot(token);
   if (data.action === "getPostImage")  return getPostImage(token, data.id);
   if (data.action === "notifyComm")    return notifyComm(token, data.id);
