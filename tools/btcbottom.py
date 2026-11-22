@@ -6,7 +6,7 @@ def cm():
     url=f"{base}?assets=btc&metrics=PriceUSD,CapMVRVCur,CapMrktCurUSD,CapRealUSD&frequency=1d&start_time=2010-07-18&page_size=10000"
     rows=[]
     while url:
-        d=json.load(urllib.request.urlopen(url,timeout=60))
+        d=json.load(urllib.request.urlopen(urllib.request.Request(url,headers={"User-Agent":"Mozilla/5.0 (compatible; research-script)","Accept":"application/json"}),timeout=60))
         rows+=d["data"]; url=d.get("next_page_url")
     df=pd.DataFrame(rows)
     df["time"]=pd.to_datetime(df["time"]).dt.tz_localize(None).dt.normalize()
@@ -62,6 +62,14 @@ keys=[k for k in ind if not k.startswith("_")]
 cnt=sum(ind[k].fillna(False).astype(int) for k in keys if "+15%" not in k and "−" not in k and "<0.6" not in k and "-75%" not in k and "<0.8" not in k and "<0" not in k.replace("<0.","")  )
 ind["_합성(위 지표 중 3개 이상)"]=cnt>=3
 
+print("\n[현재 상태]")
+print(" 종가",round(p.iloc[-1]),"/ 200주선(1400일 SMA)",round(w200.iloc[-1]),"/ 종가÷200주선",round(p.iloc[-1]/w200.iloc[-1],3))
+print(" 파이사이클: 150EMA",round(p.ewm(span=150,adjust=False).mean().iloc[-1]),"/ 0.745×471SMA",round(0.745*sma(471).iloc[-1]),"/ 신호",bool(pic.iloc[-1]))
+print(" 메이어배수",round(may.iloc[-1],3),"/ ATH대비",round(dd.iloc[-1]*100,1),"% / 주봉RSI",round(float(rsi.iloc[-1]),1))
+if onchain:
+    print(" MVRV",round(float(df['CapMVRVCur'].iloc[-1]),3),"/ 실현가격(종가÷MVRV)",round(float(p.iloc[-1]/df['CapMVRVCur'].iloc[-1])))
+    try: print(" MVRV Z",round(float(z.iloc[-1]),3))
+    except Exception: pass
 # 사이클 저점 (종가 기준)
 cyc={"2011":("2011-06-01","2012-06-01"),"2015":("2013-12-01","2015-12-31"),"2018":("2017-12-15","2019-06-30"),"2022":("2021-11-01","2023-06-30"),"2026":("2025-10-01","2026-12-31")}
 bottom={}
