@@ -1,7 +1,7 @@
 {
-  "updated": "2026-11-23T08:14:44+09:00",
+  "updated": "2026-11-24T08:23:42+09:00",
   "sentiment": {
-    "score": 9,
+    "score": 16,
     "rating": "extreme fear",
     "label": "😱 극공포"
   },
@@ -33,46 +33,54 @@
   },
   "macro": {
     "lines": [
-      "10년물 금리 4.91% (-14bp) · ⚠️ 위험 구간",
-      "VIX 35.9 · ⚠️ 변동성 확대",
-      "WTI $83.41 (-0.68%) · 정상",
-      "금 $3,515 (+0.00%) / 달러인덱스 103.82 (+0.01%)",
-      "종합: 일부 경계 신호 (2개)"
+      "10년물 금리 4.92% (+1bp) · ⚠️ 위험 구간",
+      "VIX 26.6 · ⚠️ 변동성 확대",
+      "WTI $80.30 (-4.38%) · 정상",
+      "금 $3,631 (+3.28%) / 달러인덱스 104.32 (+0.49%)",
+      "🚨 종합: 위험자산 비우호적 (경계 5개)"
     ],
-    "score": 2
+    "score": 5
   },
   "strong": [
     {
       "symbol": "WMT",
-      "text": "WMT  3개월 +20.2%"
+      "text": "WMT  3개월 +23.0%"
     },
     {
       "symbol": "PG",
-      "text": "PG  3개월 +16.3%"
+      "text": "PG  3개월 +17.4%"
     },
     {
       "symbol": "COST",
-      "text": "COST  3개월 +13.6%"
+      "text": "COST  3개월 +14.5%"
     },
     {
       "symbol": "BRK-B",
-      "text": "BRK-B  3개월 +13.0%"
+      "text": "BRK-B  3개월 +13.5%"
     },
     {
-      "symbol": "CME",
-      "text": "CME  3개월 +10.7%"
+      "symbol": "LLY",
+      "text": "LLY  3개월 +10.7%"
     }
   ],
   "value": {
-    "total": 37,
+    "total": 36,
     "items": [
       {
-        "symbol": "SMCI",
+        "symbol": "MU",
         "star": true
       },
       {
         "symbol": "TPL",
         "star": true
+      },
+      {
+        "symbol": "SMCI",
+        "star": true
+      },
+      {
+        "symbol": "MPC",
+        "star": false
       },
       {
         "symbol": "APTV",
@@ -83,27 +91,13 @@
         "star": true
       },
       {
-        "symbol": "WDC",
-        "star": true
-      },
-      {
-        "symbol": "STX",
-        "star": true
-      },
-      {
-        "symbol": "NVDA",
-        "star": true
+        "symbol": "VLO",
+        "star": false
       }
     ]
   },
-  "insider": [
-    "TSMC(TSM): Dir / +$500,039 매수",
-    "TSMC(TSM): VP / +$302,850 매수"
-  ],
-  "weeklyHA": {
-    "items": [],
-    "failed": 2
-  },
+  "insider": [],
+  "weeklyHA": null,
   "earnings": [],
   "earnCal": [
     {
@@ -111,13 +105,6 @@
       "s": "DELL",
       "n": "델",
       "g": "서버·장비",
-      "t": ""
-    },
-    {
-      "d": "2026-12-01",
-      "s": "CRWD",
-      "n": "크라우드스트라이크",
-      "g": "소프트웨어",
       "t": ""
     },
     {
