@@ -2491,9 +2491,9 @@
         haBox.addEventListener("click", (e) => e.stopPropagation());
         det.appendChild(haBox);
         const bbRow = mkEl("div"); bbRow.style.marginBottom = "8px"; bbRow.appendChild(bbPill(h.symbol)); bbRow.addEventListener("click", (e) => e.stopPropagation()); det.appendChild(bbRow);
-        const del = mkEl("button", "linkBtn", "이 종목 삭제");
+        const del = mkEl("button", "linkBtn", "이 종목 매도(삭제)");
         del.onclick = async () => {
-          if (!confirm(h.symbol + " 을(를) 보유 종목에서 삭제할까요?")) return;
+          if (!confirm(h.symbol + " 을(를) 매도 처리할까요?\n보유 종목에서 삭제되고, 친구들에게 수익률·평단·매도가 알림이 가요.\n(친구에게 숨긴 종목이면 알림이 가지 않아요)")) return;
           bbOffQuiet(h.symbol);
           const x = await api({ action: "removeHolding", token: myToken, symbol: h.symbol });
           if ((holdAl || {})[h.symbol]) { try { await api({ action: "setHoldAlert", token: myToken, symbol: h.symbol, target: "", stop: "" }); } catch (e) {} }
@@ -2506,7 +2506,7 @@
           ["📈 분석 보기", () => { symbolEl.value = h.symbol; analyze(h.symbol); window.scrollTo({ top: 0, behavior: "smooth" }); }],
           ["🎯 목표가·손절가 알림", () => { det.style.display = "block"; wrap.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => inT.focus(), 300); }],
           ["🔔 알림 전략 바꾸기", () => { det.style.display = "block"; wrap.scrollIntoView({ behavior: "smooth", block: "center" }); }],
-          ["🗑 보유 종목에서 삭제", () => del.onclick(), true]
+          ["📤 매도(삭제)", () => del.onclick(), true]
         ]));
         card.appendChild(wrap);
       });

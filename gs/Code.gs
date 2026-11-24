@@ -48,7 +48,7 @@ function doPost(e) {
     if (data.action === "register")      return json(registerToken(token));
     if (data.action === "setPaused")     return json(setPaused(token, data.paused));
     if (data.action === "addHolding")    return json(addHolding(token, data.symbol, data.avgPrice));
-    if (data.action === "removeHolding") return json(removeHolding(token, data.symbol));
+    if (data.action === "removeHolding") return json(removeHolding(token, data.symbol, data.quiet === true));
     if (data.action === "listHoldings")  return json(listHoldings(token));
     if (data.action === "search")        return json(searchSymbols(token, data.query));
     if (data.action === "analyze")       return json(analyzeCachedWeb(token, data.ticker, data.cb === 1, data.wb === 1));
@@ -373,21 +373,48 @@ function addHolding(token, symbol, avgPrice) {
   }
 }
 
-function removeHolding(token, symbol) {
+function removeHolding(token, symbol, quiet) {
   symbol = String(symbol || "").trim().toUpperCase();
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
+  var avg = 0, hidden = false;
   try {
     var sh = getHoldingsSheet(), removed = 0;
     for (var r = sh.getLastRow(); r >= 2; r--) {
-      var row = sh.getRange(r, 1, 1, 2).getValues()[0];
-      if (_dev(row[0]) === _dev(token) && row[1] === symbol) { sh.deleteRow(r); removed++; }
+      var row = sh.getRange(r, 1, 1, 6).getValues()[0];
+      if (_dev(row[0]) === _dev(token) && row[1] === symbol) {
+        if (Number(row[2]) > 0) avg = Number(row[2]);
+        if (row[5] === 1 || row[5] === "1") hidden = true;
+        sh.deleteRow(r); removed++;
+      }
     }
-    if (removed) return {ok: true, msg: symbol + " 삭제됨"};
-    return {ok: false, msg: "해당 종목이 없어요"};
+    if (!removed) return {ok: false, msg: "해당 종목이 없어요"};
   } finally {
     lock.releaseLock();
   }
+  var info = "";
+  try { info = _notifySell(token, symbol, avg, hidden, quiet); } catch (e) { try { runLog("err", "매도 알림 실패: " + e.message); } catch (e2) {} }
+  return {ok: true, msg: symbol + " 매도(삭제)됨" + info};
+}
+
+// 매도(삭제) 시 친구들에게 알림: 수익률·평단·매도가. 친구에게 숨긴 종목이면 보내지 않고, 평단 비공개면 평단은 뺌
+function _notifySell(token, symbol, avg, hidden, quiet) {
+  var px = null;
+  try { px = fetchPrices([symbol])[symbol]; } catch (e) {}
+  var pct = (avg > 0 && px != null) ? (px / avg - 1) * 100 : null;
+  var mine = px != null ? (" · 매도가 $" + Number(px).toFixed(2) + (pct != null ? " · 수익률 " + (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%" : "")) : "";
+  if (quiet || hidden) return mine;
+  var me = _myProfile(token), nm = me ? _displayName(me) : "친구";
+  var showAvg = !me || me.showAvg;
+  var title = "📤 " + nm + "님이 " + symbol + " 매도";
+  var body = (pct != null ? "수익률 " + (pct >= 0 ? "+" : "") + pct.toFixed(1) + "%" : "수익률 정보 없음") +
+    (showAvg && avg > 0 ? " · 평단 $" + avg.toFixed(2) : "") + (px != null ? " → 매도 $" + Number(px).toFixed(2) : "");
+  var cur = _watchCurTokens(), n = 0;
+  _friendDevs(token).forEach(function (d) {
+    var c = cur[d]; if (!c || c.paused) return;
+    sendToToken(c.t, title, body); n++;
+  });
+  return mine + (n ? " · 친구 " + n + "명에게 알림" : "");
 }
 
 function listHoldings(token) {
