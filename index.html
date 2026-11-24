@@ -895,6 +895,8 @@
     html[data-theme="light"] #actSheet .actBox { background: #fff; } html[data-theme="light"] #actSheet #actBtns button { background: #f2f4f8; }
     html[data-theme="light"] .buyPill, html[data-theme="light"] .buyForm input, html[data-theme="light"] .bbPill:not(.on) { background: #fff; }
 
+    #botBody .botHero { padding: 16px 18px; border-radius: 20px; } #botBody .botHero .bhBig { font-size: 18px; margin-top: 2px; } #botBody .botHero .bhRet { font-size: 30px; margin-top: 2px; } #botBody .botHero .bhVs { margin-top: 6px; font-size: 13px; }
+    #botBody .botCard { padding: 12px 16px; border-radius: 16px; } .botFold > summary { cursor: pointer; font-weight: 800; font-size: 14px; list-style: none; padding: 2px 0; } .botFold[open] > summary { margin-bottom: 10px; }
     .botNote { font-size: 12px; color: var(--sub); text-align: center; background: none; padding: 0 0 10px; margin: 0; }
     .botHero { background: var(--card2); border-radius: 24px; padding: 22px 20px; margin-bottom: 12px; }
     .botHero .bhLbl { font-size: 13px; color: var(--sub); }
@@ -1089,7 +1091,6 @@
       <div id="list"></div>
       <div class="ctaRow">
         <button id="pfBtn" class="pfCta"><span class="pfI">📋</span><span class="pfT">내 포트폴리오</span><span class="pfS">수익률·차트 보기</span></button>
-        <button id="botBtn" class="pfCta"><span class="pfI">🤖</span><span class="pfT">시뮬봇</span><span class="pfS" id="botBtnS">봇 성적 보기</span></button>
         <button id="allocBtn" class="pfCta" style="grid-column: 1 / -1"><span class="pfI">🧭</span><span class="pfT">월가식 자산배분</span><span class="pfS">올웨더 · 영구 · 60/40 · 내 비중 비교</span></button>
       </div>
 
@@ -1117,6 +1118,9 @@
         <button id="wAdd">추가</button>
       </div>
       <div id="wMsg" class="alertHint"></div>
+      <div class="secHead secDiv" style="margin-top:22px"><h3>🤖 시뮬봇</h3></div>
+      <div class="botNote">가상 매매예요. 실제 거래가 아니에요.</div>
+      <div id="botBody"></div>
       </div>
       </div>
       <div class="pg"><div id="todayRec"></div></div>
@@ -1155,11 +1159,6 @@
     </div>
   </div>
 
-  <div id="botView" class="botView">
-    <div class="botTop"><button id="botBack">← 뒤로</button><b>🤖 시뮬봇</b><span style="width:60px"></span></div>
-    <div class="botNote">가상 매매예요. 실제 거래가 아니에요.</div>
-    <div id="botBody"></div>
-  </div>
 
   <div id="iosPop">
     <div class="box">
@@ -4090,7 +4089,7 @@
           ["🗑 관심에서 빼기", () => del.onclick(), true]
         ]));
       });
-      applyBb(); loadBb(); loadExt();
+      applyBb(); loadBb(); loadExt(); try { loadBot(); } catch (e) {}
     }
     function loadWatch(fresh) {
       if (!myToken) return;
@@ -4303,10 +4302,10 @@
     let botSel = "w";
     const shr = (q) => (q == null ? "" : Number(q).toLocaleString("en-US", { maximumFractionDigits: 2 }) + "주");
     const won = (v) => Math.round(v).toLocaleString("ko-KR") + "원";
+    function botFold(title) { const d = mkEl("details", "botCard botFold"); d.appendChild(mkEl("summary", null, title)); return d; }
     function paintBot(r) {
       const body = $("botBody"); body.textContent = "";
       if (!r || !r.ok || !r.bots) { body.appendChild(mkEl("div", "alertHint", (r && r.msg) || "봇 정보를 불러오지 못했어요. 서버에 Bot 파일을 넣고 새 버전으로 배포했는지 확인하세요.")); return; }
-      $("botBtnS").textContent = r.bots.map((x) => x.name.split(" ")[0] + " " + (x.started ? bPct(x.ret) : "시작 전")).join(" · ");
       const chips = mkEl("div", "pkChips"); chips.style.margin = "0 0 12px";
       r.bots.forEach((x) => { const ch = mkEl("button", "pkChip" + (x.id === botSel ? " on" : ""), x.name); ch.onclick = () => { botSel = x.id; paintBot(r); }; chips.appendChild(ch); });
       body.appendChild(chips);
@@ -4331,7 +4330,7 @@
       }
 
       // 3) 그래프
-      const c2 = mkEl("div", "botCard"); c2.appendChild(mkEl("h4", null, "수익률 비교")); c2.appendChild(botChart(b.eq)); body.appendChild(c2);
+      const c2 = botFold("📈 수익률 비교 그래프"); c2.appendChild(botChart(b.eq)); body.appendChild(c2);
 
       // 4) 보유 종목
       const c3 = mkEl("div", "botCard"); c3.appendChild(mkEl("h4", null, "보유 종목 " + b.pos.length + " / " + b.max + "  ·  현금 " + Math.round(b.cash / 10000).toLocaleString("ko-KR") + "만원"));
@@ -4344,13 +4343,13 @@
       body.appendChild(c3);
 
       // 5) 성적표
-      const c4 = mkEl("div", "botCard"); c4.appendChild(mkEl("h4", null, "성적표"));
+      const c4 = botFold("🏆 성적표");
       const g2 = mkEl("div", "botGrid");
       [["승률", b.stat.n ? Math.round(b.stat.win / b.stat.n * 100) + "%" : "-", b.stat.n ? b.stat.win + "승 " + (b.stat.n - b.stat.win) + "패" : ""], ["평균 수익", b.stat.n ? bPct(b.stat.avgWin) : "-", "이길 때"], ["평균 손실", b.stat.n ? bPct(b.stat.avgLoss) : "-", "질 때"], ["최대 낙폭", "-" + b.stat.mdd.toFixed(1) + "%", "가장 크게 빠진 폭"]].forEach(([k, v, sub]) => { const d = mkEl("div"); d.appendChild(mkEl("span", null, k)); d.appendChild(mkEl("b", null, v)); if (sub) d.appendChild(mkEl("em", null, sub)); g2.appendChild(d); });
       c4.appendChild(g2); body.appendChild(c4);
 
       // 6) 매매 일지 (최근 5건 + 더보기)
-      const c5 = mkEl("div", "botCard"); c5.appendChild(mkEl("h4", null, "매매 일지"));
+      const c5 = botFold("📒 매매 일지 (" + b.log.length + ")");
       if (!b.log.length) c5.appendChild(mkEl("div", "alertHint", "아직 매매가 없어요."));
       const addLog = (x) => { const row = mkEl("div", "botRow"); row.appendChild(mkEl("span", "bpTag " + (x.t === "buy" ? "buy" : "sell"), x.t === "buy" ? "매수" : "매도")); const l = mkEl("div", "bpL"); l.appendChild(mkEl("b", null, x.s + (x.q != null ? "  " + shr(x.q) : "") + "  @$" + x.px)); l.appendChild(mkEl("span", "sub", x.d.slice(5).replace("-", "/") + " · " + x.why)); row.appendChild(l); return row; };
       const shown = b.log.slice(0, 5); shown.forEach((x) => c5.appendChild(addLog(x)));
@@ -4362,14 +4361,13 @@
       det.appendChild(mkEl("p", null, b.desc)); det.appendChild(mkEl("p", null, "시작 " + won(b.startCash) + " · 최대 " + b.max + "종목 · 신호 다음 장 시가 체결 · 비용 " + b.fee + "%씩 · 환율 반영"));
       body.appendChild(det);
     }
-    function closeBot() { $("botView").style.display = "none"; $("setView").style.display = "none"; $("alertView").style.display = "none"; }
-    $("botBtn").onclick = () => {
-      if (!myToken) { alert("먼저 '알림 받기'로 등록하세요"); return; }
-      $("botView").style.display = "block"; history.pushState({ bot: 1 }, "");
+    function closeBot() { $("setView").style.display = "none"; $("alertView").style.display = "none"; }
+    function loadBot() {
+      if (!myToken) return;
       const cb = lsGet("sigBot"); if (cb) paintBot(cb); else $("botBody").textContent = "불러오는 중…";
       api({ action: "getBot", token: myToken }).then((r) => { if (r && r.ok) lsSet("sigBot", r); paintBot(r); }).catch(() => { if (!cb) paintBot(null); });
-    };
-    $("botBack").onclick = () => history.back();
+    }
+    loadBot();
     // ===== 설정 · 화면 모드 =====
     function applyTheme(m) {
       const t = m === "auto" ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : m;
