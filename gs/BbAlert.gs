@@ -10,12 +10,12 @@ var BB_NAME = {d: "일봉", w: "주봉"};
 
 function _bbSheet() {
   var ss = getSheet().getParent(), sh = ss.getSheetByName(BB_SHEET);
-  if (!sh) { sh = ss.insertSheet(BB_SHEET); sh.getRange(1, 1, 1, 5).setValues([["token", "symbol", "state", "firedAt", "kind"]]); }
+  if (!sh) { sh = ss.insertSheet(BB_SHEET); sh.getRange(1, 1, 1, 6).setValues([["token", "symbol", "state", "firedAt", "kind", "manual"]]); }
   return sh;
 }
 function _bbRows() {
   var sh = _bbSheet(), last = sh.getLastRow();
-  return last < 2 ? [] : sh.getRange(2, 1, last - 1, 5).getValues();
+  return last < 2 ? [] : sh.getRange(2, 1, last - 1, 6).getValues();
 }
 function _bbKind(v) { return String(v) === "w" ? "w" : "d"; }
 
@@ -32,6 +32,15 @@ function getBbAlerts(token) {
 
 // 켜기/끄기 (kind: "d" 일봉 / "w" 주봉). 켤 때는 지금 하단 가격을 같이 알려줘요.
 function setBbAlert(token, symbol, on, kind) {
+  if (kind === "b") {                                      // 분석·추천 화면의 단일 버튼: 일봉+주봉 같이
+    var a = _setBbOne(token, symbol, on, "d"), b = a.ok ? _setBbOne(token, symbol, on, "w") : a;
+    if (!a.ok || !b.ok) return a.ok ? b : a;
+    var on2 = on === true || on === "true" || on === 1 || on === "1";
+    return {ok: true, on: on2, msg: String(symbol).toUpperCase() + (on2 ? " 볼린저·거래량 알림을 켰어요 (일봉·주봉)" : " 볼린저·거래량 알림을 껐어요")};
+  }
+  return _setBbOne(token, symbol, on, kind);
+}
+function _setBbOne(token, symbol, on, kind) {
   if (!isRegistered(token)) return {ok: false, msg: "먼저 '알림 받기'로 등록하세요"};
   symbol = String(symbol || "").trim().toUpperCase();
   if (!/^[A-Z0-9.\-]{1,12}$/.test(symbol)) return {ok: false, msg: "티커를 확인하세요"};
@@ -47,7 +56,7 @@ function setBbAlert(token, symbol, on, kind) {
     var sh = _bbSheet(), rows = _bbRows(), me = _dev(token), mine = 0, found = -1;
     for (var i = 0; i < rows.length; i++) {
       if (rows[i][0] && _dev(rows[i][0]) === me) {
-        mine++;
+        if (String(rows[i][5]) !== "a") mine++;
         if (String(rows[i][1]).toUpperCase() === symbol && _bbKind(rows[i][4]) === kind) found = i;
       }
     }
@@ -58,7 +67,7 @@ function setBbAlert(token, symbol, on, kind) {
     if (found >= 0) return {ok: true, on: true, msg: symbol + " " + nm + " 볼린저 알림이 이미 켜져 있어요"};
     if (mine >= BB_MAX) return {ok: false, msg: "볼린저 알림은 " + BB_MAX + "개까지 켤 수 있어요"};
     var b = _bbBands(info, kind), below = _bbState(b);     // 이미 하단 아래면 지금 단계부터 기록 → 더 깊어질 때부터 알림
-    sh.appendRow([token, symbol, below, "", kind]);
+    sh.appendRow([token, symbol, below, "", kind, "m"]);
     var m = symbol + " " + nm + " 볼린저 하단 알림을 켰어요";
     if (b) m += " · 하단 $" + b.lower.toFixed(2) + " (괴리율 " + _bbGap(b) + ")";
     if (below) m += "\n지금 이미 하단 아래예요. 괴리율이 " + BB_STEP + "%씩 더 깊어질 때마다 알려드려요";
@@ -173,13 +182,13 @@ function _bbSync() {
   rows.forEach(function (r, i) {
     if (!r[0] || !r[1]) { del.push(i + 2); return; }
     var key = _dev(r[0]) + "|" + String(r[1]).toUpperCase() + "|" + _bbKind(r[4]);
-    if (!want[key] || have[key]) del.push(i + 2); else have[key] = 1;
+    if (have[key] || (!want[key] && String(r[5]) === "a")) del.push(i + 2); else have[key] = 1;
   });
   var lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
     del.sort(function (a, b) { return b - a; }).forEach(function (rw) { sh.deleteRow(rw); });
     var out = [];
-    for (var key in want) if (!have[key]) { var w = want[key]; out.push([w.t, w.s, 0, "", w.k]); }
+    for (var key in want) if (!have[key]) { var w = want[key]; out.push([w.t, w.s, 0, "", w.k, "a"]); }
     if (out.length) sh.getRange(sh.getLastRow() + 1, 1, out.length, 5).setValues(out);
   } finally { lock.releaseLock(); }
 }

@@ -3902,18 +3902,30 @@
     }
     // 📉 볼린저 하단 알림 — 일봉·주봉 (보유·관심 종목에 자동 적용)
     var bbMap = {};
-    const BB_KINDS = [["d", "일봉"], ["w", "주봉"]];
-    function paintBbPill(b) { const on = !!(bbMap[b.dataset.bb] && bbMap[b.dataset.bb][b.dataset.k]); b.classList.toggle("on", on); b.textContent = "📉 볼린저 " + b.dataset.kn + (on ? " 켜짐" : ""); }
+    // 볼린저(일봉·주봉)·거래량 알림: 보유·관심 종목은 자동(안내 문구만), 분석·추천 화면에서는 버튼 하나로 켜고 끔
+    function paintBbPill(b) { const m = bbMap[b.dataset.bb], on = !!(m && (m.d || m.w)); b.classList.toggle("on", on); b.textContent = "📉 볼린저·거래량 알림" + (on ? " 켜짐" : ""); }
     function applyBb() { document.querySelectorAll(".bbPill").forEach(paintBbPill); }
     function loadBb(fresh) {
       if (!myToken) return;
       if (fresh) Object.keys(apiMemo).forEach((k) => { if (k.indexOf("getBbAlerts") > -1) delete apiMemo[k]; });
       api({ action: "getBbAlerts", token: myToken }).then((r) => { if (r && r.ok && r.map) { bbMap = r.map; applyBb(); } }).catch(() => {});
     }
-    // 볼린저(일봉·주봉)·거래량 알림은 종목을 추가하면 자동으로 켜져요 → 버튼 없이 안내 문구만 (show=true일 때)
-    function bbPill(sym, show) {
-      if (!show) return document.createDocumentFragment();
-      const t = mkEl("span", "bbAuto", "📉 볼린저·거래량 알림 자동"); t.style.cssText = "display:inline-block;margin:6px 0 0 6px;font-size:11.5px;color:var(--sub)"; return t;
+    function bbPill(sym, auto) {
+      if (auto) { const t = mkEl("span", "bbAuto", "📉 볼린저·거래량 알림 자동"); t.style.cssText = "display:inline-block;margin:6px 0 0 6px;font-size:11.5px;color:var(--sub)"; return t; }
+      const wrap = mkEl("span", "bbWrap"), msg = mkEl("span", "bbMsg"), b = mkEl("button", "bbPill"); b.dataset.bb = sym; paintBbPill(b);
+      b.onclick = async (e) => {
+        e.stopPropagation();
+        if (!myToken) { msg.textContent = "먼저 '알림 받기'로 등록하세요"; return; }
+        const m = bbMap[sym], want = !(m && (m.d || m.w)); b.disabled = true; msg.textContent = want ? "켜는 중…" : "끄는 중…";
+        try {
+          const r = await api({ action: "setBbAlert", token: myToken, symbol: sym, on: want, kind: "b" });
+          msg.textContent = (r && r.msg) || "처리하지 못했어요";
+          if (r && r.ok) { if (want) bbMap[sym] = { d: 1, w: 1 }; else delete bbMap[sym]; applyBb(); }
+        } catch (err) { msg.textContent = "오류가 났어요"; }
+        b.disabled = false;
+      };
+      wrap.appendChild(b); wrap.appendChild(msg);
+      return wrap;
     }
     function bbOffQuiet() {}                                    // 서버가 보유·관심 목록에 맞춰 알아서 정리해요
     // 보유 종목 목표가·손절가 알림
