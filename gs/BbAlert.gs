@@ -32,13 +32,29 @@ function getBbAlerts(token) {
 
 // 켜기/끄기 (kind: "d" 일봉 / "w" 주봉). 켤 때는 지금 하단 가격을 같이 알려줘요.
 function setBbAlert(token, symbol, on, kind) {
-  if (kind === "b") {                                      // 분석·추천 화면의 단일 버튼: 일봉+주봉 같이
+  if (kind === "b") {                                      // 분석·추천 화면의 단일 버튼: 일봉+주봉 같이 + 관심 종목에 자동 등록
+    var sym = String(symbol || "").trim().toUpperCase(), on2 = on === true || on === "true" || on === 1 || on === "1";
+    if (!on2) {
+      var mine = _bbMineSymbols(token);
+      if (mine[sym]) return {ok: true, on: true, msg: sym + " 은(는) " + (mine[sym] === "h" ? "보유" : "관심") + " 종목이라 알림이 자동으로 켜져 있어요. 끄려면 " + (mine[sym] === "h" ? "보유" : "관심") + " 종목에서 빼세요"};
+    } else {
+      var wr = null;
+      try { wr = addWatch(token, sym, ""); } catch (e) {}
+      if (wr && !wr.ok) return wr;                           // 등록 실패(종목 없음·개수 초과 등)면 알림도 켜지 않음
+    }
     var a = _setBbOne(token, symbol, on, "d"), b = a.ok ? _setBbOne(token, symbol, on, "w") : a;
     if (!a.ok || !b.ok) return a.ok ? b : a;
-    var on2 = on === true || on === "true" || on === 1 || on === "1";
-    return {ok: true, on: on2, msg: String(symbol).toUpperCase() + (on2 ? " 볼린저·거래량 알림을 켰어요 (일봉·주봉)" : " 볼린저·거래량 알림을 껐어요")};
+    return {ok: true, on: on2, msg: sym + (on2 ? " 관심 종목에 담고 볼린저·거래량 알림을 켰어요 (일봉·주봉)" : " 볼린저·거래량 알림을 껐어요")};
   }
   return _setBbOne(token, symbol, on, kind);
+}
+// 내 보유(h)·관심(w) 종목 → {SYMBOL: "h"|"w"}
+function _bbMineSymbols(token) {
+  var me = _dev(token), m = {};
+  var hs = getHoldingsSheet(), hl = hs.getLastRow();
+  if (hl >= 2) hs.getRange(2, 1, hl - 1, 2).getValues().forEach(function (r) { if (r[0] && _dev(r[0]) === me) m[String(r[1]).toUpperCase()] = "h"; });
+  _watchRows().forEach(function (r) { if (r[0] && _dev(r[0]) === me && !m[String(r[1]).toUpperCase()]) m[String(r[1]).toUpperCase()] = "w"; });
+  return m;
 }
 function _setBbOne(token, symbol, on, kind) {
   if (!isRegistered(token)) return {ok: false, msg: "먼저 '알림 받기'로 등록하세요"};

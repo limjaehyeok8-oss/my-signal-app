@@ -3957,7 +3957,7 @@
         try {
           const r = await api({ action: "setBbAlert", token: myToken, symbol: sym, on: want, kind: "b" });
           msg.textContent = (r && r.msg) || "처리하지 못했어요";
-          if (r && r.ok) { if (want) bbMap[sym] = { d: 1, w: 1 }; else delete bbMap[sym]; applyBb(); }
+          if (r && r.ok) { if (r.on === false) delete bbMap[sym]; else bbMap[sym] = { d: 1, w: 1 }; applyBb(); if (want) loadWatch(true); }
         } catch (err) { msg.textContent = "오류가 났어요"; }
         b.disabled = false;
       };
@@ -4016,7 +4016,7 @@
 
     // ===== 👀 관심 종목 =====
     // ===== 💡 오늘 매수 신호 종목 추천 (추천 탭 데이터 재사용) =====
-    let recData = null, recBbs = null;
+    let recData = null, recBbs = null, recAi = null;
     function paintTodayRec() {
       const box = $("todayRec"); if (!box) return; box.textContent = "";
       if (!recData) return;
@@ -4026,7 +4026,7 @@
       const cand = recData.filter((x) => !x.lt && (x.tag || []).length && !have[String(x.s).toUpperCase()]).sort((a, b) => b.sc - a.sc || b.ch - a.ch);
       const isToday = (x) => (x.tag || []).some((t) => t.indexOf("오늘") !== -1);
       const list = cand.filter(isToday).concat(cand.filter((x) => !isToday(x))).slice(0, 5);   // 오늘 신호 먼저, 모자라면 최근 신호로 채움
-      paintBbRec(box, have);
+      paintBbRec(box, have); paintAiRec(box, have);
       if (!list.length) return;
       const wrap = mkEl("div", "recBox");
       wrap.appendChild(mkEl("h3", null, "💡 추천 종목 " + list.length));
@@ -4090,11 +4090,40 @@
       });
       box.appendChild(wrap);
     }
+    // 🤖 AI 점수 상위 5개 (추천 탭의 'AI 점수순' 데이터 재사용, 내 보유·관심 종목은 뺌)
+    function paintAiRec(box, have) {
+      if (!recAi || !recAi.length) return;
+      const list = recAi.filter((x) => !have[String(x.s).toUpperCase()]).slice(0, 5);
+      if (!list.length) return;
+      const wrap = mkEl("div", "recBox");
+      const hd = mkEl("div"); hd.style.cssText = "display:flex;align-items:center;justify-content:space-between";
+      const h3 = mkEl("h3", null, "🤖 AI 점수 높은 종목 " + list.length); h3.style.margin = "0";
+      const more = mkEl("button", null, "전체 보기 ›"); more.style.cssText = "font-size:12px;padding:6px 10px";
+      more.onclick = () => { showPick(); pickFilter = "ai"; document.querySelectorAll("#pickChips button").forEach((b) => b.classList.toggle("on", b.dataset.f === "ai")); renderPicks(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      hd.appendChild(h3); hd.appendChild(more); wrap.appendChild(hd);
+      wrap.appendChild(mkEl("div", "alertHint", "지표 종합 점수가 높은 순 · 지금 추세가 좋은 종목이에요 (이미 오른 상태일 수 있어요)"));
+      list.forEach((x) => {
+        const row = mkEl("div", "recRow");
+        const sy = mkEl("span", "rs", x.s);
+        sy.onclick = () => { symbolEl.value = x.s; analyze(x.s); const pb = document.querySelector("#pgNav button:nth-child(1)"); if (pb) pb.click(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+        const m = mkEl("div", "rm");
+        const b = mkEl("b", null, "$" + fmt(x.p) + " "); b.appendChild(mkEl("span", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
+        m.appendChild(b); m.appendChild(mkEl("div", null, "AI " + (x.ai >= 0 ? "+" : "") + x.ai + "점" + (x.wk >= 2 ? " · 주봉 " + x.wk + "주 연속 양봉" : "") + (x.vr >= 1.5 ? " · 거래량 " + x.vr + "배" : "")));
+        const bt = mkEl("button", null, "👀 관심");
+        bt.onclick = async () => {
+          bt.disabled = true; bt.textContent = "추가 중…";
+          try { const r = await api({ action: "addWatch", token: myToken, symbol: x.s }); if (r && r.ok) { bt.textContent = "추가됨"; loadWatch(true); } else { bt.textContent = "👀 관심"; bt.disabled = false; } }
+          catch (e) { bt.textContent = "👀 관심"; bt.disabled = false; }
+        };
+        row.appendChild(sy); row.appendChild(m); row.appendChild(bt); wrap.appendChild(row);
+      });
+      box.appendChild(wrap);
+    }
     function skelFill(box, n, h) { if (!box || box.childElementCount) return; for (let i = 0; i < n; i++) { const d = mkEl("div", "skel"); if (h) d.style.height = h + "px"; box.appendChild(d); } }
     function loadTodayRec() {
       if (!myToken) return;
       skelFill($("todayRec"), 1, 120);
-      api({ action: "getPicks", token: myToken }).then((r) => { if (r && r.ok) { recData = r.items || []; recBbs = r.bbs || null; paintTodayRec(); } }).catch(() => {});
+      api({ action: "getPicks", token: myToken }).then((r) => { if (r && r.ok) { recData = r.items || []; recBbs = r.bbs || null; recAi = r.ai || null; paintTodayRec(); } }).catch(() => {});
     }
     function paintWatch(r) {
       const box = $("wList"); box.textContent = "";
