@@ -1246,6 +1246,7 @@
       <button data-f="today" class="on">오늘</button>
       <button data-f="d3">최근 3일</button>
       <button data-f="rr">손익비순</button>
+      <button data-f="ai">🤖 AI 점수순</button>
       <button data-f="bb">📉 볼린저 이탈</button>
     </div>
     <div class="pkChips" id="pickGroups"></div>
@@ -1789,7 +1790,7 @@
     $("frBox").addEventListener("toggle", () => { if ($("frBox").open) loadFriends(); });
 
     // ===== 추천 탭: 오늘 신호 뜬 종목 =====
-    let pickGroupList = [], pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "", pickBbs = null, bbKind = "w", bbSort = "sc";
+    let pickGroupList = [], pickGroupOrder = {}, pickData = [], pickFilter = "today", pickGroup = "", pickBbs = null, pickAi = null, bbKind = "w", bbSort = "sc";
     function renderGroups() {
       const box = $("pickGroups"); box.textContent = "";
       const cnt = {};
@@ -2013,13 +2014,13 @@
       return c;
     }
     // 목록: 5개씩 한 페이지, 옆으로 넘겨서 보기 (점으로 위치 표시)
-    function appendLimited(list, arr, showGroup, key, noRank) {
+    function appendLimited(list, arr, showGroup, key, noRank, builder) {
       if (!arr.length) return;
       const PER = 5, pages = Math.ceil(arr.length / PER);
       const slider = mkEl("div", "frSlider pkSlider");
       for (let p = 0; p < pages; p++) {
         const pg = mkEl("div", "pkPage");
-        arr.slice(p * PER, (p + 1) * PER).forEach((x, i) => pg.appendChild(pickCard(x, showGroup, noRank ? 0 : p * PER + i + 1)));
+        arr.slice(p * PER, (p + 1) * PER).forEach((x, i) => pg.appendChild((builder || pickCard)(x, showGroup, noRank ? 0 : p * PER + i + 1)));
         slider.appendChild(pg);
       }
       list.appendChild(slider);
@@ -2071,10 +2072,47 @@
         }
       }, 600);
     }
+    // 🤖 AI 점수순: 분석 화면의 'AI 지표 스코어보드' 종합 점수가 높은 종목 (신호와 별개로 지금 추세가 좋은 순)
+    function aiCard(x, _sg, rank) {
+      const c = mkEl("div", "pkCard pkRow"), main = mkEl("div", "pkMain");
+      if (rank) main.appendChild(mkEl("span", "pkRank", String(rank)));
+      const mid = mkEl("div", "pkMid"), head = mkEl("div", "pkHead");
+      const sym = mkEl("span", "sym", x.s);
+      sym.onclick = (e) => { e.stopPropagation(); showPage("home"); symbolEl.value = x.s; analyze(x.s); window.scrollTo({ top: 0, behavior: "smooth" }); };
+      head.appendChild(sym);
+      head.appendChild(mkEl("span", "pkBadge rr" + (x.ai >= 7 ? " hi" : ""), "AI " + (x.ai >= 0 ? "+" : "") + x.ai));
+      if (x.wk >= 2) head.appendChild(mkEl("span", "pkBadge", "주봉 " + x.wk + "주 연속 양봉"));
+      if (x.vr >= 1.5) head.appendChild(mkEl("span", "pkBadge", "거래량 " + x.vr + "배"));
+      mid.appendChild(head);
+      mid.appendChild(mkEl("div", "pkTag", (x.ai >= 7 ? "지표 대부분이 상승 쪽" : "상승 쪽 우세") + (x.g ? " · " + x.g : "")));
+      main.appendChild(mid);
+      const rt = mkEl("div", "pkRt"); rt.dataset.pks = x.s; rt.dataset.p = x.p; rt.dataset.ch = x.ch;
+      rt.appendChild(mkEl("div", "pkPx", fmt(x.p)));
+      rt.appendChild(mkEl("div", x.ch >= 0 ? "up" : "down", (x.ch >= 0 ? "+" : "") + x.ch.toFixed(1) + "%"));
+      main.appendChild(rt); c.appendChild(main);
+      const more = mkEl("div", "pkMore"); more.style.display = "none";
+      more.appendChild(mkEl("div", "pkWhy", "AI 점수는 주봉·일봉 하이킨아시, MACD, 스토캐스틱RSI, 거래량 등을 합친 참고용 점수예요. 점수가 높다는 건 지금 추세가 좋다는 뜻이고, 이미 많이 오른 상태일 수도 있어요 (매수 신호와는 별개)."));
+      const wb = mkEl("button", "pkWatch", "👀 관심 종목에 추가");
+      wb.onclick = async (e) => {
+        e.stopPropagation(); wb.disabled = true; wb.textContent = "추가 중…";
+        try { const r = await api({ action: "addWatch", token: myToken, symbol: x.s }); if (r && r.ok) { wb.textContent = "✓ 추가됨"; loadWatch(true); } else { wb.textContent = (r && r.msg) || "추가 실패"; setTimeout(() => { wb.textContent = "👀 관심 종목에 추가"; wb.disabled = false; }, 1800); } }
+        catch (err) { wb.textContent = "👀 관심 종목에 추가"; wb.disabled = false; }
+      };
+      more.appendChild(wb); c.appendChild(more);
+      c.onclick = () => { more.style.display = more.style.display === "none" ? "block" : "none"; };
+      return c;
+    }
+    function renderAiList() {
+      const list = $("pickList"); list.textContent = "";
+      if (!pickAi || !pickAi.length) { list.appendChild(mkEl("div", "alertHint", "아직 계산된 결과가 없어요. 아래 새로고침을 눌러 주세요 (계산에 몇 분 걸려요)")); return; }
+      list.appendChild(mkEl("div", "alertHint", "AI 점수 높은 순 · 20일선 위에서 지표가 상승 쪽인 종목이에요. 이미 오른 종목일 수 있어서 추격 매수는 조심하세요"));
+      appendLimited(list, pickAi.slice(0, 100), true, "ai", false, aiCard);
+    }
     function renderPicks() {
-      const isBb = pickFilter === "bb";
+      const isBb = pickFilter === "bb" || pickFilter === "ai";
       if (isBb) $("pickGroups").style.setProperty("display", "none", "important"); else $("pickGroups").style.removeProperty("display");   // .pkGrpBox 가 display:block !important 라서 같이 눌러줌
       $("rrTop").style.display = isBb ? "none" : "";
+      if (pickFilter === "ai") { renderAiList(); return; }
       if (isBb) { renderBbList(); return; }
       renderRrTop(); loadPickExt();
       const list = $("pickList");
@@ -2118,7 +2156,7 @@
         if (r.updated) { let t = String(r.updated); if (/GMT|T\d\d:/.test(t)) { const dt = new Date(t); if (!isNaN(dt)) { const z = (n) => String(n).padStart(2, "0"); t = z(dt.getMonth() + 1) + "/" + z(dt.getDate()) + " " + z(dt.getHours()) + ":" + z(dt.getMinutes()); } } updTxt = t + " 기준 · 카드를 누르면 이유가 펼쳐져요"; }
         $("pickUpd").textContent = updTxt;
         pickData = r.items || [];
-        pickBbs = r.bbs || null;
+        pickBbs = r.bbs || null; pickAi = r.ai || null;
         if (r.groups) pickGroupList = r.groups;
         renderGroups();
         renderPicks();

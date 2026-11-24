@@ -20,7 +20,9 @@ var PICK_GROUPS = {
   "🛡️ 경기방어주(필수소비·헬스·통신)": ["LLY","UNH","JNJ","PFE","MRK","ABBV","AMGN","GILD","BMY","TMO","DHR","ISRG","MDT","SYK","BSX","VRTX","REGN","MRNA","NVO","CVS","HIMS","CRSP","BEAM","NTLA","COST","WMT","KO","PEP","PG","PM","MO","T","VZ","TMUS","CMCSA","DIS","MCD"],
   "🔥 경기민감주(소비·산업·여행)": ["HD","LOW","TGT","NKE","LULU","SBUX","CMG","BA","CAT","DE","GE","HON","LMT","RTX","NOC","GD","UPS","FDX","UNP","CSX","F","GM","RIVN","LCID","NIO","XPEV","LI","BYD","BABA","PDD","JD","BIDU","CVNA","CELH","ELF","ONON","DECK","CROX","RCL","CCL","NCLH","DAL","UAL","AAL","LUV"],
   "🛢️ 에너지·소재·전력": ["XOM","CVX","COP","OXY","SLB","HAL","EOG","MPC","VLO","FCX","NEM","ALB","MP","CCJ","UEC","LEU","OKLO","SMR","NNE","VST","CEG","TLN","NRG","ENPH","FSLR","SEDG","RUN","PLUG","BE","NEE","DUK","SO"],
-  "🧬 중소형·테마주": ["AXTI","IREN","PL","CIFR","WULF","CORZ","APLD","MARA","RIOT","CLSK","HUT","BTBT","NBIS","CRWV","VRT","ALAB","CRDO","RMBS","AAOI","POET","LASR","NVTS","WOLF","INDI","ACLS","ONTO","AEHR","CAMT","ICHR","FORM","SPCE","RDW","BKSY","SATS","KTOS","AVAV","RCAT","ONDS","QS","EOSE","ENVX","FLNC","UAMY","USAR","CRML","RDDT","DUOL","DAVE","MQ","LMND","OPEN","TMDX","SERV","PRCH","AEVA","OUST","LAZR","MVIS","BTDR","SOUN","VERI","GRRR","SMMT","RXRX","TEM","ABCL","CDNA","NTRA","TWST","PACB","ILMN","BE","BLDP","ARRY","SHLS","NXT","STEM","GEV","OKLO"]
+  "🧬 중소형·테마주": ["AXTI","IREN","PL","CIFR","WULF","CORZ","APLD","MARA","RIOT","CLSK","HUT","BTBT","NBIS","CRWV","VRT","ALAB","CRDO","RMBS","AAOI","POET","LASR","NVTS","WOLF","INDI","ACLS","ONTO","AEHR","CAMT","ICHR","FORM","SPCE","RDW","BKSY","SATS","KTOS","AVAV","RCAT","ONDS","QS","EOSE","ENVX","FLNC","UAMY","USAR","CRML","RDDT","DUOL","DAVE","MQ","LMND","OPEN","TMDX","SERV","PRCH","AEVA","OUST","LAZR","MVIS","BTDR","SOUN","VERI","GRRR","SMMT","RXRX","TEM","ABCL","CDNA","NTRA","TWST","PACB","ILMN","BE","BLDP","ARRY","SHLS","NXT","STEM","GEV","OKLO"],
+  "🏢 S&P500 대형주(기타)": ["ADP","AMT","APD","AON","AZO","BDX","BIIB","BK","CB","CI","CL","CMI","CNC","CSGP","CTAS","D","DG","DLTR","DXCM","ECL","EL","ELV","EMR","EQIX","ETN","EW","EXC","FIS","GIS","GPN","HCA","HLT","HUM","IDXX","IQV","IR","ITW","KDP","KHC","KMB","KMI","LIN","MAR","MCK","MDLZ","MET","MMC","MMM","MNST","MSCI","NSC","ORLY","OTIS","PAYX","PCAR","PGR","PH","PLD","PRU","PSA","PSX","ROST","SHW","SPG","SRE","STZ","SYY","TJX","TRV","TT","WELL","WM","WMB","YUM","ZTS","ALL","AIG","AEP","AJG","APH","CARR","CDW","CHTR","CPRT","CTSH","DHI","EA","EBAY","EXR","FAST","GLW","GWW","HSY","HWM","KR","LEN","LHX","LVS","MGM","NDAQ","NUE","ODFL","OKE","PCG","PEG","PHM","PWR","RSG","STT","TDG","TEL","TSCO","TTWO","URI","VMC","MLM","WAB","WBD","XEL","ZBH","DOW","LYB","CF","MOS","ADM","CAG","HRL","TSN","MKC","CLX","CHD","ULTA","BBY","DRI","ROK","DOV","FTV","HUBB","JCI","SNA","SWK","TXT","VRSK","WAT","MTD","A","PODD","ALGN","RMD","STE","COO","HOLX","BAX","GEHC","LH","DGX","MOH","VTRS","FICO","VEEV","HUBS","TYL","ROP","GDDY","ENTG","PAYC","PTC","FSLR","CPAY","TPL","DKNG","LYV","WSM","RL","TPR","DPZ","ARES","KKR","BX","APO","TROW","NTRS","CBOE","MKTX","RJF","FITB","HBAN","RF","KEY","CFG","MTB","ZION"],
+  "🌍 해외·채권·스타일 ETF": ["EWJ","EWY","EWZ","EWT","INDA","VWO","VEA","VXUS","BND","AGG","LQD","SHY","TIP","SCHG","SCHX","IJR","IJH","MDY","RSP","VGT","VHT","VFH","VDE","VIS","VAW","VCR","VDC","VPU","VOX","SPYG","SPYV","IWF","IWD","DGRO","VIG","NOBL","SPHD","USMV","COWZ","ARKX","ARKQ","BKLN","EMB","MUB","IBND","PFF","DBC","DBA","CPER","PPLT","PALL","UUP","FXE","FXY"]
 };
 var PICK_UNIVERSE = [], PICK_GROUP_OF = {};
 Object.keys(PICK_GROUPS).forEach(function (g) {
@@ -126,6 +128,33 @@ function pickOne(symbol, d, w) {
           lt: cloverRepeat ? 1 : 0, cn: cc ? cc.n : 0, dd: cc ? Math.round(cc.dd) : 0};
 }
 
+// 분석 화면의 'AI 지표 스코어보드 종합 점수'를 추천 훑기용으로 가볍게 계산 (analyzeStock 과 같은 지표·같은 getAiVerdict2). 일봉 1년·주봉 5년 데이터 기준이라 분석 화면과 1~2점 다를 수 있어요
+function _aiScoreQuick(d, w, haD, haW) {
+  var len = d.closes.length, cp = d.closes[len - 1];
+  var ma20 = calculateMA(d.closes, 20);
+  var rsi9 = calculateWilderRSI(d.closes, 9), stoch = calculateStochasticRSI(rsi9, 14);
+  var currRsi9 = rsi9[rsi9.length - 1], currStoch = stoch[stoch.length - 1], prevStoch = stoch[stoch.length - 2];
+  var currRsiW = calculateWilderRSI(w.closes, 14).pop() || 0, bbUpper = calculateBollingerUpper(d.closes, 20, 2);
+  var mac = calculateMACDOscillator(d.closes), ml = mac.length, currMacd = mac[ml - 1], prevMacd = mac[ml - 2], prev2Macd = mac[ml - 3];
+  var hLenD = haD.closes.length, hLenW = haW.closes.length;
+  var div = detectDivergenceFinal(d, rsi9);
+  var isVolExhausted = d.volumes[len - 1] < (d.volumes[div.pivotIndex || len - 10] * 0.95);
+  var isHooked = false;
+  if (div.msg.indexOf("상승") !== -1 && prevStoch <= 35 && currStoch > prevStoch) isHooked = true;
+  else if (div.msg.indexOf("하락") !== -1 && prevStoch >= 65 && currStoch < prevStoch) isHooked = true;
+  var shortStop = null, longStop = null, i;
+  for (i = hLenD - 1; i >= 1; i--) { if (haD.closes[i] > haD.opens[i] && haD.closes[i - 1] <= haD.opens[i - 1]) { shortStop = haD.lows[i]; break; } }
+  if (!shortStop) shortStop = Math.min.apply(null, d.lows.slice(-10));
+  for (i = hLenW - 1; i >= 1; i--) { if (haW.closes[i] > haW.opens[i] && haW.closes[i - 1] <= haW.opens[i - 1]) { longStop = haW.lows[i]; break; } }
+  if (!longStop) longStop = Math.min.apply(null, d.lows.slice(-40));
+  var hp = checkHighpointSellSignal(w, haD);
+  var bullD = haD.closes[hLenD - 1] > haD.opens[hLenD - 1];
+  var vma = calculateMA(d.volumes.slice(0, len - 1), 20), vr = vma > 0 ? d.volumes[len - 1] / vma : 0;
+  var v = getAiVerdict2(cp, ma20, currRsi9, currRsiW, div.msg, isHooked, isVolExhausted, haD, haW, shortStop, longStop, currMacd, prevMacd, prev2Macd, currStoch, prevStoch, bbUpper, hp, vma > 0 && vr >= 1.5, bullD);
+  var wk = 0; for (i = hLenW - 1; i >= 0; i--) { if (haW.closes[i] > haW.opens[i]) wk++; else break; }
+  return {score: v.score, wk: wk, vr: vr};
+}
+
 // 후보 + 등록된 사람들의 보유 종목 전체
 function pickUniverse() {
   var set = {}, list = [];
@@ -165,7 +194,7 @@ function refreshPicks() {
   var props = PropertiesService.getScriptProperties();
   props.setProperty("PICKS_RUN_AT", String(t0));                // 계산 중 표시
   var universe = pickUniverse();
-  var items = [], highs = [], bbs = [], scanned = 0, CH = 25;
+  var items = [], highs = [], bbs = [], ais = [], scanned = 0, CH = 25;
   for (var i = 0; i < universe.length; i += CH) {
     if (Date.now() - t0 > 4.6 * 60 * 1000) break;               // 6분 제한 전에 멈춤 (뒤에 이탈 종목 추가 계산 시간을 남김)
     var chunk = universe.slice(i, i + CH);
@@ -198,6 +227,13 @@ function refreshPicks() {
           var gd = _bbGapOf(d.closes), gw = _bbGapOf(w.closes), cl = d.closes[d.closes.length - 1];
           if (cl >= 3 && ((gd != null && gd < 0) || (gw != null && gw < 0))) bbs.push({s: s, g: PICK_GROUP_OF[s] || "기타", p: Number(cl.toFixed(2)), gd: gd, gw: gw, sw: (gw != null && gw < 0) ? _bbStats(w.closes, [2, 4, 8], 8) : null, ow: null});
         } catch (e) {}
+        try {                                              // AI 점수: 20일선 위에 있는 종목만 계산 (추세 좋은 쪽만 보면 되니까)
+          var al = d.closes.length;
+          if (al >= 120 && w.closes.length >= 20 && d.closes[al - 1] >= 3 && d.closes[al - 1] > calculateMA(d.closes, 20)) {
+            var aq = _aiScoreQuick(d, w, calculateHeikinAshi_GAS(d), calculateHeikinAshi_GAS(w));
+            if (aq && aq.score >= 3) ais.push({s: s, g: PICK_GROUP_OF[s] || "🧑 내 보유·기타", p: Number(d.closes[al - 1].toFixed(2)), ch: Number(((d.closes[al - 1] / d.closes[al - 2] - 1) * 100).toFixed(1)), ai: aq.score, wk: aq.wk, vr: Number(aq.vr.toFixed(1))});
+          }
+        } catch (e) {}
         var r = pickOne(s, d, w);
         if (r && r.sc >= 1) items.push(r);                 // 점수 1점 이상만 보여줌
       } catch (e) { /* 한 종목 실패는 무시 */ }
@@ -225,6 +261,12 @@ function refreshPicks() {
       });
     }
   } catch (e) {}
+  try {                                                    // AI 점수 높은 순 목록 (칸 길이 때문에 4번째 칸에 따로 저장)
+    ais.sort(function (a, b) { return b.ai - a.ai || b.wk - a.wk || b.ch - a.ch; });
+    var al2 = ais.slice(0, 150), aj = JSON.stringify(al2);
+    while (aj.length > 45000 && al2.length > 20) { al2.pop(); aj = JSON.stringify(al2); }
+    sh.getRange(1, 4).setValue("ai"); sh.getRange(2, 4).setValue(aj);
+  } catch (e) {}
   try {                                                    // 목록은 칸 길이 제한(5만자) 때문에 따로 저장
     bbs.sort(function (a, b) { return Math.min(a.gw == null ? 0 : a.gw, a.gd == null ? 0 : a.gd) - Math.min(b.gw == null ? 0 : b.gw, b.gd == null ? 0 : b.gd); });
     var bl = bbs.slice(0, 200), bj = JSON.stringify(bl);
@@ -248,6 +290,8 @@ function getPicks(token, force) {
     else if (/^\d{4}-\d\d-\d\d \d\d:\d\d/.test(upd)) lastMs = new Date(upd.slice(0, 10) + "T" + upd.slice(11, 16) + ":00+09:00").getTime();
     try { o = JSON.parse(String(v[1] || "{}")); } catch (e) { o = {}; }
   }
+  var ai = null;
+  try { if (sh.getLastRow() >= 2) { var av = String(sh.getRange(2, 4).getValue() || ""); if (av) ai = JSON.parse(av); } } catch (e) {}
   var bbs = null, bbOld = false;
   try {
     if (sh.getLastRow() >= 2) { var bv = String(sh.getRange(2, 3).getValue() || ""); if (bv) bbs = JSON.parse(bv); }
@@ -267,7 +311,7 @@ function getPicks(token, force) {
       refreshing = true;
     }
   } catch (e) { /* 트리거를 못 만들어도 기존 결과는 보여줌 */ }
-  return {ok: true, updated: upd, scanned: o.scanned || 0, total: o.total || 0, items: o.items || [], highs: o.highs || null, bbs: bbs, refreshing: refreshing, groups: Object.keys(PICK_GROUPS)};
+  return {ok: true, updated: upd, scanned: o.scanned || 0, total: o.total || 0, items: o.items || [], highs: o.highs || null, bbs: bbs, ai: ai, refreshing: refreshing, groups: Object.keys(PICK_GROUPS)};
 }
 
 // 한 번짜리 트리거가 부르는 함수: 계산하고 자기 트리거를 지움
