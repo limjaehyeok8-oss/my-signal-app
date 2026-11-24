@@ -219,7 +219,7 @@ function botRun() {
     var now = new Date(), dow = Number(Utilities.formatDate(now, "America/New_York", "u")), hm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
     var nowKey = botWeekKey(Utilities.formatDate(now, "America/New_York", "yyyy-MM-dd"));
     var weekDone = botWeekKey(day) < nowKey || dow >= 6 || (dow === 5 && hm >= 1610);
-    var res = [];
+    var res = [], botMsgs = [];
 
     ["w", "d", "m"].forEach(function (id) {
       var def = BOT_DEFS[id];
@@ -258,10 +258,23 @@ function botRun() {
       eq.push({d: day, v: Math.round(total), b: Math.round(BOT_START_KRW * (spyC * fx) / (st.spy0 * st.fx0))});
       st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : id === "m" ? _botDecideMomentum(st, data, day) : _botDecideDaily(st, data, day);
       st.last = day; st.fx = fx;
+      if (id === "w") {                                              // 주봉봇이 오늘 체결한 매매를 알림용으로 모아둠
+        var todayTrades = log.filter(function (x) { return x.d === day; });
+        if (todayTrades.length) botMsgs.push(todayTrades);
+      }
       m[id + "_state"] = st; m[id + "_eq"] = eq.slice(-500); m[id + "_log"] = log.slice(-150); m[id + "_closed"] = closed.slice(-300);
       res.push(id + ":ok");
     });
     _botSaveAll(m);
+    try {                                                            // 🤖 주봉봇이 무엇을 샀고 팔았는지 푸시
+      if (botMsgs.length) {
+        var tr = botMsgs[0], buys = tr.filter(function (x) { return x.t === "buy"; }), sells = tr.filter(function (x) { return x.t === "sell"; });
+        var lines = [];
+        buys.forEach(function (x) { lines.push("🟢 매수 " + x.s + " $" + x.px + " · " + x.why); });
+        sells.forEach(function (x) { lines.push("🔴 매도 " + x.s + " $" + x.px + " · " + String(x.why).replace(" · ", ", ")); });
+        sendPush("🤖 주봉봇 매매: 매수 " + buys.length + " · 매도 " + sells.length, lines.join("\n") + "\n(가상 매매예요)");
+      }
+    } catch (e) { try { runLog("err", "주봉봇 알림 실패: " + e.message); } catch (e2) {} }
     return day + " " + res.join(" ");
   } finally { lock.releaseLock(); }
 }
