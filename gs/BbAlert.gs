@@ -120,6 +120,7 @@ function _bbBands(info, kind) {
 
 // 10분마다: 켜 둔 종목이 볼린저 하단에 닿거나 이탈하면 알림 (정규장에서만)
 function checkBbAlerts(force) {
+  try { _bbSync(); } catch (e) { try { runLog("err", "볼린저 동기화 실패: " + e.message); } catch (e2) {} }
   if (force !== true && _haSession() !== "정규장") return "정규장이 아님";
   var sh = _bbSheet(), rows = _bbRows(), set = {d: {}, w: {}}, any = false;
   rows.forEach(function (r) { if (r[0] && r[1]) { set[_bbKind(r[4])][String(r[1]).toUpperCase()] = 1; any = true; } });
@@ -155,6 +156,32 @@ function checkBbAlerts(force) {
     }
   });
   return "볼린저 알림 " + sent + "건";
+}
+
+// 보유·관심 종목 전부에 일봉·주봉 볼린저 알림을 자동으로 맞춰요 (추가하면 생기고, 빼면 사라짐). 사람이 켜고 끌 필요 없음
+function _bbSync() {
+  var want = {}, tokOf = {};
+  var add = function (tk, sym) {
+    tk = String(tk || "").trim(); sym = String(sym || "").trim().toUpperCase();
+    if (!tk || !/^[A-Z0-9.\-]{1,12}$/.test(sym)) return;
+    var d = _dev(tk); ["d", "w"].forEach(function (k) { want[d + "|" + sym + "|" + k] = {t: tk, s: sym, k: k}; });
+  };
+  var hs = getHoldingsSheet(), hl = hs.getLastRow();
+  if (hl >= 2) hs.getRange(2, 1, hl - 1, 2).getValues().forEach(function (r) { add(r[0], r[1]); });
+  _watchRows().forEach(function (r) { add(r[0], r[1]); });
+  var sh = _bbSheet(), rows = _bbRows(), have = {}, del = [];
+  rows.forEach(function (r, i) {
+    if (!r[0] || !r[1]) { del.push(i + 2); return; }
+    var key = _dev(r[0]) + "|" + String(r[1]).toUpperCase() + "|" + _bbKind(r[4]);
+    if (!want[key] || have[key]) del.push(i + 2); else have[key] = 1;
+  });
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    del.sort(function (a, b) { return b - a; }).forEach(function (rw) { sh.deleteRow(rw); });
+    var out = [];
+    for (var key in want) if (!have[key]) { var w = want[key]; out.push([w.t, w.s, 0, "", w.k]); }
+    if (out.length) sh.getRange(sh.getLastRow() + 1, 1, out.length, 5).setValues(out);
+  } finally { lock.releaseLock(); }
 }
 
 // 직접 확인용: 앱스스크립트에서 실행하면 로그에 하단 가격과 괴리율이 나와요
