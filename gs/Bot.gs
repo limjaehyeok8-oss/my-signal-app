@@ -3,7 +3,8 @@
 //  · 일봉봇 : 1234(W자) 매매. 두 번째 바닥이 첫 바닥보다 높게 끝나고 다시 양봉이 되면 사고,
 //             첫 바닥을 종가로 깨면 손절, 하이킨아시 음봉 2연속이면 팝니다.
 // 처음 한 번: setupBotTrigger 실행 (매일 아침 8시쯤 자동 기록). 규칙을 바꾸면 resetBot 으로 새로 시작하세요.
-var BOT_START_KRW = 10000000;  // 봇마다 시작 가상 자금 (원)
+var BOT_START_KRW = 30000000;  // 봇마다 시작 가상 자금 (원) · 5종목 × 600만원
+var BOT_VER = "v3-30m-max5";    // 규칙·자금을 바꾸면 값을 바꿔요 → 다음 실행 때 기록을 한 번 비우고 새로 시작
 var BOT_FEE       = 0.0025;    // 수수료+환전+슬리피지 (살 때·팔 때 각각 0.25%)
 var BOT_SHEET     = "bot";
 
@@ -175,6 +176,8 @@ function botRun() {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return "busy";
   try {
+    var P = PropertiesService.getScriptProperties();
+    if (P.getProperty("BOT_VER") !== BOT_VER) { resetBot(); P.setProperty("BOT_VER", BOT_VER); }      // 자금·규칙이 바뀌었으면 새로 시작
     var m = _botLoadAll(), set = {"SPY": 1, "KRW=X": 1};
     BOT_W_LIST.concat(BOT_D_LIST).forEach(function (s) { set[s] = 1; });
     ["w", "d"].forEach(function (id) { ((m[id + "_state"] || {}).pos || []).forEach(function (p) { set[p.s] = 1; }); });
