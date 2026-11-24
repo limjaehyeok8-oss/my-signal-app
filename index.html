@@ -2205,7 +2205,7 @@
         if (!rows.length && !at.length) { sec.appendChild(mkEl("div", "afW", "비교할 과거 기록이 없어요")); box.appendChild(sec); return; }
         if (at.length) {                                                          // 한 줄 요약: 지금과 비슷한 RSI였을 때 3번째 기간 결과
           const m = at[Math.min(2, at.length - 1)];
-          sec.appendChild(mkEl("div", "ovSum", "지금과 비슷한 RSI였던 때 " + st.at.n + u + " → " + m[0] + u + " 뒤 " + m[2] + "% 상승 (평균 " + pc(m[3]) + ")"));
+          sec.appendChild(mkEl("div", "ovSum", "지금과 비슷한 RSI였던 때 " + st.at.n + "번 중 " + m[0] + u + " 뒤 오른 건 " + m[2] + "% (" + (m[2] >= 50 ? "절반 넘게 오름" : "오른 쪽이 더 적음") + "). 평균 " + pc(m[3]) + (m[3] > 0 && m[2] < 50 ? " — 일부가 크게 올라 평균만 높아진 거예요" : "")));
         }
         const g = mkEl("div", "ovT"), hs = (rows.length ? rows.map((r) => r.h) : at.map((x) => x[0]));
         g.style.gridTemplateColumns = "minmax(70px,1.6fr) repeat(" + hs.length + ",1fr)";
