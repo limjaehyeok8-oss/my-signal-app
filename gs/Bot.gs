@@ -4,14 +4,16 @@
 //             첫 바닥을 종가로 깨면 손절, 하이킨아시 음봉 2연속이면 팝니다.
 // 처음 한 번: setupBotTrigger 실행 (매일 아침 8시쯤 자동 기록). 규칙을 바꾸면 resetBot 으로 새로 시작하세요.
 var BOT_START_KRW = 30000000;  // 봇마다 시작 가상 자금 (원) · 5종목 × 600만원
-var BOT_VER = "v3-30m-max5";    // 규칙·자금을 바꾸면 값을 바꿔요 → 다음 실행 때 기록을 한 번 비우고 새로 시작
+var BOT_VER = "v4-3bots-60";    // 규칙·자금을 바꾸면 값을 바꿔요 → 다음 실행 때 기록을 한 번 비우고 새로 시작
 var BOT_FEE       = 0.0025;    // 수수료+환전+슬리피지 (살 때·팔 때 각각 0.25%)
 var BOT_SHEET     = "bot";
 
-// 주봉봇이 훑어보는 종목 (지수·반도체 ETF + 대형 우량주, 업종을 섞음). 20종목을 보되 동시에는 최대 5종목 × 200만원만 보유
-var BOT_W_MAX = 5;
-var BOT_W_LIST = ["QQQ", "SMH", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "AVGO", "LLY", "JPM",
-  "AAPL", "TSLA", "TSM", "AMD", "NFLX", "COST", "V", "UNH", "XOM", "BRK-B"];
+// 주봉봇이 훑어보는 종목 (지수·섹터 ETF + 업종별 대형주, 60여 개). 동시에는 최대 5종목 × 600만원만 보유
+var BOT_W_MAX = 5, BOT_M_MAX = 5;
+var BOT_W_LIST = ["QQQ","SMH","IWM","XLF","XLE","XLV","XLK","GLD",
+  "NVDA","MSFT","GOOGL","AMZN","META","AVGO","LLY","JPM","AAPL","TSLA","TSM","AMD","NFLX","COST","V","UNH","XOM","BRK-B",
+  "ORCL","CRM","ADBE","NOW","UBER","PLTR","MU","QCOM","ASML","AMAT","ANET","PANW","CRWD","COIN",
+  "HD","WMT","KO","PG","MCD","MA","BAC","GS","ABBV","JNJ","MRK","ISRG","CAT","GE","LMT","DIS","CVX","NKE","BA","IBM","CSCO"];
 // 일봉봇이 매일 훑는 종목 (거래 많은 대형주·ETF, 레버리지 제외). 최대 5종목 × 200만원
 var BOT_D_MAX  = 5;
 var BOT_D_LIST = ["SPY","QQQ","IWM","DIA","SMH","XLF","XLE","XLV","XLK","XLI","GLD","TLT",
@@ -25,7 +27,8 @@ var BOT_D_LIST = ["SPY","QQQ","IWM","DIA","SMH","XLF","XLE","XLV","XLK","XLI","G
 
 var BOT_DEFS = {
   w: {name: "주봉봇", desc: "주봉 하이킨아시 양봉이면 보유, 음봉이 되면 매도", max: BOT_W_MAX},
-  d: {name: "일봉봇 (1234·W자)", desc: "W자 두 번째 바닥이 첫 바닥보다 높고 다시 양봉이 되면 매수", max: BOT_D_MAX}
+  d: {name: "일봉봇 (1234·W자)", desc: "W자 두 번째 바닥이 첫 바닥보다 높고 다시 양봉이 되면 매수", max: BOT_D_MAX},
+  m: {name: "모멘텀봇", desc: "200일·50일선 위에서 최근 6개월 상승률이 가장 강한 종목 5개를 들고, 50일선을 깨거나 순위가 15위 밖으로 밀리면 매도", max: BOT_M_MAX}
 };
 
 // ---------- 공통 계산 (백테스트·전략에서도 같이 씀) ----------
@@ -91,7 +94,7 @@ function _botLoadAll() {
   return m;
 }
 function _botSaveAll(m) {
-  var sh = _botSheet(), keys = Object.keys(m).filter(function (k) { return /^(w|d)_(state|eq|log|closed)$/.test(k); }).sort();
+  var sh = _botSheet(), keys = Object.keys(m).filter(function (k) { return /^(w|d|m)_(state|eq|log|closed)$/.test(k); }).sort();
   if (keys.length) sh.getRange(2, 1, keys.length, 2).setValues(keys.map(function (k) { return [k, JSON.stringify(m[k])]; }));
 }
 
@@ -171,6 +174,33 @@ function _botDecideDaily(st, data, day) {
   return orders;
 }
 
+// 모멘텀 로테이션: 200일선·50일선 위 + 6개월 수익률 양수인 종목 중 상승률 순위. 상위 5개를 들고, 50일선 이탈이나 15위 밖이면 매도
+function botSma(c, n) { if (c.length < n) return null; var t = 0; for (var i = c.length - n; i < c.length; i++) t += c[i]; return t / n; }
+function _botDecideMomentum(st, data, day) {
+  var ranked = [], rankOf = {}, info = {};
+  BOT_W_LIST.concat(BOT_D_LIST).forEach(function (s) {
+    if (info[s] !== undefined) return;
+    var d = data[s]; info[s] = null;
+    if (!d || d.c.length < 210 || d.dates[d.dates.length - 1] !== day) return;
+    var n = d.c.length, p = d.c[n - 1], s50 = botSma(d.c, 50), s200 = botSma(d.c, 200), mom = p / d.c[n - 127] - 1;
+    info[s] = {p: p, s50: s50, mom: mom, ok: p > s50 && p > s200 && mom > 0};
+    if (info[s].ok) ranked.push(s);
+  });
+  ranked.sort(function (a, b) { return info[b].mom - info[a].mom; });
+  ranked.forEach(function (s, i) { rankOf[s] = i + 1; });
+  var orders = [], selling = 0;
+  st.pos.forEach(function (p) {
+    var f = info[p.s]; if (!f) return;
+    var why = !f.ok ? (f.p <= f.s50 ? "50일선 이탈" : "추세 약화 (200일선·6개월 수익률)") : rankOf[p.s] > 15 ? "상승률 순위 " + rankOf[p.s] + "위로 밀림" : "";
+    if (why) { orders.push({act: "sell", s: p.s, why: why}); selling++; }
+  });
+  var slots = BOT_M_MAX - st.pos.length + selling;
+  ranked.filter(function (s) { return !st.pos.some(function (p) { return p.s === s; }); }).slice(0, Math.max(0, slots)).forEach(function (s) {
+    orders.push({act: "buy", s: s, why: "상승률 " + rankOf[s] + "위 (6개월 +" + (info[s].mom * 100).toFixed(0) + "%) · 200·50일선 위"});
+  });
+  return orders;
+}
+
 // 하루 한 번 실행: 어제 정한 주문을 오늘 시가로 체결 → 종가로 평가 → 내일 주문 정하기
 function botRun() {
   var lock = LockService.getScriptLock();
@@ -180,7 +210,7 @@ function botRun() {
     if (P.getProperty("BOT_VER") !== BOT_VER) { resetBot(); P.setProperty("BOT_VER", BOT_VER); }      // 자금·규칙이 바뀌었으면 새로 시작
     var m = _botLoadAll(), set = {"SPY": 1, "KRW=X": 1};
     BOT_W_LIST.concat(BOT_D_LIST).forEach(function (s) { set[s] = 1; });
-    ["w", "d"].forEach(function (id) { ((m[id + "_state"] || {}).pos || []).forEach(function (p) { set[p.s] = 1; }); });
+    ["w", "d", "m"].forEach(function (id) { ((m[id + "_state"] || {}).pos || []).forEach(function (p) { set[p.s] = 1; }); });
     var data = _botFetch(Object.keys(set), "2y");
     if (!data.SPY || !data["KRW=X"]) return "no data";
     var spy = data.SPY, day = spy.dates[spy.dates.length - 1], spyC = spy.c[spy.c.length - 1];
@@ -191,7 +221,7 @@ function botRun() {
     var weekDone = botWeekKey(day) < nowKey || dow >= 6 || (dow === 5 && hm >= 1610);
     var res = [];
 
-    ["w", "d"].forEach(function (id) {
+    ["w", "d", "m"].forEach(function (id) {
       var def = BOT_DEFS[id];
       var st = m[id + "_state"] || {start: "", cash: BOT_START_KRW, pos: [], pend: [], last: "", spy0: null, fx0: null};
       var eq = m[id + "_eq"] || [], log = m[id + "_log"] || [], closed = m[id + "_closed"] || [];
@@ -226,7 +256,7 @@ function botRun() {
       var total = st.cash;
       st.pos.forEach(function (p) { var b = bar(p.s); if (b) p.px = b.close; total += p.qty * p.px * fx; });
       eq.push({d: day, v: Math.round(total), b: Math.round(BOT_START_KRW * (spyC * fx) / (st.spy0 * st.fx0))});
-      st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : _botDecideDaily(st, data, day);
+      st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : id === "m" ? _botDecideMomentum(st, data, day) : _botDecideDaily(st, data, day);
       st.last = day; st.fx = fx;
       m[id + "_state"] = st; m[id + "_eq"] = eq.slice(-500); m[id + "_log"] = log.slice(-150); m[id + "_closed"] = closed.slice(-300);
       res.push(id + ":ok");
@@ -258,7 +288,7 @@ function _botView(id, m) {
 function getBot(token) {
   if (!isRegistered(token)) return {ok: false, msg: "먼저 '알림 받기'로 등록하세요"};
   var m = _botLoadAll();
-  return {ok: true, bots: [_botView("w", m), _botView("d", m)]};
+  return {ok: true, bots: [_botView("w", m), _botView("d", m), _botView("m", m)]};
 }
 
 function setupBotTrigger() {
