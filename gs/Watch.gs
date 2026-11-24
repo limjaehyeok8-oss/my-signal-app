@@ -322,7 +322,7 @@ function getOversold(token, symbol) {
   if (!isRegistered(token)) return {ok: false};
   var s = String(symbol || "").trim().toUpperCase();
   if (!/^[A-Z0-9.\-]{1,12}$/.test(s)) return {ok: false, msg: "티커 형식이 올바르지 않아요"};
-  var cache = CacheService.getScriptCache(), ck = "ovs3_" + s, hit = cache.get(ck);
+  var cache = CacheService.getScriptCache(), ck = "ovs4_" + s, hit = cache.get(ck);
   if (hit) { try { return JSON.parse(hit); } catch (e) {} }
   var base = "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(s);
   var rs = UrlFetchApp.fetchAll([{url: base + "?range=10y&interval=1d", muteHttpExceptions: true}, {url: base + "?range=10y&interval=1wk", muteHttpExceptions: true}]);
@@ -341,6 +341,7 @@ function getOversold(token, symbol) {
   try { cache.put(ck, JSON.stringify(out), 21600); } catch (e) {}
   return out;
 }
+function _median(a) { var b = a.slice().sort(function (x, y) { return x - y; }), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; }
 // c: 종가 배열, hs: 몇 봉 뒤를 볼지, gap: 같은 과매도로 치는 최소 간격(봉), perYear: 1년이 몇 봉인지
 function _oversoldStats(c, hs, gap, perYear) {
   var rsi = calculateWilderRSI(c, 14), off = c.length - rsi.length, n = c.length, TH = 30, ev = [], last = -99;
@@ -354,19 +355,19 @@ function _oversoldStats(c, hs, gap, perYear) {
     if (!rets.length) return {h: h, n: 0};
     var sum = 0, win = 0, worst = rets[0];
     rets.forEach(function (x) { sum += x; if (x > 0) win++; if (x < worst) worst = x; });
-    return {h: h, n: rets.length, avg: Number((sum / rets.length).toFixed(1)), win: Math.round(win / rets.length * 100), worst: Number(worst.toFixed(1))};
+    return {h: h, n: rets.length, avg: Number((sum / rets.length).toFixed(1)), win: Math.round(win / rets.length * 100), med: Number(_median(rets).toFixed(1)), worst: Number(worst.toFixed(1))};
   });
   var cur = rsi[rsi.length - 1];
   // 'RSI 가 X 일 때 h봉 뒤 오른 비율': 현재 RSI 근처(±2)였던 모든 봉 / RSI 구간별 (겹치는 봉이 많아 횟수가 부풀 수 있어 참고용)
   var stat = function (lo, hi) {
     var o = {n: 0, r: []};
     hs.forEach(function (h) {
-      var sum = 0, win = 0, m = 0;
+      var sum = 0, win = 0, m = 0, xs = [];
       for (var i = Math.max(1, off + 1); i + h < n; i++) {
         var v = rsi[i - off]; if (v < lo || v >= hi) continue;
-        var x = (c[i + h] / c[i] - 1) * 100; m++; sum += x; if (x > 0) win++;
+        var x = (c[i + h] / c[i] - 1) * 100; m++; sum += x; xs.push(x); if (x > 0) win++;
       }
-      o.r.push(m ? [h, m, Math.round(win / m * 100), Number((sum / m).toFixed(1))] : [h, 0, 0, 0]);
+      o.r.push(m ? [h, m, Math.round(win / m * 100), Number((sum / m).toFixed(1)), Number(_median(xs).toFixed(1))] : [h, 0, 0, 0, 0]);
     });
     for (var j = Math.max(1, off + 1); j < n; j++) { var q = rsi[j - off]; if (q >= lo && q < hi) o.n++; }
     return o;
