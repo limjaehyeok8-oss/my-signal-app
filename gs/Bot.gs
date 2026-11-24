@@ -7,11 +7,12 @@ var BOT_START_KRW = 10000000;  // 봇마다 시작 가상 자금 (원)
 var BOT_FEE       = 0.0025;    // 수수료+환전+슬리피지 (살 때·팔 때 각각 0.25%)
 var BOT_SHEET     = "bot";
 
-// 주봉봇이 보는 종목 (지수·반도체 ETF + 대형 우량주, 업종을 섞음). 20종목 × 50만원
+// 주봉봇이 훑어보는 종목 (지수·반도체 ETF + 대형 우량주, 업종을 섞음). 20종목을 보되 동시에는 최대 5종목 × 200만원만 보유
+var BOT_W_MAX = 5;
 var BOT_W_LIST = ["QQQ", "SMH", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "AVGO", "LLY", "JPM",
   "AAPL", "TSLA", "TSM", "AMD", "NFLX", "COST", "V", "UNH", "XOM", "BRK-B"];
-// 일봉봇이 매일 훑는 종목 (거래 많은 대형주·ETF, 레버리지 제외). 최대 10종목 × 100만원
-var BOT_D_MAX  = 10;
+// 일봉봇이 매일 훑는 종목 (거래 많은 대형주·ETF, 레버리지 제외). 최대 5종목 × 200만원
+var BOT_D_MAX  = 5;
 var BOT_D_LIST = ["SPY","QQQ","IWM","DIA","SMH","XLF","XLE","XLV","XLK","XLI","GLD","TLT",
   "AAPL","MSFT","GOOGL","AMZN","META","TSLA","NFLX","ORCL","CRM","ADBE","NOW","UBER","SHOP","PLTR","APP",
   "NVDA","AVGO","AMD","INTC","QCOM","MU","TSM","ASML","ARM","AMAT","LRCX","MRVL","ANET",
@@ -22,7 +23,7 @@ var BOT_D_LIST = ["SPY","QQQ","IWM","DIA","SMH","XLF","XLE","XLV","XLK","XLI","G
   "XOM","CVX","FCX","VST","CEG","NEE"];
 
 var BOT_DEFS = {
-  w: {name: "주봉봇", desc: "주봉 하이킨아시 양봉이면 보유, 음봉이 되면 매도", max: BOT_W_LIST.length},
+  w: {name: "주봉봇", desc: "주봉 하이킨아시 양봉이면 보유, 음봉이 되면 매도", max: BOT_W_MAX},
   d: {name: "일봉봇 (1234·W자)", desc: "W자 두 번째 바닥이 첫 바닥보다 높고 다시 양봉이 되면 매수", max: BOT_D_MAX}
 };
 
@@ -127,7 +128,7 @@ function _botFetch(syms, range) {
 
 // ---------- 봇별 "내일 주문" 정하기 ----------
 function _botDecideWeekly(st, data, day, weekDone) {
-  var orders = [];
+  var orders = [], selling = 0, cands = [];
   BOT_W_LIST.forEach(function (s) {
     var d = data[s];
     if (!d || d.c.length < 60 || d.dates[d.dates.length - 1] !== day) return;
@@ -135,9 +136,12 @@ function _botDecideWeekly(st, data, day, weekDone) {
     if (w.green.length < 20) return;
     var green = w.green[w.green.length - 1];
     var held = st.pos.some(function (p) { return p.s === s; });
-    if (held && !green) orders.push({act: "sell", s: s, why: "주봉 하이킨아시 음봉 전환"});
-    if (!held && green) orders.push({act: "buy", s: s, why: "주봉 하이킨아시 양봉"});
+    if (held && !green) { orders.push({act: "sell", s: s, why: "주봉 하이킨아시 음봉 전환"}); selling++; }
+    if (!held && green) { var n = d.c.length; cands.push({s: s, mom: n > 65 ? d.c[n - 1] / d.c[n - 66] - 1 : 0}); }
   });
+  var slots = BOT_W_MAX - st.pos.length + selling;                  // 동시에 최대 BOT_W_MAX종목만 보유 → 양봉 종목이 많으면 최근 3개월 상승이 큰 순서로
+  cands.sort(function (a, b) { return b.mom - a.mom; });
+  cands.slice(0, Math.max(0, slots)).forEach(function (c) { orders.push({act: "buy", s: c.s, why: "주봉 하이킨아시 양봉 (최근 3개월 강한 순)"}); });
   return orders;
 }
 function _botDecideDaily(st, data, day) {
