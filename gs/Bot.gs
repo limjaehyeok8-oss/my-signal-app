@@ -7,10 +7,11 @@ var BOT_START_KRW = 10000000;  // 봇마다 시작 가상 자금 (원)
 var BOT_FEE       = 0.0025;    // 수수료+환전+슬리피지 (살 때·팔 때 각각 0.25%)
 var BOT_SHEET     = "bot";
 
-// 주봉봇이 보는 종목 (지수·반도체 ETF + 대형 우량주, 업종을 섞음). 10종목 × 100만원
-var BOT_W_LIST = ["QQQ", "SMH", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "AVGO", "LLY", "JPM"];
-// 일봉봇이 매일 훑는 종목 (거래 많은 대형주·ETF, 레버리지 제외). 최대 5종목 × 200만원
-var BOT_D_MAX  = 5;
+// 주봉봇이 보는 종목 (지수·반도체 ETF + 대형 우량주, 업종을 섞음). 20종목 × 50만원
+var BOT_W_LIST = ["QQQ", "SMH", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "AVGO", "LLY", "JPM",
+  "AAPL", "TSLA", "TSM", "AMD", "NFLX", "COST", "V", "UNH", "XOM", "BRK-B"];
+// 일봉봇이 매일 훑는 종목 (거래 많은 대형주·ETF, 레버리지 제외). 최대 10종목 × 100만원
+var BOT_D_MAX  = 10;
 var BOT_D_LIST = ["SPY","QQQ","IWM","DIA","SMH","XLF","XLE","XLV","XLK","XLI","GLD","TLT",
   "AAPL","MSFT","GOOGL","AMZN","META","TSLA","NFLX","ORCL","CRM","ADBE","NOW","UBER","SHOP","PLTR","APP",
   "NVDA","AVGO","AMD","INTC","QCOM","MU","TSM","ASML","ARM","AMAT","LRCX","MRVL","ANET",
