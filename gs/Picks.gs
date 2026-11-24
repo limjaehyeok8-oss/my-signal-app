@@ -227,11 +227,11 @@ function refreshPicks() {
           var gd = _bbGapOf(d.closes), gw = _bbGapOf(w.closes), cl = d.closes[d.closes.length - 1];
           if (cl >= 3 && ((gd != null && gd < 0) || (gw != null && gw < 0))) bbs.push({s: s, g: PICK_GROUP_OF[s] || "기타", p: Number(cl.toFixed(2)), gd: gd, gw: gw, sw: (gw != null && gw < 0) ? _bbStats(w.closes, [2, 4, 8], 8) : null, ow: null});
         } catch (e) {}
-        try {                                              // AI 점수: 20일선 위에 있는 종목만 계산 (추세 좋은 쪽만 보면 되니까)
+        try {                                              // AI 점수: 일봉·주봉 20선 위에 있는 종목만 계산 (추세 좋은 쪽만 보면 되니까)
           var al = d.closes.length;
-          if (al >= 120 && w.closes.length >= 20 && d.closes[al - 1] >= 3 && d.closes[al - 1] > calculateMA(d.closes, 20)) {
+          if (al >= 120 && w.closes.length >= 20 && d.closes[al - 1] >= 3 && d.closes[al - 1] > calculateMA(d.closes, 20) && d.closes[al - 1] > calculateMA(w.closes, 20)) {   // 일봉 20선 위 + 주봉 20선 위만
             var aq = _aiScoreQuick(d, w, calculateHeikinAshi_GAS(d), calculateHeikinAshi_GAS(w));
-            if (aq && aq.score >= 3) ais.push({s: s, g: PICK_GROUP_OF[s] || "🧑 내 보유·기타", p: Number(d.closes[al - 1].toFixed(2)), ch: Number(((d.closes[al - 1] / d.closes[al - 2] - 1) * 100).toFixed(1)), ai: aq.score, wk: aq.wk, vr: Number(aq.vr.toFixed(1))});
+            if (aq && aq.score >= 3) ais.push({s: s, g: PICK_GROUP_OF[s] || "🧑 내 보유·기타", p: Number(d.closes[al - 1].toFixed(2)), ch: Number(((d.closes[al - 1] / d.closes[al - 2] - 1) * 100).toFixed(1)), ai: aq.score, wk: aq.wk, vr: Number(aq.vr.toFixed(1)), w20: 1});
           }
         } catch (e) {}
         var r = pickOne(s, d, w);

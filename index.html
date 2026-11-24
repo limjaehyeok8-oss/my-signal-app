@@ -2105,7 +2105,7 @@
     function renderAiList() {
       const list = $("pickList"); list.textContent = "";
       if (!pickAi || !pickAi.length) { list.appendChild(mkEl("div", "alertHint", "아직 계산된 결과가 없어요. 아래 새로고침을 눌러 주세요 (계산에 몇 분 걸려요)")); return; }
-      list.appendChild(mkEl("div", "alertHint", "AI 점수 높은 순 · 20일선 위에서 지표가 상승 쪽인 종목이에요. 이미 오른 종목일 수 있어서 추격 매수는 조심하세요"));
+      list.appendChild(mkEl("div", "alertHint", "AI 점수 높은 순 · 일봉·주봉 20선 위에서 지표가 상승 쪽인 종목이에요. 이미 오른 종목일 수 있어서 추격 매수는 조심하세요"));
       appendLimited(list, pickAi.slice(0, 100), true, "ai", false, aiCard);
     }
     function renderPicks() {
@@ -2156,7 +2156,7 @@
         if (r.updated) { let t = String(r.updated); if (/GMT|T\d\d:/.test(t)) { const dt = new Date(t); if (!isNaN(dt)) { const z = (n) => String(n).padStart(2, "0"); t = z(dt.getMonth() + 1) + "/" + z(dt.getDate()) + " " + z(dt.getHours()) + ":" + z(dt.getMinutes()); } } updTxt = t + " 기준 · 카드를 누르면 이유가 펼쳐져요"; }
         $("pickUpd").textContent = updTxt;
         pickData = r.items || [];
-        pickBbs = r.bbs || null; pickAi = r.ai || null;
+        pickBbs = r.bbs || null; pickAi = (r.ai || []).filter((x) => x.w20) ;
         if (r.groups) pickGroupList = r.groups;
         renderGroups();
         renderPicks();
@@ -4123,7 +4123,7 @@
     function loadTodayRec() {
       if (!myToken) return;
       skelFill($("todayRec"), 1, 120);
-      api({ action: "getPicks", token: myToken }).then((r) => { if (r && r.ok) { recData = r.items || []; recBbs = r.bbs || null; recAi = r.ai || null; paintTodayRec(); } }).catch(() => {});
+      api({ action: "getPicks", token: myToken }).then((r) => { if (r && r.ok) { recData = r.items || []; recBbs = r.bbs || null; recAi = (r.ai || []).filter((x) => x.w20); paintTodayRec(); } }).catch(() => {});
     }
     function paintWatch(r) {
       const box = $("wList"); box.textContent = "";
