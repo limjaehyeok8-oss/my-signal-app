@@ -194,6 +194,22 @@ function _bbSync() {
   var hs = getHoldingsSheet(), hl = hs.getLastRow();
   if (hl >= 2) hs.getRange(2, 1, hl - 1, 2).getValues().forEach(function (r) { add(r[0], r[1]); });
   _watchRows().forEach(function (r) { add(r[0], r[1]); });
+  // 직접 켜 둔 볼린저·거래량 알림 종목이 관심 목록에 없으면 관심 종목에 자동으로 넣어줌 (알림 = 관심 종목 규칙)
+  try {
+    var wsh = _watchSheet(), wcount = {};
+    _watchRows().forEach(function (r) { if (r[0]) { var dv = _dev(r[0]); wcount[dv] = (wcount[dv] || 0) + 1; } });
+    var addW = [];
+    _bbRows().forEach(function (r) {
+      if (!r[0] || !r[1] || String(r[5]) === "a") return;
+      var dv = _dev(r[0]), sy = String(r[1]).toUpperCase(), kk = dv + "|" + sy + "|d";
+      if (want[kk]) return;                                  // 이미 보유·관심에 있음
+      if ((wcount[dv] || 0) >= WATCH_MAX) return;
+      want[dv + "|" + sy + "|d"] = {t: String(r[0]), s: sy, k: "d"}; want[dv + "|" + sy + "|w"] = {t: String(r[0]), s: sy, k: "w"};
+      wcount[dv] = (wcount[dv] || 0) + 1;
+      addW.push([String(r[0]), sy, "", "", new Date(), ""]);
+    });
+    if (addW.length) wsh.getRange(wsh.getLastRow() + 1, 1, addW.length, 6).setValues(addW);
+  } catch (e) {}
   var sh = _bbSheet(), rows = _bbRows(), have = {}, del = [];
   rows.forEach(function (r, i) {
     if (!r[0] || !r[1]) { del.push(i + 2); return; }
