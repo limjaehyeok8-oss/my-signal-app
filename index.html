@@ -4216,28 +4216,27 @@
     function paintDD(r) {
       const box = $("ddBox"); box.textContent = "";
       if (!r || !r.ok) return;
-      const c = mkEl("div", "mkCard"); c.appendChild(mkEl("h4", null, "📉 고점 대비 하락 (과거 큰 하락과 비교)"));
+      const c = mkEl("div", "mkCard"); c.appendChild(mkEl("h4", null, "📉 고점 대비 하락"));
       r.items.forEach((x) => {
         const sec = mkEl("div"); sec.style.cssText = "margin:12px 0 4px";
         const hd = mkEl("div", "mkTop"); hd.appendChild(mkEl("span", null, x.name));
         hd.appendChild(mkEl("span", x.dd < 0 ? "down" : "up", (x.dd >= 0 ? "" : "") + x.dd.toFixed(1) + "%")); sec.appendChild(hd);
-        sec.appendChild(mkEl("div", "caNote", "고점 " + x.hi.toLocaleString("en-US") + " (" + x.hiDate + ") · 현재 " + x.price.toLocaleString("en-US") + " · 이번 저점 " + x.low.toFixed(1) + "% (" + x.lowDate.slice(5) + ")"));
-        const rows = x.past.slice(-5).map((e) => ({ lb: e.a.slice(0, 7) + " → " + e.t.slice(0, 7), v: e.d, now: false }));
-        rows.push({ lb: "이번 (지금)", v: x.dd, now: true }, { lb: "이번 저점", v: x.low, now: true, low: true });
+        const deep = x.past.length ? x.past.reduce((a, b) => (b.d < a.d ? b : a)) : null;
+        const sm = mkEl("div", "sub", deep ? "역대 최대 하락(" + deep.d.toFixed(0) + "%)의 " + Math.round(Math.abs(x.dd) / Math.abs(deep.d) * 100) + "% 수준 · 이번 최저 " + x.low.toFixed(1) + "%" : "이번 최저 " + x.low.toFixed(1) + "%"); sm.style.cssText = "font-size:12.5px;margin:2px 0 6px"; sec.appendChild(sm);
+        const rows = x.past.slice().sort((p, q) => p.d - q.d).slice(0, 3).map((e) => ({ lb: e.t.slice(0, 4) + "년", v: e.d, now: false }));
+        rows.push({ lb: "지금", v: x.dd, now: true });
         const mx = Math.max.apply(null, rows.map((q) => Math.abs(q.v)).concat([20]));
         rows.forEach((q) => {
-          const line = mkEl("div"); line.style.cssText = "display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12.5px";
-          const lb = mkEl("span", null, q.lb); lb.style.cssText = "flex:0 0 112px;color:var(--sub)" + (q.now ? ";color:var(--text);font-weight:800" : "");
-          const tr = mkEl("div"); tr.style.cssText = "flex:1;height:10px;border-radius:5px;background:var(--card2)";
-          const fl = mkEl("div"); fl.style.cssText = "height:100%;border-radius:5px;width:" + Math.max(2, Math.abs(q.v) / mx * 100) + "%;background:" + (q.now ? (q.low ? "var(--down,#3b82f6)" : "var(--accent,#f59e0b)") : "var(--sub)") + ";opacity:" + (q.now ? 1 : .55);
-          tr.appendChild(fl); line.appendChild(lb); line.appendChild(tr); line.appendChild(mkEl("b", null, q.v.toFixed(1) + "%"));
+          const line = mkEl("div"); line.style.cssText = "display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12.5px";
+          const lb = mkEl("span", null, q.lb); lb.style.cssText = "flex:0 0 44px;color:var(--sub)" + (q.now ? ";color:var(--txt);font-weight:800" : "");
+          const tr = mkEl("div"); tr.style.cssText = "flex:1;height:8px;border-radius:4px;background:var(--card2)";
+          const fl = mkEl("div"); fl.style.cssText = "height:100%;border-radius:4px;width:" + Math.max(2, Math.abs(q.v) / mx * 100) + "%;background:" + (q.now ? "var(--accent,#f59e0b)" : "var(--sub)") + ";opacity:" + (q.now ? 1 : .5);
+          tr.appendChild(fl); line.appendChild(lb); line.appendChild(tr); const bv = mkEl("b", null, q.v.toFixed(1) + "%"); bv.style.cssText = "flex:0 0 52px;text-align:right"; line.appendChild(bv);
           sec.appendChild(line);
         });
-        const deep = x.past.length ? x.past.reduce((a, b) => (b.d < a.d ? b : a)) : null;
-        if (deep) sec.appendChild(mkEl("div", "caNote", "가장 깊었던 " + deep.t.slice(0, 4) + "년 하락(" + deep.d.toFixed(1) + "%)의 " + Math.round(Math.abs(x.dd) / Math.abs(deep.d) * 100) + "% 수준 (저점 기준 " + Math.round(Math.abs(x.low) / Math.abs(deep.d) * 100) + "%)"));
         c.appendChild(sec);
       });
-      c.appendChild(mkEl("div", "mkTip", "최근 15년, 고점 대비 -15% 이상 빠졌던 구간이에요. 과거 하락의 깊이는 참고일 뿐이고, 이번에도 같은 깊이에서 멈춘다는 보장은 없어요."));
+      c.appendChild(mkEl("div", "mkTip", "최근 15년 중 가장 깊었던 하락 3번과 비교해요. 참고용이에요."));
       box.appendChild(c);
     }
     function loadDD() {
