@@ -108,15 +108,15 @@ function _bbFetch(symbols, kind) {
     try {
       if (resp.getResponseCode() !== 200) return;
       var r = JSON.parse(resp.getContentText()).chart.result[0], q = r.indicators.quote[0], ts = r.timestamp || [];
-      var closes = [], lows = [], tss = [];
+      var closes = [], lows = [], tss = [], vols = [];
       for (var i = 0; i < ts.length; i++) {
         if (q.close[i] == null) continue;
-        closes.push(Number(q.close[i])); lows.push(q.low[i] == null ? Number(q.close[i]) : Number(q.low[i])); tss.push(ts[i]);
+        vols.push(Number((q.volume && q.volume[i]) || 0)); closes.push(Number(q.close[i])); lows.push(q.low[i] == null ? Number(q.close[i]) : Number(q.low[i])); tss.push(ts[i]);
       }
       _mergeLastPeriod(r.meta && r.meta.dataGranularity, tss, null, null, lows, closes);
       if (closes.length < BB_N) return;
       var px = Number(r.meta && r.meta.regularMarketPrice);
-      out[symbols[k]] = {closes: closes, lows: lows, ts: tss, px: px > 0 ? px : closes[closes.length - 1]};
+      out[symbols[k]] = {closes: closes, lows: lows, ts: tss, vols: vols.slice(-20), px: px > 0 ? px : closes[closes.length - 1]};
     } catch (e) {}
   });
   return out;
@@ -143,6 +143,17 @@ function _bbBands(info, kind) {
   return {px: px, ma: ma, lower: lower, upper: upper, low: low, touch: sd > 0 && low <= lower};
 }
 
+// 잡주(동전주·거래 적은 종목)는 하단을 이탈해도 회복이 느려서 알림에서 뺌: 주가 $5 미만이거나, 최근 20봉 하루 평균 거래대금이 약 $15M 미만
+function _bbJunk(sym, info, kd) {
+  if (/\.(KS|KQ)$/i.test(sym)) return false;                 // 한국 종목은 원화라서 이 기준을 쓰지 않음
+  if (!info || !info.vols || !info.vols.length) return false;
+  var px = info.px > 0 ? info.px : info.closes[info.closes.length - 1];
+  if (px < 5) return true;
+  var sum = 0; info.vols.forEach(function (v) { sum += v; });
+  var perDay = sum / info.vols.length / (_bbKind(kd) === "w" ? 5 : 1) * px;
+  return sum > 0 && perDay < 15e6;
+}
+
 // 10분마다: 켜 둔 종목이 볼린저 하단에 닿거나 이탈하면 알림 (정규장에서만)
 function checkBbAlerts(force) {
   try { _bbSync(); } catch (e) { try { runLog("err", "볼린저 동기화 실패: " + e.message); } catch (e2) {} }
@@ -165,6 +176,7 @@ function checkBbAlerts(force) {
     var s = String(r[1]).toUpperCase(), kd = _bbKind(r[4]);
     if (!(s in bands[kd])) bands[kd][s] = _bbBands(data[kd][s], kd);
     var b = bands[kd][s]; if (!b) return;
+    if (_bbJunk(s, data[kd][s], kd)) return;                          // 잡주는 알림 제외
     var state = Math.max(0, Math.floor(Number(r[2]) || 0)), now = _bbState(b);
     if (now > state) {
       sh.getRange(i + 2, 3).setValue(now); sh.getRange(i + 2, 4).setValue(new Date());
