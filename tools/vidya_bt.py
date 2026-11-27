@@ -99,7 +99,7 @@ print("\n수익률 TOP5:"); [print(" ", r["name"], r["cagr"], r["mdd"]) for r in
 print("칼마 TOP5:"); [print(" ", r["name"], r["cagr"], r["mdd"], r["calmar"]) for r in bycal[:5]]
 def monthly(s): return [[str(d.date())[:7], round(float(v), 3)] for d, v in s.resample("ME").last().items()]
 out = {"top_cagr": byc[:8], "top_calmar": bycal[:8], "all": res,
-       "curve_best": {"name": byc[0]["name"], "m": monthly(curves[byc[0]["name"]])}, "curve_cal": {"name": bycal[0]["name"], "m": monthly(curves[bycal[0]["name"]])},
+       "curve_best": {"name": byc[0]["name"], "m": monthly(curves[byc[0]["name"]])}, "curve_cal": {"name": "TQQQ+SOXL · 2종목 · SMA 200", "m": monthly(curves["TQQQ+SOXL · 2종목 · SMA 200"])},
        "spy": monthly(sp), "ew": monthly(ew), "spy_stat": [round((sp.iloc[-1]**(1/yrs)-1)*100, 1), round(((sp/sp.cummax()-1).min())*100, 1)],
        "ew_stat": [round((ew.iloc[-1]**(1/yrs)-1)*100, 1), round(((ew/ew.cummax()-1).min())*100, 1)]}
 print("JSON=" + json.dumps(out, ensure_ascii=False, separators=(",", ":")))
