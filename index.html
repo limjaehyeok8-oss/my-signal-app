@@ -1531,11 +1531,11 @@
         const det = document.createElement("details");
         det.className = "anMore";
         const sm = document.createElement("summary");
-        sm.textContent = "📄 자세히 보기";
+        sm.textContent = "📄 자세한 분석";
         det.appendChild(sm);
         rest.forEach((b) => det.appendChild(mk("anBlock", b)));
         pre.appendChild(det);
-        if (!ok) det.open = true;
+        det.open = true;                                           // 정보는 접지 않고 전부 펼쳐서 보여줌
       }
     }
 
