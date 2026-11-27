@@ -198,12 +198,12 @@ function botVidya(c) {
 }
 // 주봉 초저점: 주봉 저가 <= 볼린저(20주,2σ) 하단 AND 주봉 RSI14 <= 30. 확정된(끝난) 주봉만 사용. 반환 {sig, rsi}
 function _botWeeklyLow(d, weekDone) {
-  var wc = [], wl = [], cur = null, i;
+  var wc = [], wl = [], wh = [], cur = null, i;
   for (i = 0; i < d.c.length; i++) {
     var k = botWeekKey(d.dates[i]);
-    if (k !== cur) { cur = k; wc.push(d.c[i]); wl.push(d.l[i]); } else { wc[wc.length - 1] = d.c[i]; wl[wl.length - 1] = Math.min(wl[wl.length - 1], d.l[i]); }
+    if (k !== cur) { cur = k; wc.push(d.c[i]); wl.push(d.l[i]); wh.push(d.h[i]); } else { wc[wc.length - 1] = d.c[i]; wl[wl.length - 1] = Math.min(wl[wl.length - 1], d.l[i]); wh[wh.length - 1] = Math.max(wh[wh.length - 1], d.h[i]); }
   }
-  if (!weekDone) { wc.pop(); wl.pop(); }
+  if (!weekDone) { wc.pop(); wl.pop(); wh.pop(); }
   var m = wc.length; if (m < 40) return {sig: false, rsi: null};
   var g = 0, l = 0, j;
   for (j = 1; j <= 14; j++) { var df = wc[j] - wc[j - 1]; if (df > 0) g += df; else l -= df; }
@@ -213,12 +213,12 @@ function _botWeeklyLow(d, weekDone) {
   var w = wc.slice(m - 20), mean = 0, v = 0;
   w.forEach(function (x) { mean += x; }); mean /= 20; w.forEach(function (x) { v += (x - mean) * (x - mean); });
   var lower = mean - 2 * Math.sqrt(v / 19);
-  var touch = wl[m - 1] <= lower;
-  return {sig: weekDone && touch && rsi <= 30, mid: weekDone && touch && rsi > 30 && rsi <= 40, rsi: rsi};
+  var touch = wl[m - 1] <= lower, upper = mean + 2 * Math.sqrt(v / 19), whh = wh[m - 1] >= upper;
+  return {sig: weekDone && touch && rsi <= 30, mid: weekDone && touch && rsi > 30 && rsi <= 40, top: weekDone && whh && rsi >= 80, wtop: weekDone && whh && rsi >= 70 && rsi < 80, rsi: rsi};
 }
 function _botDecideVidya(st, data, day, weekDone) {   // 200일선 ±5% 밴드(횡보 거르기) + 3개월 모멘텀 순위 + 주봉 초저점 추가 매수
   var info = {}, up = [], lows = [], orders = [], selling = 0, BAND = 0.05;
-  st.weak = [];
+  st.weak = []; st.tops = [];
   BOT_V_LIST.forEach(function (s) {
     var d = data[s];
     if (!d || d.c.length < 205 || d.dates[d.dates.length - 1] !== day) return;
@@ -226,6 +226,7 @@ function _botDecideVidya(st, data, day, weekDone) {   // 200일선 ±5% 밴드(�
     info[s] = {gap: gap, mom: d.c[n] / d.c[n - 63] - 1, low: wk};
     if (gap >= BAND) up.push(s);                      // 200일선 +5% 위일 때만 새로 매수 (선 근처 횡보는 건너뜀)
     else if (wk.sig) lows.push(s);                    // 선 아래라도 주봉 초저점이면 반등 노리고 매수
+    if (wk.top || wk.wtop) st.tops = (st.tops || []).concat([{s: s, rsi: wk.rsi, strong: !!wk.top}]);
     if (wk.mid) st.weak.push({s: s, rsi: wk.rsi});    // 약한 저점(RSI 30~40 + 볼린저 하단): 알림만, 매매는 안 함
   });
   st.pos.forEach(function (p) {
@@ -295,7 +296,7 @@ function botRun() {
     var now = new Date(), dow = Number(Utilities.formatDate(now, "America/New_York", "u")), hm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
     var nowKey = botWeekKey(Utilities.formatDate(now, "America/New_York", "yyyy-MM-dd"));
     var weekDone = botWeekKey(day) < nowKey || dow >= 6 || (dow === 5 && hm >= 1610);
-    var res = [], botMsgs = [], vSignals = [], vWeak = [];
+    var res = [], botMsgs = [], vSignals = [], vWeak = [], vTops = [];
 
     if (m.v_state && m.v_state.rule !== BOT_V_RULE) { ["state", "eq", "log", "closed"].forEach(function (k) { delete m["v_" + k]; }); }   // 규칙이 바뀐 레버리지봇만 새로 시작
     ["w", "d", "m", "v"].forEach(function (id) {
@@ -337,7 +338,8 @@ function botRun() {
       st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : id === "m" ? _botDecideMomentum(st, data, day) : id === "v" ? _botDecideVidya(st, data, day, weekDone) : _botDecideDaily(st, data, day);
       st.last = day; st.fx = fx;
       if (id === "v" && st.pend.length) vSignals = st.pend.slice();
-      if (id === "v" && st.weak && st.weak.length) vWeak = st.weak.slice();      // 레버리지봇은 신호가 뜬 순간(다음 장 시가에 체결 예정) 알림
+      if (id === "v" && st.weak && st.weak.length) vWeak = st.weak.slice();
+      if (id === "v" && st.tops && st.tops.length) vTops = st.tops.slice();      // 레버리지봇은 신호가 뜬 순간(다음 장 시가에 체결 예정) 알림
       if (id === "w") {                                              // 주봉봇이 오늘 체결한 매매를 알림용으로 모아둠
         var todayTrades = log.filter(function (x) { return x.d === day; });
         if (todayTrades.length) botMsgs.push(todayTrades);
@@ -359,6 +361,10 @@ function botRun() {
       if (vWeak.length) sendPush("🍀 약한 저점 신호: " + vWeak.map(function (x) { return x.s; }).join(", "),
         vWeak.map(function (x) { return x.s + " 주봉 RSI " + x.rsi.toFixed(0) + " · 볼린저 하단 이하"; }).join("\n") + "\n매수 신호는 아니고 참고용이에요 (과거 13주 뒤 오른 비율 약 61%, 초저점은 78%).");
     } catch (e) { try { runLog("err", "약한 저점 알림 실패: " + e.message); } catch (e2) {} }
+    try {                                                            // 🔥 고점 주의 (알림만)
+      if (vTops.length) sendPush("🔥 고점 주의: " + vTops.map(function (x) { return x.s; }).join(", "),
+        vTops.map(function (x) { return x.s + " 주봉 RSI " + x.rsi.toFixed(0) + " · 볼린저 상단 이상 (" + (x.strong ? "초고점" : "약한 고점") + ")"; }).join("\n") + "\n매도 신호는 아니고 참고용이에요 (초고점 뒤 13주 평균 −8%였지만 표본이 21번뿐이고, 약한 고점은 평소와 별 차이가 없었어요).");
+    } catch (e) { try { runLog("err", "고점 주의 알림 실패: " + e.message); } catch (e2) {} }
     try {                                                            // 🤖 주봉봇이 무엇을 샀고 팔았는지 푸시
       if (botMsgs.length) {
         var tr = botMsgs[0], buys = tr.filter(function (x) { return x.t === "buy"; }), sells = tr.filter(function (x) { return x.t === "sell"; });
@@ -416,7 +422,7 @@ function _botAttachCharts(bots, m) {
   bots.forEach(function (b) { if (b.started) b.pos.forEach(function (p) { need[p.s] = 1; }); });
   BOT_V_LIST.forEach(function (s) { need[s] = 1; });                 // 레버리지봇은 보유와 상관없이 4종 모두 차트
   var syms = Object.keys(need); if (!syms.length) return;
-  var cache = CacheService.getScriptCache(), key = "botcand4_" + syms.sort().join(",").slice(0, 200), data = null;
+  var cache = CacheService.getScriptCache(), key = "botcand5_" + syms.sort().join(",").slice(0, 200), data = null;
   try { var c = cache.get(key); if (c) data = JSON.parse(c); } catch (e) {}
   if (!data) {
     var raw = _botFetch(syms, "3y"); data = {};
@@ -447,8 +453,8 @@ function _botAttachCharts(bots, m) {
 }
 // 과열(고점) 지표: 200일선 대비 괴리율, 주봉 RSI(14), 주봉 하락 다이버전스, RSI 70+ 세 번·고점 하락
 function _botHeat(d) {
-  var c = d.c, n = c.length, sma = n >= 200 ? botSma(c, 200) : null, wk = [], wd = [], wlo = [], last = "", i, j;
-  for (i = 0; i < n; i++) { var k = botWeekKey(d.dates[i]); if (k === last) { wk[wk.length - 1] = c[i]; wd[wd.length - 1] = d.dates[i]; wlo[wlo.length - 1] = Math.min(wlo[wlo.length - 1], d.l[i]); } else { wk.push(c[i]); wd.push(d.dates[i]); wlo.push(d.l[i]); last = k; } }
+  var c = d.c, n = c.length, sma = n >= 200 ? botSma(c, 200) : null, wk = [], wd = [], wlo = [], whi = [], last = "", i, j;
+  for (i = 0; i < n; i++) { var k = botWeekKey(d.dates[i]); if (k === last) { wk[wk.length - 1] = c[i]; wd[wd.length - 1] = d.dates[i]; wlo[wlo.length - 1] = Math.min(wlo[wlo.length - 1], d.l[i]); whi[whi.length - 1] = Math.max(whi[whi.length - 1], d.h[i]); } else { wk.push(c[i]); wd.push(d.dates[i]); wlo.push(d.l[i]); whi.push(d.h[i]); last = k; } }
   var rs = [], m = wk.length;
   if (m > 15) {
     var g = 0, l = 0;
@@ -462,15 +468,21 @@ function _botHeat(d) {
   for (i = 16; i < m - 2; i++) { if (isMax(wk, i)) piv.push(i); if (rs[i] >= 70 && isMax(rs, i)) rp.push(i); }
   for (i = 1; i < piv.length; i++) { var p1 = piv[i - 1], p2 = piv[i]; if (p2 - p1 >= 3 && p2 - p1 <= 30 && wk[p2] > wk[p1] && rs[p2] < rs[p1] - 3 && rs[p1] >= 65) div.push({a: wd[p1], b: wd[p2]}); }
   for (i = 2; i < rp.length; i++) { var x = rp[i - 2], y = rp[i - 1], z = rp[i]; if (z - x <= 60 && rs[x] > rs[y] && rs[y] > rs[z]) lh.push({a: wd[x], b: wd[z]}); }
-  var lowsig = [], midsig = [];                                                    // 과거 주봉 초저점(RSI<=30 & 저가<=볼린저 하단) 주 (끝난 주만)
+  var lowsig = [], midsig = [], topsig = [], weaktop = [];                                                    // 과거 주봉 초저점(RSI<=30 & 저가<=볼린저 하단) 주 (끝난 주만)
   for (i = 20; i < m - 1; i++) {
-    if (rs[i] == null || rs[i] > 40) continue;
+    if (rs[i] == null) continue;
+    if (rs[i] >= 70) {                                                // 고점 쪽: RSI>=70 & 주봉 고가 >= 볼린저 상단
+      var w3 = wk.slice(i - 19, i + 1), mu3 = 0, v3 = 0; w3.forEach(function (x) { mu3 += x; }); mu3 /= 20; w3.forEach(function (x) { v3 += (x - mu3) * (x - mu3); });
+      if (whi[i] >= mu3 + 2 * Math.sqrt(v3 / 19)) { if (rs[i] >= 80) topsig.push(wd[i]); else weaktop.push(wd[i]); }
+      continue;
+    }
+    if (rs[i] > 40) continue;
     var w2 = wk.slice(i - 19, i + 1), mu2 = 0, v2 = 0; w2.forEach(function (x) { mu2 += x; }); mu2 /= 20; w2.forEach(function (x) { v2 += (x - mu2) * (x - mu2); });
     if (wlo[i] <= mu2 - 2 * Math.sqrt(v2 / 19)) { if (rs[i] <= 30) lowsig.push(wd[i]); else midsig.push(wd[i]); }
   }
   var bbg = null;
   if (m >= 21) { var ww = wk.slice(m - 20), mu = 0, vv = 0; ww.forEach(function (x) { mu += x; }); mu /= 20; ww.forEach(function (x) { vv += (x - mu) * (x - mu); }); var lo = mu - 2 * Math.sqrt(vv / 19); bbg = Number(((wk[m - 1] / lo - 1) * 100).toFixed(1)); }
-  return {gap: sma ? Number(((c[n - 1] / sma - 1) * 100).toFixed(1)) : null, wrsi: rsi == null ? null : Number(rsi.toFixed(0)), bbg: bbg, lows: lowsig.slice(-12), mids: midsig.slice(-20), div: div.slice(-3), lh: lh.slice(-2)};
+  return {gap: sma ? Number(((c[n - 1] / sma - 1) * 100).toFixed(1)) : null, wrsi: rsi == null ? null : Number(rsi.toFixed(0)), bbg: bbg, lows: lowsig.slice(-12), mids: midsig.slice(-20), tops: topsig.slice(-12), wtops: weaktop.slice(-20), div: div.slice(-3), lh: lh.slice(-2)};
 }
 function _r2(x) { return x == null ? null : Number(Number(x).toFixed(2)); }
 

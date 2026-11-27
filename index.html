@@ -4516,6 +4516,13 @@
         const mark = (ds, label, col) => { const i = dayIdx(ds); if (i < k0 || i < 0) return; const x = X(i - k0), y = Y(ch.h[i]) - 6; svg.add("path", { d: "M" + x + " " + (y + 5) + " l-4 -7 h8 z", fill: col }); svg.add("text", { x: Math.min(Math.max(x, 24), W - R - 18), y: y - 4, fill: col, "font-size": 8.5, "font-weight": 700, "text-anchor": "middle" }, label); };
         (ch.heat.div || []).forEach((e) => { const i1 = dayIdx(e.a), i2 = dayIdx(e.b); if (i1 >= k0 && i2 >= 0 && ch.h[i1] != null) svg.add("line", { x1: X(i1 - k0), y1: Y(ch.h[i1]), x2: X(i2 - k0), y2: Y(ch.h[i2]), stroke: "#c77dff", "stroke-width": 1, "stroke-dasharray": "3 2" }); mark(e.b, "다이버전스", "#c77dff"); });
         (ch.heat.lh || []).forEach((e) => mark(e.b, "RSI↓", "#ff9f43"));
+        (ch.heat.wtops || []).forEach((ds) => { const i = dayIdx(ds); if (i < k0 || i < 0) return; const x = X(i - k0), y = Y(ch.h[i]) - 6;      // 약한 고점 (RSI 70~80 + 볼린저 상단): 작은 빨간 점
+          svg.add("circle", { cx: x, cy: y, r: 2.6, fill: "none", stroke: "#ff5d73", "stroke-width": 1.2, opacity: 0.8 }); });
+        let lastTop = -99;
+        (ch.heat.tops || []).forEach((ds) => { const i = dayIdx(ds); if (i < k0 || i < 0) return; const x = X(i - k0), y = Y(ch.h[i]) - 6;          // 🔥 초고점 (RSI 80 이상 + 볼린저 상단): 큰 빨간 ▼
+          svg.add("path", { d: "M" + x + " " + (y + 6) + " l-5 -9 h10 z", fill: "#ff5d73" });
+          if (i - lastTop > 25) svg.add("text", { x: Math.min(Math.max(x, 24), W - R - 18), y: y - 6, fill: "#ff5d73", "font-size": 8.5, "font-weight": 700, "text-anchor": "middle" }, "🔥초고점");
+          lastTop = i; });
         (ch.heat.mids || []).forEach((ds) => { const i = dayIdx(ds); if (i < k0 || i < 0) return; const x = X(i - k0), y = Y(ch.l[i]) + 5;     // 중간 저점 (RSI 30~40 + 볼린저 하단): 작은 연한 점
           svg.add("circle", { cx: x, cy: y, r: 2.6, fill: "none", stroke: "#2ecc71", "stroke-width": 1.2, opacity: 0.8 }); });
         let lastLab = -99;
