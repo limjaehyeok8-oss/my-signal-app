@@ -1,11 +1,12 @@
-# 레버리지 ETF 12종 전략 비교 백테스트 (봇과 같은 조건: 최대 5종목 동시, 종목당 시작자금/5 고정, 신호는 종가 → 다음날 시가 체결, 수수료 0.25%)
-import yfinance as yf, pandas as pd, numpy as np, json, warnings
+# 레버리지 ETF 전략 비교 2차: 복리 운용(수익을 다시 투자) + 종목 풀·보유 종목 수·신호 종류 조합
+import yfinance as yf, pandas as pd, numpy as np, json, warnings, itertools
 warnings.filterwarnings("ignore")
-LIST = ["TQQQ","SOXL","TECL","UPRO","SPXL","TNA","FAS","LABU","FNGU","WEBL","BULZ","NVDL"]
-FEE, SLOTS = 0.0025, 5
+ALL = ["TQQQ","SOXL","TECL","UPRO","SPXL","TNA","FAS","LABU","FNGU","WEBL","BULZ","NVDL"]
+POOLS = {"전체 12종": ALL, "핵심 4종(TQQQ·SOXL·TECL·UPRO)": ["TQQQ","SOXL","TECL","UPRO"], "지수 3종(TQQQ·UPRO·TNA)": ["TQQQ","UPRO","TNA"], "TQQQ 하나": ["TQQQ"]}
+FEE = 0.0025
 
 def vidya(c, ln, cmo=20):
-    c = c.astype(float); n = len(c); out = np.full(n, np.nan)
+    n = len(c); out = np.full(n, np.nan)
     if n < ln: return out
     a = 2 / (ln + 1); v = c[:ln].mean()
     for i in range(ln - 1, n):
@@ -20,84 +21,85 @@ def load(t):
     if d is None or len(d) < 300: return None
     d.columns = [x[0] if isinstance(x, tuple) else x for x in d.columns]
     return d[["Open", "Close"]].dropna()
-
-D = {t: load(t) for t in LIST}; D = {t: d for t, d in D.items() if d is not None}
+raw = {t: load(t) for t in ALL}; raw = {t: d for t, d in raw.items() if d is not None}
 SPY = load("SPY")
-print("데이터:", {t: str(d.index[0].date()) for t, d in D.items()})
+START = pd.Timestamp("2010-06-01")
+idx = pd.DatetimeIndex(sorted(set().union(*[set(d.index) for d in raw.values()])))
+idx = idx[idx >= START]
+O = pd.DataFrame({t: d["Open"] for t, d in raw.items()}).reindex(idx); C = pd.DataFrame({t: d["Close"] for t, d in raw.items()}).reindex(idx)
+Cf = pd.DataFrame({t: d["Close"] for t, d in raw.items()}).reindex(idx.union(pd.DatetimeIndex([]))).copy()
+full = {t: d["Close"] for t, d in raw.items()}
+def sig_frames():
+    S = {}
+    for n in (30, 60, 120, 200):
+        S[f"VIDYA {n}"] = pd.DataFrame({t: pd.Series(vidya(full[t].values.astype(float), n), index=full[t].index) for t in raw}).reindex(idx)
+    for n in (50, 100, 200): S[f"SMA {n}"] = pd.DataFrame({t: full[t].rolling(n).mean() for t in raw}).reindex(idx)
+    return S
+LINES = sig_frames()
+MOM = {m: pd.DataFrame({t: full[t] / full[t].shift(m) - 1 for t in raw}).reindex(idx) for m in (63, 126)}
+SMA200 = LINES["SMA 200"]
 
-def feats(d):
-    c = d["Close"].values.astype(float); s = pd.Series(c, index=d.index)
-    f = {"c": s}
-    for n in (50, 100, 120, 200): f[f"sma{n}"] = s.rolling(n).mean()
-    for n in (30, 60, 120, 200): f[f"vid{n}"] = pd.Series(vidya(c, n), index=d.index)
-    f["mom126"] = s / s.shift(126) - 1; f["mom63"] = s / s.shift(63) - 1; f["mom252"] = s / s.shift(252) - 1
-    return f
-F = {t: feats(d) for t, d in D.items()}
+def run(pool, slots, line, rank, mom_filter=None):
+    cols = [t for t in pool if t in raw]
+    o = O[cols].values; c = C[cols].values; L = LINES[line][cols].values
+    M = MOM[rank][cols].values if rank else None
+    base = (c / L - 1)                                  # 선 대비 위치
+    hold = base > 0
+    if mom_filter: hold = hold & (MOM[mom_filter][cols].values > 0) & (c > SMA200[cols].values)
+    score = M if rank else base
+    n = len(idx); cash = 1.0; q = np.zeros(len(cols)); eq = np.full(n, np.nan); trades = []; entry = np.zeros(len(cols))
+    eq[0] = 1.0
+    for k in range(n - 1):
+        valid = ~np.isnan(L[k]) & ~np.isnan(c[k])
+        if mom_filter or rank: valid &= ~np.isnan(score[k])
+        # 청산
+        for j in range(len(cols)):
+            if q[j] > 0 and valid[j] and not hold[k, j] and not np.isnan(o[k + 1, j]):
+                px = o[k + 1, j] * (1 - FEE); cash += q[j] * px; trades.append(px / entry[j] - 1); q[j] = 0
+        # 진입 (복리: 슬롯 예산 = 총자산/슬롯수)
+        total = cash + np.nansum(q * c[k])
+        cand = [j for j in range(len(cols)) if valid[j] and hold[k, j] and q[j] == 0 and not np.isnan(o[k + 1, j])]
+        cand.sort(key=lambda j: -score[k, j])
+        for j in cand:
+            if (q > 0).sum() >= slots: break
+            bud = min(cash, total / slots)
+            if bud < 1e-4: break
+            px = o[k + 1, j] * (1 + FEE); q[j] = bud / px; entry[j] = px; cash -= bud
+        eq[k + 1] = cash + np.nansum(np.where(np.isnan(c[k + 1]), q * entry, q * c[k + 1]))
+    s = pd.Series(eq, index=idx).ffill()
+    yrs = (s.index[-1] - s.index[0]).days / 365.25
+    cagr = s.iloc[-1] ** (1 / yrs) - 1; mdd = (s / s.cummax() - 1).min()
+    half = s.index[len(s) // 2]
+    h1 = (s[:half].iloc[-1] / s.iloc[0]) ** (1 / ((half - s.index[0]).days / 365.25)) - 1
+    h2 = (s.iloc[-1] / s[:half].iloc[-1]) ** (1 / ((s.index[-1] - half).days / 365.25)) - 1
+    w = [x for x in trades if x > 0]
+    return s, dict(cagr=round(cagr * 100, 1), mdd=round(mdd * 100, 1), total=round((s.iloc[-1] - 1) * 100), c1=round(h1 * 100, 1), c2=round(h2 * 100, 1),
+                   n=len(trades), win=round(len(w) / max(1, len(trades)) * 100), calmar=round(cagr / abs(mdd), 2))
 
-# 전략: (보유조건 함수, 순위점수 함수) — 둘 다 (t, day) → 값 (NaN이면 해당 없음)
-def S_vid(n):   return (lambda f, k: f["c"].iloc[k] > f[f"vid{n}"].iloc[k], lambda f, k: f["c"].iloc[k] / f[f"vid{n}"].iloc[k] - 1)
-def S_sma(n):   return (lambda f, k: f["c"].iloc[k] > f[f"sma{n}"].iloc[k], lambda f, k: f["c"].iloc[k] / f[f"sma{n}"].iloc[k] - 1)
-def S_vid_mom(n, m): return (lambda f, k: f["c"].iloc[k] > f[f"vid{n}"].iloc[k] and f[m].iloc[k] > 0, lambda f, k: f[m].iloc[k])
-def S_mom(m, sma): return (lambda f, k: f[m].iloc[k] > 0 and f["c"].iloc[k] > f[f"sma{sma}"].iloc[k], lambda f, k: f[m].iloc[k])
-def S_dual(n, m):  # VIDYA 위 + 모멘텀 순위, 청산은 VIDYA 아래일 때만
-    return (lambda f, k: f["c"].iloc[k] > f[f"vid{n}"].iloc[k], lambda f, k: f[m].iloc[k])
-
-STRATS = {
- "VIDYA 30": S_vid(30), "VIDYA 60": S_vid(60), "VIDYA 120": S_vid(120), "VIDYA 200": S_vid(200),
- "단순이평 50": S_sma(50), "단순이평 120": S_sma(120), "단순이평 200": S_sma(200),
- "VIDYA120 + 6개월모멘텀 양수·순위": S_vid_mom(120, "mom126"),
- "VIDYA120 위 + 모멘텀순위(6개월)": S_dual(120, "mom126"),
- "VIDYA60 위 + 모멘텀순위(6개월)": S_dual(60, "mom126"),
- "VIDYA200 위 + 모멘텀순위(6개월)": S_dual(200, "mom126"),
- "모멘텀(3개월)+200선": S_mom("mom63", 200), "모멘텀(6개월)+200선": S_mom("mom126", 200), "모멘텀(12개월)+200선": S_mom("mom252", 200),
-}
-
-def sim(name, hold, score, start="2010-06-01"):
-    dates = sorted(set().union(*[set(d.index) for d in D.values()])); dates = [x for x in dates if x >= pd.Timestamp(start)]
-    cash = 1.0; pos = {}; eq = []; trades = []
-    for k in range(len(dates) - 1):
-        day, nxt = dates[k], dates[k + 1]
-        sig = {}
-        for t, f in F.items():
-            if day in f["c"].index:
-                i = f["c"].index.get_loc(day)
-                try:
-                    h = hold(f, i); sc = score(f, i)
-                    if not (np.isnan(sc)): sig[t] = (bool(h), float(sc))
-                except Exception: pass
-        for t in list(pos):
-            if t in sig and not sig[t][0] and nxt in D[t].index:
-                px = D[t].loc[nxt, "Open"] * (1 - FEE); cash += pos[t][0] * px; trades.append(px / pos[t][1] - 1); del pos[t]
-        ups = sorted([t for t, (h, sc) in sig.items() if h and t not in pos and nxt in D[t].index], key=lambda t: -sig[t][1])
-        for t in ups:
-            if len(pos) >= SLOTS: break
-            px = D[t].loc[nxt, "Open"] * (1 + FEE); bud = min(cash, 1.0 / SLOTS)
-            if bud < 0.01: continue
-            pos[t] = (bud / px, px); cash -= bud
-        val = cash + sum(q * (D[t].loc[nxt, "Close"] if nxt in D[t].index else px0) for t, (q, px0) in pos.items())
-        eq.append((nxt, val))
-    return pd.Series([v for _, v in eq], index=[d for d, _ in eq]), trades
-
-def stat(eq):
-    yrs = (eq.index[-1] - eq.index[0]).days / 365.25
-    cagr = (eq.iloc[-1] / eq.iloc[0]) ** (1 / yrs) - 1; mdd = (eq / eq.cummax() - 1).min()
-    return cagr * 100, mdd * 100
-
-rows = []
-for nm, (h, s) in STRATS.items():
-    eq, tr = sim(nm, h, s)
-    cg, md = stat(eq); half = eq.index[len(eq) // 2]
-    c1, m1 = stat(eq[:half]); c2, m2 = stat(eq[half:])
-    wins = [x for x in tr if x > 0]
-    yr = (eq.groupby(eq.index.year).last() / eq.groupby(eq.index.year).last().shift(1).fillna(1.0) - 1) * 100
-    rows.append(dict(name=nm, total=round((eq.iloc[-1] - 1) * 100), cagr=round(cg, 1), mdd=round(md, 1), calmar=round(cg / abs(md), 2),
-                     c1=round(c1, 1), c2=round(c2, 1), n=len(tr), win=round(len(wins) / max(1, len(tr)) * 100), avg=round(np.mean(tr) * 100, 1) if tr else 0,
-                     years={int(y): round(float(v)) for y, v in yr.items()}))
-    print(f"{nm:34s} 누적 {rows[-1]['total']:>6}% 연 {cg:5.1f}% MDD {md:6.1f}% 칼마 {rows[-1]['calmar']:>5} | 전반 {c1:5.1f}% 후반 {c2:5.1f}% | 거래 {len(tr)} 승률 {rows[-1]['win']}% 평균 {rows[-1]['avg']}%")
-# 비교 기준
-ew = pd.concat([f["c"].pct_change() for f in F.values()], axis=1).mean(axis=1).fillna(0); ewe = (1 + ew[ew.index >= "2010-06-01"]).cumprod()
-cg, md = stat(ewe); print(f"{'12종 균등 보유(매일 리밸런싱)':34s} 누적 {round((ewe.iloc[-1]-1)*100)}% 연 {cg:.1f}% MDD {md:.1f}%")
-sp = SPY["Close"][SPY.index >= "2010-06-01"]; sp = sp / sp.iloc[0]; cg, md = stat(sp); print(f"{'SPY 보유':34s} 누적 {round((sp.iloc[-1]-1)*100)}% 연 {cg:.1f}% MDD {md:.1f}%")
-print("\n연도별(수익률%):")
-for r in sorted(rows, key=lambda r: -r["calmar"])[:5]: print(r["name"], r["years"])
-print("JSON=" + json.dumps(rows, ensure_ascii=False))
+res = []; curves = {}
+combos = []
+for pn, pool in POOLS.items():
+    for slots in ([1] if len(pool) == 1 else [2, 3, 5]):
+        if slots > len(pool): continue
+        for line in ["VIDYA 30", "VIDYA 60", "VIDYA 120", "VIDYA 200", "SMA 100", "SMA 200"]:
+            combos.append((pn, pool, slots, line, None, None))
+        combos.append((pn, pool, slots, "VIDYA 60", "mom126", None)); combos.append((pn, pool, slots, "SMA 200", "mom63", None))
+for pn, pool, slots, line, rank, mf in combos:
+    s, st = run(pool, slots, line, rank, mf)
+    name = f"{pn} · {slots}종목 · {line}" + (f" · 6개월모멘텀순위" if rank == "mom126" else "") + (" · 3개월모멘텀순위" if rank == "mom63" else "")
+    st.update(name=name, pool=pn, slots=slots, line=line, rank=rank); res.append(st); curves[name] = s
+    print(f"{name:62s} 연 {st['cagr']:>5}% MDD {st['mdd']:>6}% 칼마 {st['calmar']:>5} | 전반 {st['c1']:>5}% 후반 {st['c2']:>5}% | 거래 {st['n']} 승률 {st['win']}%", flush=True)
+# 기준선
+sp = SPY["Close"].reindex(idx).ffill(); sp = sp / sp.iloc[0]
+yrs = (sp.index[-1] - sp.index[0]).days / 365.25; print(f"SPY 연 {(sp.iloc[-1]**(1/yrs)-1)*100:.1f}% MDD {((sp/sp.cummax()-1).min())*100:.1f}%")
+ew = (C.pct_change().mean(axis=1).fillna(0) + 1).cumprod()
+print(f"12종 균등보유 연 {(ew.iloc[-1]**(1/yrs)-1)*100:.1f}% MDD {((ew/ew.cummax()-1).min())*100:.1f}%")
+byc = sorted(res, key=lambda r: -r["cagr"]); bycal = sorted(res, key=lambda r: -r["calmar"])
+print("\n수익률 TOP5:"); [print(" ", r["name"], r["cagr"], r["mdd"]) for r in byc[:5]]
+print("칼마 TOP5:"); [print(" ", r["name"], r["cagr"], r["mdd"], r["calmar"]) for r in bycal[:5]]
+def monthly(s): return [[str(d.date())[:7], round(float(v), 3)] for d, v in s.resample("ME").last().items()]
+out = {"top_cagr": byc[:8], "top_calmar": bycal[:8], "all": res,
+       "curve_best": {"name": byc[0]["name"], "m": monthly(curves[byc[0]["name"]])}, "curve_cal": {"name": bycal[0]["name"], "m": monthly(curves[bycal[0]["name"]])},
+       "spy": monthly(sp), "ew": monthly(ew), "spy_stat": [round((sp.iloc[-1]**(1/yrs)-1)*100, 1), round(((sp/sp.cummax()-1).min())*100, 1)],
+       "ew_stat": [round((ew.iloc[-1]**(1/yrs)-1)*100, 1), round(((ew/ew.cummax()-1).min())*100, 1)]}
+print("JSON=" + json.dumps(out, ensure_ascii=False, separators=(",", ":")))
