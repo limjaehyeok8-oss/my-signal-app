@@ -2577,6 +2577,21 @@
           log(x.msg); loadHoldings();
         };
         det.appendChild(del);
+        const delQ = mkEl("button", "linkBtn", "🤫 친구에게 알리지 않고 매도"); delQ.style.marginLeft = "12px";
+        delQ.onclick = async () => {
+          if (!confirm(h.symbol + " 을(를) 친구 알림 없이 매도 처리할까요?\n보유 종목에서만 삭제돼요.")) return;
+          bbOffQuiet(h.symbol);
+          const x = await api({ action: "removeHolding", token: myToken, symbol: h.symbol, quiet: true });
+          if ((holdAl || {})[h.symbol]) { try { await api({ action: "setHoldAlert", token: myToken, symbol: h.symbol, target: "", stop: "" }); } catch (e) {} }
+          log(x.msg); loadHoldings();
+        };
+        det.appendChild(delQ);
+        const hidRow = mkEl("div"); hidRow.style.cssText = "margin-top:8px;display:flex;gap:8px;align-items:center;font-size:12px";
+        const hMsg2 = mkEl("span", "btApplyMsg");
+        const hb1 = mkEl("button", "linkBtn", "👁 친구에게 숨기기"), hb2 = mkEl("button", "linkBtn", "친구에게 보이기");
+        hb1.onclick = async () => { const x = await api({ action: "setHidden", token: myToken, symbol: h.symbol, hidden: true }); hMsg2.textContent = x.msg || ""; };
+        hb2.onclick = async () => { const x = await api({ action: "setHidden", token: myToken, symbol: h.symbol, hidden: false }); hMsg2.textContent = x.msg || ""; };
+        hidRow.appendChild(hb1); hidRow.appendChild(hb2); hidRow.appendChild(hMsg2); det.appendChild(hidRow);
         wrap.appendChild(det);
         row.onclick = () => { det.style.display = det.style.display === "none" ? "block" : "none"; };
         onLong(wrap, () => openAct(h.symbol, [
