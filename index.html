@@ -4534,6 +4534,7 @@
         const hb = mkEl("div"); hb.style.cssText = "margin-top:6px;padding:6px 10px;border-radius:10px;font-size:12px;line-height:1.5;background:" + (hot ? "rgba(255,90,106,.16)" : warm ? "rgba(255,176,32,.14)" : "var(--card2)");
         hb.appendChild(mkEl("b", null, (hot ? "🔥 과열 · " : warm ? "⚠️ 달아오르는 중 · " : "🌡 과열 아님 · ")));
         hb.appendChild(document.createTextNode((g != null ? "200일선 대비 " + (g >= 0 ? "+" : "") + g + "% (경고 +60%)" : "") + (g != null && wr != null ? " · " : "") + (wr != null ? "주봉 RSI " + wr + " (경고 80)" : "")));
+        if (wr != null && ch.heat.bbg != null) { const near = wr <= 30 && ch.heat.bbg <= 0; const lw = mkEl("div", "sub", (near ? "🍀 주봉 초저점 조건 충족!" : "🍀 주봉 초저점까지: ") + (near ? " " : "") + "주봉 RSI " + wr + " (30 이하 필요) · 볼린저 하단까지 " + (ch.heat.bbg > 0 ? "+" + ch.heat.bbg + "%" : "도달")); lw.style.cssText = "margin-top:3px;font-size:11.5px" + (near ? ";color:#2ecc71;font-weight:700" : ""); hb.appendChild(lw); }
         if (hot) hb.appendChild(mkEl("div", "sub", "레버리지 ETF 12종 기준, 이 구간 뒤 60일 안에 −20% 이상 빠진 비율이 38~47%였어요 (평소 33%). 약한 경고라서 참고만 하세요."));
         const recent = (arr) => (arr || []).filter((e) => e.b >= ch.t[Math.max(0, n - 60)]);
         const dv = recent(ch.heat.div), lhh = recent(ch.heat.lh);

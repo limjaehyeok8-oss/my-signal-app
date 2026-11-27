@@ -4,6 +4,7 @@
 //             첫 바닥을 종가로 깨면 손절, 하이킨아시 음봉 2연속이면 팝니다.
 // 처음 한 번: setupBotTrigger 실행 (매일 아침 8시쯤 자동 기록). 규칙을 바꾸면 resetBot 으로 새로 시작하세요.
 var BOT_START_KRW = 30000000;  // 봇마다 시작 가상 자금 (원) · 5종목 × 600만원
+var BOT_V_RULE = "sma200b5low";
 var BOT_VER = "v4-3bots-60";    // 규칙·자금을 바꾸면 값을 바꿔요 → 다음 실행 때 기록을 한 번 비우고 새로 시작
 var BOT_FEE       = 0.0025;    // 수수료+환전+슬리피지 (살 때·팔 때 각각 0.25%)
 var BOT_SHEET     = "bot";
@@ -293,7 +294,7 @@ function botRun() {
     var weekDone = botWeekKey(day) < nowKey || dow >= 6 || (dow === 5 && hm >= 1610);
     var res = [], botMsgs = [], vSignals = [];
 
-    if (m.v_state && m.v_state.rule !== "sma200b5low") { ["state", "eq", "log", "closed"].forEach(function (k) { delete m["v_" + k]; }); }   // 규칙이 바뀐 레버리지봇만 새로 시작
+    if (m.v_state && m.v_state.rule !== BOT_V_RULE) { ["state", "eq", "log", "closed"].forEach(function (k) { delete m["v_" + k]; }); }   // 규칙이 바뀐 레버리지봇만 새로 시작
     ["w", "d", "m", "v"].forEach(function (id) {
       var def = BOT_DEFS[id];
       var st = m[id + "_state"] || {start: "", cash: BOT_START_KRW, pos: [], pend: [], last: "", spy0: null, fx0: null};
@@ -301,7 +302,7 @@ function botRun() {
       if (st.last && day <= st.last) { res.push(id + ":already"); return; }
       var bar = function (s) { var d = data[s]; if (!d) return null; var n = d.c.length - 1; return d.dates[n] === day ? {open: d.o[n], close: d.c[n]} : null; };
 
-      if (id === "v") st.rule = "sma200b5low";
+      if (id === "v") st.rule = BOT_V_RULE;
       if (!st.start) { st.start = day; st.spy0 = spyC; st.fx0 = fx; }
       else {
         st.pend.sort(function (a, b) { return (a.act === "sell" ? 0 : 1) - (b.act === "sell" ? 0 : 1); });
@@ -388,6 +389,12 @@ function _botView(id, m) {
 function getBot(token) {
   if (!isRegistered(token)) return {ok: false, msg: "먼저 '알림 받기'로 등록하세요"};
   var m = _botLoadAll();
+  if (!m.v_state || m.v_state.rule !== BOT_V_RULE) {              // 레버리지봇이 새 규칙으로 아직 시작 안 했으면 지금 바로 한 번 돌림 (1분에 한 번만)
+    try {
+      var cc = CacheService.getScriptCache();
+      if (!cc.get("botKick")) { cc.put("botKick", "1", 60); botRun(); m = _botLoadAll(); }
+    } catch (e) { try { runLog("err", "레버리지봇 즉시 시작 실패: " + e.message); } catch (e2) {} }
+  }
   var bots = [_botView("w", m), _botView("d", m), _botView("m", m), _botView("v", m)];
   try { _botAttachCharts(bots, m); } catch (e) { try { runLog("err", "봇 차트 실패: " + e.message); } catch (e2) {} }
   return {ok: true, bots: bots};
@@ -447,7 +454,9 @@ function _botHeat(d) {
   for (i = 16; i < m - 2; i++) { if (isMax(wk, i)) piv.push(i); if (rs[i] >= 70 && isMax(rs, i)) rp.push(i); }
   for (i = 1; i < piv.length; i++) { var p1 = piv[i - 1], p2 = piv[i]; if (p2 - p1 >= 3 && p2 - p1 <= 30 && wk[p2] > wk[p1] && rs[p2] < rs[p1] - 3 && rs[p1] >= 65) div.push({a: wd[p1], b: wd[p2]}); }
   for (i = 2; i < rp.length; i++) { var x = rp[i - 2], y = rp[i - 1], z = rp[i]; if (z - x <= 60 && rs[x] > rs[y] && rs[y] > rs[z]) lh.push({a: wd[x], b: wd[z]}); }
-  return {gap: sma ? Number(((c[n - 1] / sma - 1) * 100).toFixed(1)) : null, wrsi: rsi == null ? null : Number(rsi.toFixed(0)), div: div.slice(-3), lh: lh.slice(-2)};
+  var bbg = null;
+  if (m >= 21) { var ww = wk.slice(m - 20), mu = 0, vv = 0; ww.forEach(function (x) { mu += x; }); mu /= 20; ww.forEach(function (x) { vv += (x - mu) * (x - mu); }); var lo = mu - 2 * Math.sqrt(vv / 19); bbg = Number(((wk[m - 1] / lo - 1) * 100).toFixed(1)); }
+  return {gap: sma ? Number(((c[n - 1] / sma - 1) * 100).toFixed(1)) : null, wrsi: rsi == null ? null : Number(rsi.toFixed(0)), bbg: bbg, div: div.slice(-3), lh: lh.slice(-2)};
 }
 function _r2(x) { return x == null ? null : Number(Number(x).toFixed(2)); }
 
