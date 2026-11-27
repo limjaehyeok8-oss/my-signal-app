@@ -1552,7 +1552,7 @@
       const msg = mkEl("div", "btApplyMsg");
       const row = mkEl("div", "stLine");
       const sel = document.createElement("select");
-      STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = label; sel.appendChild(o); });
+      stratOptions(sel, cur);
       sel.value = cur;
       const save = mkEl("button", null, "저장");
       save.onclick = () => saveStrategy(symbol, sel.value, msg).then((ok) => { if (ok) { loadHoldings(); analyze(symbol); } });
@@ -2416,6 +2416,11 @@
       ["holdAll", "⑪ 저점매수마다 추가+보유"],
       ["holdStrong", "⑫ 강한 저점매수 추가+보유"]
     ];
+    // 화면에는 핵심 6개만 보여줌 (예전에 저장해 둔 다른 전략은 그 종목에서만 같이 보임)
+    const STRATS_SHOW = ["default", "side", "cl4", "wha", "w1234", "ma200"];
+    function stratOptions(sel, cur, prefix) {
+      STRATS.filter(([k]) => STRATS_SHOW.indexOf(k) >= 0 || k === cur).forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = (prefix || "") + label.replace(/^[①-⑮]\s*/, ""); sel.appendChild(o); });
+    }
     async function saveStrategy(sym, key, msgEl) {
       if (!myToken) { msgEl.textContent = "먼저 '알림 받기'로 등록하세요"; return false; }
       msgEl.textContent = "저장 중...";
@@ -2539,7 +2544,7 @@
         // 줄을 누르면 펼쳐지는 부분: 알림 전략, 삭제
         const det = mkEl("div"); det.style.display = "none"; det.style.padding = "6px 0 10px";
         const sel = document.createElement("select");
-        STRATS.forEach(([k, label]) => { const o = document.createElement("option"); o.value = k; o.textContent = "🔔 " + label; sel.appendChild(o); });
+        stratOptions(sel, stMap[h.symbol] || "default", "🔔 ");
         sel.value = stMap[h.symbol] || "default";
         const stMsg = mkEl("div", "hMsg");
         sel.onchange = async () => { const ok = await saveStrategy(h.symbol, sel.value, stMsg); if (!ok) sel.value = stMap[h.symbol] || "default"; else stMap[h.symbol] = sel.value; };
