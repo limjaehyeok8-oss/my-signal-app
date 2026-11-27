@@ -4404,6 +4404,17 @@
     let botSel = "w";
     const shr = (q) => (q == null ? "" : Number(q).toLocaleString("en-US", { maximumFractionDigits: 2 }) + "주");
     const won = (v) => Math.round(v).toLocaleString("ko-KR") + "원";
+    function botBtCard(b) {
+        const cb = botFold("🧪 백테스트 · " + b.bt.period + " · 레버리지 ETF 12종");
+        const tb = document.createElement("table"); tb.style.cssText = "width:100%;font-size:11.5px;border-collapse:collapse";
+        const addRow = (cells, bold, hl) => { const tr = document.createElement("tr"); if (hl) tr.style.background = "var(--card2)"; cells.forEach((v, i) => { const td = document.createElement(i ? "td" : "td"); td.textContent = v; td.style.cssText = "padding:5px 4px;border-bottom:1px solid var(--line,#ddd3);" + (i ? "text-align:right;white-space:nowrap;" : "") + (bold ? "font-weight:800;" : ""); tr.appendChild(td); }); tb.appendChild(tr); };
+        addRow(["전략 (최대 5종목 동시)", "연수익", "최대낙폭", "전반/후반"], true);
+        b.bt.rows.forEach((r) => addRow([r[0], (r[1] >= 0 ? "+" : "") + r[1] + "%", r[2] + "%", r[4] + "/" + r[5] + "%"], false, r[0] === "VIDYA 60"));
+        b.bt.ref.forEach((r) => addRow([r[0], "+" + r[1] + "%", r[2] + "%", ""], true));
+        cb.appendChild(tb);
+        cb.appendChild(mkEl("div", "mkTip", "이 봇은 표의 'VIDYA 60'을 써요 (VIDYA 종류 중 수익률 최고). 다만 추세 따라가기 전략들은 같은 ETF를 그냥 들고 있을 때보다 수익이 낮았고(대신 낙폭은 줄어요), 후반(2018~)엔 더 약했어요. 지금 살아남은 ETF만으로 한 테스트라 실제보다 좋게 나왔을 수 있고, 과거 성과가 앞으로를 보장하지 않아요."));
+        return cb;
+    }
     function botFold(title) { const d = mkEl("details", "botCard botFold"); d.appendChild(mkEl("summary", null, title)); return d; }
     function paintBot(r) {
       const body = $("botBody"); body.textContent = "";
@@ -4413,7 +4424,7 @@
       body.appendChild(chips);
       const b = r.bots.filter((x) => x.id === botSel)[0] || r.bots[0];
       const cls = (v) => (v >= 0 ? "up" : "down");
-      if (!b.started) { body.appendChild(mkEl("div", "alertHint", "봇이 아직 시작 전이에요. 서버에서 setupBotTrigger 를 한 번 실행하면 시작돼요.")); return; }
+      if (!b.started) { body.appendChild(mkEl("div", "alertHint", "봇이 아직 시작 전이에요. 서버가 자동으로 시작해요 (매일 아침 8시쯤 기록, 첫 실행은 10분 안에).")); if (b.bt) body.appendChild(botBtCard(b)); return; }
 
       // 1) 한눈에: 총 자산 + 누적 수익률 + S&P 대비
       const hero = mkEl("div", "botHero");
@@ -4443,6 +4454,8 @@
         row.appendChild(l); row.appendChild(mkEl("b", "bpPnl " + cls(p.pnl), (p.pnl >= 0 ? "▲ " : "▼ ") + bPct(p.pnl))); c3.appendChild(row);
       });
       body.appendChild(c3);
+
+      if (b.bt) body.appendChild(botBtCard(b));
 
       // 5) 성적표
       const c4 = botFold("🏆 성적표");

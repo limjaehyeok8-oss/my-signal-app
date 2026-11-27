@@ -81,6 +81,7 @@ function checkWatchTargets(force) {
   var now = new Date();
   var dow = Number(Utilities.formatDate(now, "America/New_York", "u")), hm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
   try { if (typeof checkHoldAlerts === "function") checkHoldAlerts(); } catch (e) {}      // 보유 종목 목표가·손절가 (장외 시간 포함)
+  try { if (typeof _ensureBotTrigger === "function") _ensureBotTrigger(); } catch (e) {}   // 시뮬봇 트리거 자동 설치·시작
   try { if (typeof checkBtcBottom === "function") checkBtcBottom(); } catch (e) {}       // BTC 200주선·Pi Cycle 바닥 구간 알림 (3시간 간격)
   try { if (typeof checkBbAlerts === "function") checkBbAlerts(); } catch (e) {}          // 볼린저 하단 터치 (정규장)
   try { if (typeof catchUpAlerts === "function") catchUpAlerts(); } catch (e) { try { runLog("err", "catchUp 실패: " + e.message); } catch (e2) {} }   // 개장 전·마감 후 알림 보조 실행

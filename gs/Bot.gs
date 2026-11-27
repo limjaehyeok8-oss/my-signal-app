@@ -31,7 +31,7 @@ var BOT_DEFS = {
   w: {name: "주봉봇", desc: "주봉 하이킨아시 양봉이면 보유, 음봉이 되면 매도", max: BOT_W_MAX},
   d: {name: "일봉봇 (1234·W자)", desc: "W자 두 번째 바닥이 첫 바닥보다 높고 다시 양봉이 되면 매수", max: BOT_D_MAX},
   m: {name: "모멘텀봇", desc: "200일·50일선 위에서 최근 6개월 상승률이 가장 강한 종목 5개를 들고, 50일선을 깨거나 순위가 15위 밖으로 밀리면 매도", max: BOT_M_MAX},
-  v: {name: "VIDYA봇 (레버리지)", desc: "VIDYA(120선, 변동성 적응 이동평균) 위로 올라선 레버리지 ETF를 사고, 아래로 내려가면 매도 (TQQQ·SOXL 등). 신호가 뜰 때마다 알림", max: BOT_V_MAX}
+  v: {name: "VIDYA봇 (레버리지)", desc: "VIDYA(60선, 변동성 적응 이동평균) 위로 올라선 레버리지 ETF를 사고, 아래로 내려가면 매도 (TQQQ·SOXL 등). 신호가 뜰 때마다 알림", max: BOT_V_MAX}
 };
 
 // ---------- 공통 계산 (백테스트·전략에서도 같이 씀) ----------
@@ -177,8 +177,10 @@ function _botDecideDaily(st, data, day) {
   return orders;
 }
 
-// VIDYA(120): 변동성(CMO)에 따라 반응 속도가 달라지는 120일 이동평균 (120선). 종가가 VIDYA 위면 상승 추세, 아래면 하락 추세.
-var BOT_VIDYA_LEN = 120, BOT_VIDYA_CMO = 20;
+// VIDYA(60): 변동성(CMO)에 따라 반응 속도가 달라지는 60일 이동평균 (60선). 종가가 VIDYA 위면 상승 추세, 아래면 하락 추세.
+var BOT_VIDYA_LEN = 60, BOT_VIDYA_CMO = 20;          // 길이는 백테스트(2010~2026, 레버리지 ETF 12종)에서 30·60·120·200 중 수익률이 가장 좋았던 60으로
+// 백테스트 요약 (tools/vidya_bt.py 결과: [전략, 연수익%, 최대낙폭%, 누적%, 전반 연%, 후반 연%, 거래수, 승률%])
+var BOT_V_BT = {"period":"2010-06 ~ 2026-11","rows":[["VIDYA 60",12.5,-38.1,598,19.5,5.9,340,30],["단순이평 200",12.5,-37.9,592,21.2,4.4,280,31],["VIDYA60 위 + 모멘텀순위(6개월)",11.4,-38.0,493,19.4,4.0,340,31],["VIDYA120 위 + 모멘텀순위(6개월)",11.3,-51.7,503,22.6,1.1,228,28],["VIDYA 120",11.1,-51.7,489,22.6,0.8,224,28],["모멘텀(6개월)+200선",10.9,-41.3,450,19.9,2.6,322,38],["모멘텀(12개월)+200선",10.8,-34.5,446,20.0,2.4,322,30],["VIDYA 30",10.4,-32.2,409,13.6,7.2,490,31],["모멘텀(3개월)+200선",10.3,-28.2,400,14.6,6.1,474,38],["VIDYA 200",10.0,-70.6,397,22.8,-1.5,150,27],["단순이평 50",10.0,-37.6,381,9.2,10.8,817,33],["VIDYA120 + 6개월모멘텀 양수·순위",10.0,-40.3,385,20.4,0.4,328,33],["VIDYA200 위 + 모멘텀순위(6개월)",10.0,-70.5,399,22.8,-1.4,152,28],["단순이평 120",9.9,-32.1,372,14.5,5.4,452,31]],"ref":[["12종 균등 보유 (매일 리밸런싱)",29.5,-79.8,6571],["SPY 보유",14.2,-33.7,792]]};
 function botVidya(c) {
   var n = c.length, alpha = 2 / (BOT_VIDYA_LEN + 1), vid = new Array(n), i, j, v = 0;
   if (n < BOT_VIDYA_LEN) return {vid: vid};
@@ -201,11 +203,11 @@ function _botDecideVidya(st, data, day) {
     info[s] = {up: d.c[n] > r.vid[n], gap: d.c[n] / r.vid[n] - 1, px: d.c[n]};
     if (info[s].up) up.push(s);
   });
-  st.pos.forEach(function (p) { var f = info[p.s]; if (f && !f.up) { orders.push({act: "sell", s: p.s, why: "종가가 VIDYA(120) 아래로 (" + (f.gap * 100).toFixed(1) + "%)"}); selling++; } });
+  st.pos.forEach(function (p) { var f = info[p.s]; if (f && !f.up) { orders.push({act: "sell", s: p.s, why: "종가가 VIDYA(" + BOT_VIDYA_LEN + ") 아래로 (" + (f.gap * 100).toFixed(1) + "%)"}); selling++; } });
   up.sort(function (a, b) { return info[b].gap - info[a].gap; });
   var slots = BOT_V_MAX - st.pos.length + selling;
   up.filter(function (s) { return !st.pos.some(function (p) { return p.s === s; }); }).slice(0, Math.max(0, slots)).forEach(function (s) {
-    orders.push({act: "buy", s: s, why: "종가가 VIDYA(120) 위 (+" + (info[s].gap * 100).toFixed(1) + "%)"});
+    orders.push({act: "buy", s: s, why: "종가가 VIDYA(" + BOT_VIDYA_LEN + ") 위 (+" + (info[s].gap * 100).toFixed(1) + "%)"});
   });
   return orders;
 }
@@ -327,7 +329,7 @@ function botRun() {
 
 function _botView(id, m) {
   var def = BOT_DEFS[id], st = m[id + "_state"];
-  if (!st || !st.start) return {id: id, name: def.name, desc: def.desc, started: false};
+  if (!st || !st.start) return {id: id, name: def.name, desc: def.desc, started: false, bt: id === "v" ? BOT_V_BT : null};
   var eq = m[id + "_eq"] || [], closed = m[id + "_closed"] || [], fx = st.fx || st.fx0, total = st.cash;
   var pos = st.pos.map(function (p) {
     total += p.qty * p.px * fx;
@@ -342,7 +344,8 @@ function _botView(id, m) {
           total: Math.round(total), cash: Math.round(st.cash), max: def.max, fee: BOT_FEE * 100,
           ret: Number(((total / BOT_START_KRW - 1) * 100).toFixed(1)), spy: Number(((lastB / BOT_START_KRW - 1) * 100).toFixed(1)),
           pos: pos, pend: st.pend, eq: eq, log: (m[id + "_log"] || []).slice(-40).reverse(),
-          stat: {n: closed.length, win: wins.length, avgWin: Number(avg(wins).toFixed(1)), avgLoss: Number(avg(loss).toFixed(1)), mdd: Number(mdd.toFixed(1))}};
+          stat: {n: closed.length, win: wins.length, avgWin: Number(avg(wins).toFixed(1)), avgLoss: Number(avg(loss).toFixed(1)), mdd: Number(mdd.toFixed(1))},
+          bt: id === "v" ? BOT_V_BT : null};
 }
 function getBot(token) {
   if (!isRegistered(token)) return {ok: false, msg: "먼저 '알림 받기'로 등록하세요"};
@@ -350,6 +353,16 @@ function getBot(token) {
   return {ok: true, bots: [_botView("w", m), _botView("d", m), _botView("m", m), _botView("v", m)]};
 }
 
+// 시뮬봇 트리거를 서버가 스스로 설치·시작 (10분 트리거에 얹혀 1시간에 한 번 확인) → setupBotTrigger 를 손으로 실행할 필요 없음
+function _ensureBotTrigger() {
+  var c = CacheService.getScriptCache();
+  if (c.get("bot_trig_ok")) return;
+  c.put("bot_trig_ok", "1", 3600);
+  var has = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === "botRun"; });
+  if (!has) ScriptApp.newTrigger("botRun").timeBased().everyDays(1).atHour(8).create();
+  var P = PropertiesService.getScriptProperties();
+  if (P.getProperty("BOT_VER") !== BOT_VER) { botRun(); }                  // 아직 한 번도 안 돌았거나 규칙이 바뀐 경우 바로 시작
+}
 function setupBotTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === "botRun") ScriptApp.deleteTrigger(t); });
   ScriptApp.newTrigger("botRun").timeBased().everyDays(1).atHour(8).create();
