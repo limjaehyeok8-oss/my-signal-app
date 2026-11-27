@@ -11,4 +11,4 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install yfinance pandas numpy lxml
-      - run: python tools/top_bt.py
+      - run: python tools/div_bt.py
