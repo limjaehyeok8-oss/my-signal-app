@@ -83,4 +83,4 @@ for name in ["^IXIC", "^NDX"]:
         print(f"  해당 일수 {len(m)}일 · 6개월뒤 평균 {r6.mean()*100:+.1f}% 승률 {(r6>0).mean()*100:.0f}% · 12개월뒤 평균 {r12.mean()*100:+.1f}% 승률 {(r12>0).mean()*100:.0f}% · 이후 1년 내 낙폭이 {worse.mean()*100:.1f}%p 더 깊어짐(평균), 최악 {worse.min()*100:.1f}%p")
     # 최근 120일 낙폭 흐름
     print("\n[최근 낙폭 흐름 (월말)]")
-    print((dd.resample("M").last().tail(14) * 100).round(1).to_string())
+    print((dd.resample("ME").last().tail(14) * 100).round(1).to_string())
