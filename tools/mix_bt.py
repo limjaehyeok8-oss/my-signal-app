@@ -56,3 +56,8 @@ for t in ("TQQQ", "SOXL", "반반"):
     print("기준(현재 방식):", f"{base.연수익:.1f}% / {base.최대낙폭:.1f}% / 칼마 {base.칼마:.2f} / 전반 {base.전반:.1f} 후반 {base.후반:.1f} / {int(base.횟수)}회")
     for _, r in x.sort_values("칼마", ascending=False).head(6).iterrows():
         print(f"  {r.매수:14s} 매수 → {r.매도:12s} 매도  {r.연수익:5.1f}% / {r.최대낙폭:6.1f}% / 칼마 {r.칼마:.2f} / 전반 {r.전반:5.1f} 후반 {r.후반:5.1f} / {int(r.횟수)}회")
+print("== 매수만 VIDYA로 (더 빨리 사는지) · 매도는 200일선")
+for t in ("TQQQ", "SOXL", "반반"):
+    x = df[(df.종목 == t) & (df.매도 == "종가<SMA200")]
+    for _, r in x.iterrows():
+        print(f"  {t:5s} {r.매수:14s} 매수 → 종가<SMA200 매도  {r.연수익:5.1f}% / {r.최대낙폭:6.1f}% / 칼마 {r.칼마:.2f} / 전반 {r.전반:5.1f} 후반 {r.후반:5.1f} / {int(r.횟수)}회")
