@@ -3881,7 +3881,7 @@
             const x = r.px[el.dataset.xsym];
             let line = el.dataset.xin ? el.querySelector(".extLine") : (el.nextElementSibling && el.nextElementSibling.classList.contains("extLine") ? el.nextElementSibling : null);
             applyExtPnl(el, x || null);
-            if (x && el.dataset.xin) { const bb = el.querySelector("b"); if (bb) bb.textContent = el.dataset.xsym + "  $" + fmt(x.px); }
+            if (x && el.dataset.xin) { const bb = el.querySelector("b"); if (bb) { bb.textContent = el.dataset.xsym + "  $" + fmt(x.px); if (x.sess !== "정규장") { const tg = mkEl("span", "extTag", " 🌙" + x.sess + (x.chg != null ? " " + (x.chg >= 0 ? "+" : "") + x.chg.toFixed(1) + "%" : "")); tg.style.cssText = "font-size:11px;font-weight:500;color:var(--sub)"; bb.appendChild(tg); } } if (line) line.remove(); return; }
             if (!x || x.sess === "정규장") { if (line) line.remove(); return; }
             if (!line) { line = mkEl(el.dataset.xin ? "span" : "div", el.dataset.xin ? "sub extLine" : "alertHint extLine"); if (el.dataset.xin) el.appendChild(line); else el.insertAdjacentElement("afterend", line); }
             line.textContent = "🌙 " + x.sess + " $" + fmt(x.px) + (x.chg != null ? " (종가 대비 " + (x.chg >= 0 ? "+" : "") + x.chg.toFixed(1) + "%)" : "") + " · " + x.at;
