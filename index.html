@@ -4486,11 +4486,11 @@
       });
       cb.appendChild(sv2);
       const lg2 = mkEl("div", "botLeg"); lg2.appendChild(mkEl("span", null, "▬ 연수익(빨강)")); lg2.appendChild(mkEl("span", null, "▬ 최대낙폭(파랑·짧을수록 안전)")); cb.appendChild(lg2);
-      cb.appendChild(tipEl("이 봇은 맨 위 규칙(TQQQ+SOXL · 200일선)을 써요. VIDYA(변동성 적응 이평선)는 200일선보다 연수익이 7%p쯤 낮았어요. TQQQ만 하면 낙폭이 더 작았어요. ⚠️ 지금 살아남은 ETF로만 본 과거 성적이라 실제보다 좋게 나왔을 수 있고, 최대낙폭 −59%는 돈이 반 토막 이하가 될 수 있다는 뜻이에요. 투자 권유가 아니에요."));
+      cb.appendChild(tipEl("이 봇은 맨 위 규칙(TQQQ+SOXL · 200일선 ±5% 밴드)을 써요. 선 근처 횡보 때 사고팔지 않아 매매가 104회→36회로 줄었고, VIDYA는 이보다 연수익이 12%p쯤 낮았어요. 곡선은 두 종목 매일 반반 기준 근사치예요. ⚠️ 지금 살아남은 ETF로만 본 과거 성적이라 실제보다 좋게 나왔을 수 있고, 최대낙폭 −59%는 돈이 반 토막 이하가 될 수 있다는 뜻이에요. 투자 권유가 아니에요."));
       return cb;
     }
     function botPosChart(b, ch) {
-      const box = mkEl("div", "botCard"), p = ch.pos, fx = b.fx || 1, n = ch.t.length, k0 = Math.max(0, n - 150);
+      const box = mkEl("div", "botCard"), p = ch.pos, fx = b.fx || 1, n = ch.t.length, k0 = Math.max(0, n - 250);
       const W = 360, H = 210, L = 6, R = 44, T = 10, B = 18, svg = svgBox(W, H), cSub = cvar("--sub"), cLine = cvar("--line"), cUp = cvar("--up"), cDn = cvar("--down");
       const idx = []; for (let i = k0; i < n; i++) idx.push(i);
       const lineArr = ch.line ? idx.map((i) => ch.line[i]) : [];
@@ -4499,9 +4499,9 @@
       idx.forEach((i) => { lo = Math.min(lo, ch.l[i]); hi = Math.max(hi, ch.h[i]); });
       lineArr.concat(extra).forEach((v) => { if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
       const pd = (hi - lo) * 0.07 || 1; lo -= pd; hi += pd;
-      const m = idx.length, X = (j) => L + (W - L - R) * (j + 0.5) / m, Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo)), cw = Math.max(1.4, (W - L - R) / m * 0.7);
+      const m = idx.length, X = (j) => L + (W - L - R) * (j + 0.5) / m, Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo)), cw = Math.max(1, (W - L - R) / m * 0.7);
       for (let g = 0; g <= 3; g++) { const v = lo + (hi - lo) * g / 3, y = Y(v); svg.add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: cLine, "stroke-width": 0.5 }); svg.add("text", { x: W - R + 3, y: y + 3, fill: cSub, "font-size": 9 }, v >= 100 ? v.toFixed(0) : v.toFixed(1)); }
-      let lm = "", lx = -99; idx.forEach((i, j) => { const mo = ch.t[i].slice(5, 7); if (mo !== lm) { lm = mo; if (X(j) - lx < 34) return; lx = X(j); svg.add("text", { x: X(j), y: H - 5, fill: cSub, "font-size": 9, "text-anchor": "middle" }, (+mo) + "월"); } });
+      let lm = "", lx = -99; idx.forEach((i, j) => { const mo = ch.t[i].slice(5, 7); if (mo !== lm) { lm = mo; if (X(j) - lx < 24) return; lx = X(j); svg.add("text", { x: X(j), y: H - 5, fill: cSub, "font-size": 9, "text-anchor": "middle" }, (+mo) + "월"); } });
       idx.forEach((i, j) => { const up = ch.c[i] >= ch.o[i], col = up ? cUp : cDn, x = X(j);
         svg.add("line", { x1: x, x2: x, y1: Y(ch.h[i]), y2: Y(ch.l[i]), stroke: col, "stroke-width": 1 });
         svg.add("rect", { x: x - cw / 2, y: Y(Math.max(ch.o[i], ch.c[i])), width: cw, height: Math.max(1, Math.abs(Y(ch.o[i]) - Y(ch.c[i]))), fill: col }); });
