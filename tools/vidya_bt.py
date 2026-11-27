@@ -42,7 +42,7 @@ SMA200 = LINES["SMA 200"]
 def run(pool, slots, line, rank, mom_filter=None):
     cols = [t for t in pool if t in raw]
     o = O[cols].values; c = C[cols].values; L = LINES[line][cols].values
-    M = MOM[rank][cols].values if rank else None
+    M = MOM[int(rank[3:])][cols].values if rank else None
     base = (c / L - 1)                                  # 선 대비 위치
     hold = base > 0
     if mom_filter: hold = hold & (MOM[mom_filter][cols].values > 0) & (c > SMA200[cols].values)
