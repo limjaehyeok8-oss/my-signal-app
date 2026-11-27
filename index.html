@@ -4523,6 +4523,14 @@
       const hb = mkEl("b", null, ch.s); hb.style.whiteSpace = "nowrap"; head.appendChild(hb);
       const hs = mkEl("span", "sub", (p ? shr(p.q) + " 보유" : "미보유") + (ch.line ? " · 주황 " + ch.lineLabel.replace(/\(.*\)/, "") : "")); hs.style.cssText = "font-size:11px;text-align:right"; head.appendChild(hs);
       box.appendChild(head); box.appendChild(svg);
+      if (b.id === "v" && ch.heat && (ch.heat.gap != null || ch.heat.wrsi != null)) {            // 🔥 과열(고점) 지표
+        const g = ch.heat.gap, wr = ch.heat.wrsi, hot = (g != null && g >= 60) || (wr != null && wr >= 80), warm = (g != null && g >= 40) || (wr != null && wr >= 70);
+        const hb = mkEl("div"); hb.style.cssText = "margin-top:6px;padding:6px 10px;border-radius:10px;font-size:12px;line-height:1.5;background:" + (hot ? "rgba(255,90,106,.16)" : warm ? "rgba(255,176,32,.14)" : "var(--card2)");
+        hb.appendChild(mkEl("b", null, (hot ? "🔥 과열 · " : warm ? "⚠️ 달아오르는 중 · " : "🌡 과열 아님 · ")));
+        hb.appendChild(document.createTextNode((g != null ? "200일선 대비 " + (g >= 0 ? "+" : "") + g + "% (경고 +60%)" : "") + (g != null && wr != null ? " · " : "") + (wr != null ? "주봉 RSI " + wr + " (경고 80)" : "")));
+        if (hot) hb.appendChild(mkEl("div", "sub", "과거에 이 구간 뒤 60일 안에 고점 대비 −20% 이상 빠진 경우가 절반 이상이었어요. 일부 정리를 생각해 볼 만해요 (참고용)."));
+        box.appendChild(hb);
+      }
       const sg = (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%", cc = (v) => (v >= 0 ? cUp : cDn);
       const cells = [];
       if (p) {

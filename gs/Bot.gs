@@ -375,7 +375,8 @@ function _botAttachCharts(bots, m) {
     Object.keys(raw).forEach(function (s) {
       var d = raw[s], n = d.c.length, k0 = Math.max(0, n - 250), sma = {};
       [50, 100, 200].forEach(function (L) { sma[L] = d.c.map(function (_, i) { return i + 1 < L ? null : botSma(d.c.slice(0, i + 1).slice(-L), L); }).slice(k0); });
-      data[s] = {t: d.dates.slice(k0), o: d.o.slice(k0).map(_r2), h: d.h.slice(k0).map(_r2), l: d.l.slice(k0).map(_r2), c: d.c.slice(k0).map(_r2),
+      var heat = _botHeat(d);
+      data[s] = {heat: heat, t: d.dates.slice(k0), o: d.o.slice(k0).map(_r2), h: d.h.slice(k0).map(_r2), l: d.l.slice(k0).map(_r2), c: d.c.slice(k0).map(_r2),
                  s50: sma[50].map(_r2), s100: sma[100].map(_r2), s200: sma[200].map(_r2)};
     });
     try { var js = JSON.stringify(data); if (js.length < 95000) cache.put(key, js, 600); } catch (e) {}
@@ -389,12 +390,26 @@ function _botAttachCharts(bots, m) {
       var d = data[s], pos = (b.pos || []).filter(function (p) { return p.s === s; })[0] || null;
       var marks = (b.log || []).filter(function (x) { return x.s === s && d.t.indexOf(x.d) >= 0; }).map(function (x) { return {d: x.d, t: x.t, px: x.px}; });
       var line = def.n ? d["s" + def.n] : null;
-      var o = {s: s, t: d.t, o: d.o, h: d.h, l: d.l, c: d.c, line: line, lineLabel: def.label, marks: marks};
+      var o = {heat: d.heat, s: s, t: d.t, o: d.o, h: d.h, l: d.l, c: d.c, line: line, lineLabel: def.label, marks: marks};
       if (b.id === "d" && pos && pos.l1) o.flat = pos.l1;
       if (pos) o.pos = pos;
       return o;
     });
   });
+}
+// 과열(고점) 지표: 200일선 대비 괴리율, 주봉 RSI(14). 레버리지 ETF 백테스트에서 +60% 이상 / 주봉 RSI 80 이상 뒤에는 60일 안에 -20% 이상 빠진 경우가 55~80%였어요.
+function _botHeat(d) {
+  var c = d.c, n = c.length, sma = n >= 200 ? botSma(c, 200) : null, wk = [], last = "";
+  for (var i = 0; i < n; i++) { var k = botWeekKey(d.dates[i]); if (k === last) wk[wk.length - 1] = c[i]; else { wk.push(c[i]); last = k; } }
+  var rsi = null;
+  if (wk.length > 15) {
+    var g = 0, l = 0, j;
+    for (j = 1; j <= 14; j++) { var df = wk[j] - wk[j - 1]; if (df > 0) g += df; else l -= df; }
+    g /= 14; l /= 14;
+    for (j = 15; j < wk.length; j++) { var df2 = wk[j] - wk[j - 1]; g = (g * 13 + Math.max(df2, 0)) / 14; l = (l * 13 + Math.max(-df2, 0)) / 14; }
+    rsi = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+  }
+  return {gap: sma ? Number(((c[n - 1] / sma - 1) * 100).toFixed(1)) : null, wrsi: rsi == null ? null : Number(rsi.toFixed(0))};
 }
 function _r2(x) { return x == null ? null : Number(Number(x).toFixed(2)); }
 
