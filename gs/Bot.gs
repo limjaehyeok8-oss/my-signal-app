@@ -31,7 +31,7 @@ var BOT_DEFS = {
   w: {name: "주봉봇", desc: "주봉 하이킨아시 양봉이면 보유, 음봉이 되면 매도", max: BOT_W_MAX},
   d: {name: "일봉봇 (1234·W자)", desc: "W자 두 번째 바닥이 첫 바닥보다 높고 다시 양봉이 되면 매수", max: BOT_D_MAX},
   m: {name: "모멘텀봇", desc: "200일·50일선 위에서 최근 6개월 상승률이 가장 강한 종목 5개를 들고, 50일선을 깨거나 순위가 15위 밖으로 밀리면 매도", max: BOT_M_MAX},
-  v: {name: "레버리지봇 (200일선)", desc: "TQQQ·SOXL 중 200일선 +5% 위로 올라선 종목을 3개월 상승률 순으로 최대 2개 보유하고, 200일선 −5% 아래로 내려가면 매도 (선 근처 횡보 구간에서는 사고팔지 않아요). 신호가 뜰 때마다 알림 (2010~2026 백테스트에서 VIDYA·선 하나 기준보다 좋았던 규칙)", max: BOT_V_MAX}
+  v: {name: "레버리지봇 (200일선)", desc: "TQQQ·SOXL 중 200일선 +5% 위로 올라선 종목을 3개월 상승률 순으로 최대 2개 보유하고, 200일선 −5% 아래로 내려가면 매도 (선 근처 횡보 구간에서는 사고팔지 않아요). 추가로 주봉 초저점(🍀)이 뜨면 200일선 아래라도 사서 주봉 RSI가 60을 넘을 때까지 들고 가요. 신호가 뜰 때마다 알림 (2010~2026 백테스트에서 VIDYA·선 하나 기준보다 좋았던 규칙)", max: BOT_V_MAX}
 };
 
 // ---------- 공통 계산 (백테스트·전략에서도 같이 씀) ----------
@@ -195,20 +195,53 @@ function botVidya(c) {
   }
   return {vid: vid};
 }
-function _botDecideVidya(st, data, day) {            // 200일선 ±5% 밴드(횡보 거르기) + 3개월 모멘텀 순위
-  var info = {}, up = [], orders = [], selling = 0, BAND = 0.05;
+// 주봉 초저점: 주봉 저가 <= 볼린저(20주,2σ) 하단 AND 주봉 RSI14 <= 30. 확정된(끝난) 주봉만 사용. 반환 {sig, rsi}
+function _botWeeklyLow(d, weekDone) {
+  var wc = [], wl = [], cur = null, i;
+  for (i = 0; i < d.c.length; i++) {
+    var k = botWeekKey(d.dates[i]);
+    if (k !== cur) { cur = k; wc.push(d.c[i]); wl.push(d.l[i]); } else { wc[wc.length - 1] = d.c[i]; wl[wl.length - 1] = Math.min(wl[wl.length - 1], d.l[i]); }
+  }
+  if (!weekDone) { wc.pop(); wl.pop(); }
+  var m = wc.length; if (m < 40) return {sig: false, rsi: null};
+  var g = 0, l = 0, j;
+  for (j = 1; j <= 14; j++) { var df = wc[j] - wc[j - 1]; if (df > 0) g += df; else l -= df; }
+  g /= 14; l /= 14;
+  for (j = 15; j < m; j++) { var d2 = wc[j] - wc[j - 1]; g = (g * 13 + Math.max(d2, 0)) / 14; l = (l * 13 + Math.max(-d2, 0)) / 14; }
+  var rsi = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+  var w = wc.slice(m - 20), mean = 0, v = 0;
+  w.forEach(function (x) { mean += x; }); mean /= 20; w.forEach(function (x) { v += (x - mean) * (x - mean); });
+  var lower = mean - 2 * Math.sqrt(v / 19);
+  return {sig: weekDone && wl[m - 1] <= lower && rsi <= 30, rsi: rsi};
+}
+function _botDecideVidya(st, data, day, weekDone) {   // 200일선 ±5% 밴드(횡보 거르기) + 3개월 모멘텀 순위 + 주봉 초저점 추가 매수
+  var info = {}, up = [], lows = [], orders = [], selling = 0, BAND = 0.05;
   BOT_V_LIST.forEach(function (s) {
     var d = data[s];
     if (!d || d.c.length < 205 || d.dates[d.dates.length - 1] !== day) return;
-    var n = d.c.length - 1, sma = botSma(d.c, 200), gap = d.c[n] / sma - 1;
-    info[s] = {gap: gap, mom: d.c[n] / d.c[n - 63] - 1};
+    var n = d.c.length - 1, sma = botSma(d.c, 200), gap = d.c[n] / sma - 1, wk = _botWeeklyLow(d, weekDone);
+    info[s] = {gap: gap, mom: d.c[n] / d.c[n - 63] - 1, low: wk};
     if (gap >= BAND) up.push(s);                      // 200일선 +5% 위일 때만 새로 매수 (선 근처 횡보는 건너뜀)
+    else if (wk.sig) lows.push(s);                    // 선 아래라도 주봉 초저점이면 반등 노리고 매수
   });
-  st.pos.forEach(function (p) { var f = info[p.s]; if (f && f.gap <= -BAND) { orders.push({act: "sell", s: p.s, why: "종가가 200일선 −5% 아래로 (" + (f.gap * 100).toFixed(1) + "%)"}); selling++; } });
+  st.pos.forEach(function (p) {
+    var f = info[p.s]; if (!f) return;
+    if (p.low) {                                      // 초저점으로 산 종목: 주봉 RSI가 60을 넘을 때까지 들고 감
+      if (f.low.rsi != null && f.low.rsi > 60) {
+        p.low = null;
+        if (f.gap < 0) { orders.push({act: "sell", s: p.s, why: "초저점 반등 완료 (주봉 RSI " + f.low.rsi.toFixed(0) + ")"}); selling++; }
+      }
+      return;
+    }
+    if (f.gap <= -BAND) { orders.push({act: "sell", s: p.s, why: "종가가 200일선 −5% 아래로 (" + (f.gap * 100).toFixed(1) + "%)"}); selling++; }
+  });
   up.sort(function (a, b) { return info[b].mom - info[a].mom; });
-  var slots = BOT_V_MAX - st.pos.length + selling;
-  up.filter(function (s) { return !st.pos.some(function (p) { return p.s === s; }); }).slice(0, Math.max(0, slots)).forEach(function (s) {
-    orders.push({act: "buy", s: s, why: "종가가 200일선 +5% 위 (+" + (info[s].gap * 100).toFixed(1) + "%) · 3개월 " + (info[s].mom * 100).toFixed(0) + "%"});
+  var slots = BOT_V_MAX - st.pos.length + selling, held = function (s) { return st.pos.some(function (p) { return p.s === s; }); };
+  up.filter(function (s) { return !held(s); }).slice(0, Math.max(0, slots)).forEach(function (s) {
+    orders.push({act: "buy", s: s, why: "종가가 200일선 +5% 위 (+" + (info[s].gap * 100).toFixed(1) + "%) · 3개월 " + (info[s].mom * 100).toFixed(0) + "%"}); slots--;
+  });
+  lows.filter(function (s) { return !held(s); }).slice(0, Math.max(0, slots)).forEach(function (s) {
+    orders.push({act: "buy", s: s, low: true, why: "🍀 주봉 초저점 (볼린저 하단 이하 · 주봉 RSI " + info[s].low.rsi.toFixed(0) + ") · 반등 노림"});
   });
   return orders;
 }
@@ -260,7 +293,7 @@ function botRun() {
     var weekDone = botWeekKey(day) < nowKey || dow >= 6 || (dow === 5 && hm >= 1610);
     var res = [], botMsgs = [], vSignals = [];
 
-    if (m.v_state && m.v_state.rule !== "sma200b5") { ["state", "eq", "log", "closed"].forEach(function (k) { delete m["v_" + k]; }); }   // 규칙이 바뀐 레버리지봇만 새로 시작
+    if (m.v_state && m.v_state.rule !== "sma200b5low") { ["state", "eq", "log", "closed"].forEach(function (k) { delete m["v_" + k]; }); }   // 규칙이 바뀐 레버리지봇만 새로 시작
     ["w", "d", "m", "v"].forEach(function (id) {
       var def = BOT_DEFS[id];
       var st = m[id + "_state"] || {start: "", cash: BOT_START_KRW, pos: [], pend: [], last: "", spy0: null, fx0: null};
@@ -268,7 +301,7 @@ function botRun() {
       if (st.last && day <= st.last) { res.push(id + ":already"); return; }
       var bar = function (s) { var d = data[s]; if (!d) return null; var n = d.c.length - 1; return d.dates[n] === day ? {open: d.o[n], close: d.c[n]} : null; };
 
-      if (id === "v") st.rule = "sma200b5";
+      if (id === "v") st.rule = "sma200b5low";
       if (!st.start) { st.start = day; st.spy0 = spyC; st.fx0 = fx; }
       else {
         st.pend.sort(function (a, b) { return (a.act === "sell" ? 0 : 1) - (b.act === "sell" ? 0 : 1); });
@@ -288,7 +321,7 @@ function botRun() {
             var qty = Math.floor(budget / (cost * fx) * 10000) / 10000;      // 소수점 주식 허용
             if (qty * cost * fx < 50000) return;
             st.cash -= qty * cost * fx;
-            st.pos.push({s: o.s, qty: qty, avg: cost, d: day, why: o.why, px: b.close, l1: o.l1 || null});
+            st.pos.push({s: o.s, qty: qty, avg: cost, d: day, why: o.why, px: b.close, l1: o.l1 || null, low: o.low || null});
             log.push({d: day, t: "buy", q: Number(qty.toFixed(2)), s: o.s, px: Number(b.open.toFixed(2)), why: o.why});
           }
         });
@@ -297,7 +330,7 @@ function botRun() {
       var total = st.cash;
       st.pos.forEach(function (p) { var b = bar(p.s); if (b) p.px = b.close; total += p.qty * p.px * fx; });
       eq.push({d: day, v: Math.round(total), b: Math.round(BOT_START_KRW * (spyC * fx) / (st.spy0 * st.fx0))});
-      st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : id === "m" ? _botDecideMomentum(st, data, day) : id === "v" ? _botDecideVidya(st, data, day) : _botDecideDaily(st, data, day);
+      st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : id === "m" ? _botDecideMomentum(st, data, day) : id === "v" ? _botDecideVidya(st, data, day, weekDone) : _botDecideDaily(st, data, day);
       st.last = day; st.fx = fx;
       if (id === "v" && st.pend.length) vSignals = st.pend.slice();      // 레버리지봇은 신호가 뜬 순간(다음 장 시가에 체결 예정) 알림
       if (id === "w") {                                              // 주봉봇이 오늘 체결한 매매를 알림용으로 모아둠
@@ -338,7 +371,7 @@ function _botView(id, m) {
   var eq = m[id + "_eq"] || [], closed = m[id + "_closed"] || [], fx = st.fx || st.fx0, total = st.cash;
   var pos = st.pos.map(function (p) {
     total += p.qty * p.px * fx;
-    return {s: p.s, q: Number(p.qty.toFixed(2)), avg: Number(p.avg.toFixed(2)), px: Number(p.px.toFixed(2)), pnl: Number(((p.px / p.avg - 1) * 100).toFixed(1)), d: p.d, why: p.why, l1: p.l1 || null};
+    return {s: p.s, q: Number(p.qty.toFixed(2)), avg: Number(p.avg.toFixed(2)), px: Number(p.px.toFixed(2)), pnl: Number(((p.px / p.avg - 1) * 100).toFixed(1)), d: p.d, why: p.why, l1: p.l1 || null, low: p.low ? 1 : 0};
   });
   var peak = 0, mdd = 0;
   eq.forEach(function (e) { if (e.v > peak) peak = e.v; if (peak) mdd = Math.max(mdd, (1 - e.v / peak) * 100); });

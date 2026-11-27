@@ -4527,7 +4527,7 @@
       const last = ch.c[n - 1], lv = ch.line ? ch.line[n - 1] : null;
       const head = mkEl("div", null); head.style.cssText = "display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;gap:8px";
       const hb = mkEl("b", null, ch.s); hb.style.whiteSpace = "nowrap"; head.appendChild(hb);
-      const hs = mkEl("span", "sub", (p ? shr(p.q) + " 보유" : "미보유") + (ch.line ? " · 주황 " + ch.lineLabel.replace(/\(.*\)/, "") : "")); hs.style.cssText = "font-size:11px;text-align:right"; head.appendChild(hs);
+      const hs = mkEl("span", "sub", (p ? (p.low ? "🍀초저점 " : "") + shr(p.q) + " 보유" : "미보유") + (ch.line ? " · 주황 " + ch.lineLabel.replace(/\(.*\)/, "") : "")); hs.style.cssText = "font-size:11px;text-align:right"; head.appendChild(hs);
       box.appendChild(head); box.appendChild(svg);
       if (b.id === "v" && ch.heat && (ch.heat.gap != null || ch.heat.wrsi != null)) {            // 🔥 과열(고점) 지표
         const g = ch.heat.gap, wr = ch.heat.wrsi, hot = (g != null && g >= 60) || (wr != null && wr >= 80), warm = (g != null && g >= 40) || (wr != null && wr >= 70);
@@ -4609,7 +4609,7 @@
       const c3 = mkEl("div", "botCard"); c3.appendChild(mkEl("h4", null, "보유 종목 " + b.pos.length + " / " + b.max + "  ·  현금 " + Math.round(b.cash / 10000).toLocaleString("ko-KR") + "만원"));
       if (!b.pos.length) c3.appendChild(mkEl("div", "alertHint", "지금은 들고 있는 종목이 없어요."));
       b.pos.forEach((p) => {
-        const row = mkEl("div", "botPos"); const l = mkEl("div", "bpL"); l.appendChild(mkEl("b", null, p.s + (p.q != null ? "  " + shr(p.q) : "")));
+        const row = mkEl("div", "botPos"); const l = mkEl("div", "bpL"); l.appendChild(mkEl("b", null, (p.low ? "🍀 " : "") + p.s + (p.q != null ? "  " + shr(p.q) : "")));
         l.appendChild(mkEl("span", "sub", "평단 $" + p.avg.toFixed(2) + " → $" + p.px + " · " + p.d.slice(5).replace("-", "/") + " 매수"));
         row.appendChild(l); row.appendChild(mkEl("b", "bpPnl " + cls(p.pnl), (p.pnl >= 0 ? "▲ " : "▼ ") + bPct(p.pnl))); c3.appendChild(row);
       });
