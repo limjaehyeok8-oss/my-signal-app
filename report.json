@@ -1,7 +1,7 @@
 {
-  "updated": "2026-11-27T08:26:48+09:00",
+  "updated": "2026-11-28T08:24:04+09:00",
   "sentiment": {
-    "score": 14,
+    "score": 24,
     "rating": "extreme fear",
     "label": "😱 극공포"
   },
@@ -33,30 +33,30 @@
   },
   "macro": {
     "lines": [
-      "10년물 금리 4.85% (-6bp) · ⚠️ 위험 구간",
-      "VIX 26.8 · ⚠️ 변동성 확대",
-      "WTI $84.83 (+1.37%) · 정상",
-      "금 $3,594 (+1.63%) / 달러인덱스 103.78 (+0.10%)",
-      "🚨 종합: 위험자산 비우호적 (경계 3개)"
+      "10년물 금리 4.94% (+9bp) · ⚠️ 위험 구간",
+      "VIX 23.8 · ⚠️ 변동성 확대",
+      "WTI $83.08 (-0.72%) · 정상",
+      "금 $3,668 (+3.75%) / 달러인덱스 104.01 (+0.33%)",
+      "🚨 종합: 위험자산 비우호적 (경계 5개)"
     ],
-    "score": 3
+    "score": 5
   },
   "strong": [
     {
       "symbol": "WMT",
-      "text": "WMT  3개월 +28.6%"
+      "text": "WMT  3개월 +29.1%"
     },
     {
       "symbol": "PG",
-      "text": "PG  3개월 +21.8%"
+      "text": "PG  3개월 +21.0%"
     },
     {
       "symbol": "COST",
-      "text": "COST  3개월 +19.7%"
+      "text": "COST  3개월 +19.6%"
     },
     {
       "symbol": "LLY",
-      "text": "LLY  3개월 +18.5%"
+      "text": "LLY  3개월 +18.7%"
     },
     {
       "symbol": "BRK-B",
@@ -64,8 +64,12 @@
     }
   ],
   "value": {
-    "total": 36,
+    "total": 35,
     "items": [
+      {
+        "symbol": "MU",
+        "star": true
+      },
       {
         "symbol": "SMCI",
         "star": true
@@ -89,16 +93,11 @@
       {
         "symbol": "FSLR",
         "star": true
-      },
-      {
-        "symbol": "WDC",
-        "star": true
       }
     ]
   },
   "insider": [
-    "팔란티어(PLTR): Dir / +$122,253,519 매수",
-    "TSMC(TSM): VP / +$302,850 매수"
+    "팔란티어(PLTR): Dir / +$122,253,519 매수"
   ],
   "weeklyHA": null,
   "earnings": [],
