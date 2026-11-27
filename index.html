@@ -4490,7 +4490,7 @@
       return cb;
     }
     function botPosChart(b, ch) {
-      const box = mkEl("div", "botCard"), p = ch.pos, fx = b.fx || 1, n = ch.t.length, k0 = Math.max(0, n - 60);
+      const box = mkEl("div", "botCard"), p = ch.pos, fx = b.fx || 1, n = ch.t.length, k0 = Math.max(0, n - 150);
       const W = 360, H = 210, L = 6, R = 44, T = 10, B = 18, svg = svgBox(W, H), cSub = cvar("--sub"), cLine = cvar("--line"), cUp = cvar("--up"), cDn = cvar("--down");
       const idx = []; for (let i = k0; i < n; i++) idx.push(i);
       const lineArr = ch.line ? idx.map((i) => ch.line[i]) : [];
@@ -4499,7 +4499,7 @@
       idx.forEach((i) => { lo = Math.min(lo, ch.l[i]); hi = Math.max(hi, ch.h[i]); });
       lineArr.concat(extra).forEach((v) => { if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
       const pd = (hi - lo) * 0.07 || 1; lo -= pd; hi += pd;
-      const m = idx.length, X = (j) => L + (W - L - R) * (j + 0.5) / m, Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo)), cw = Math.max(2, (W - L - R) / m * 0.62);
+      const m = idx.length, X = (j) => L + (W - L - R) * (j + 0.5) / m, Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo)), cw = Math.max(1.4, (W - L - R) / m * 0.7);
       for (let g = 0; g <= 3; g++) { const v = lo + (hi - lo) * g / 3, y = Y(v); svg.add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: cLine, "stroke-width": 0.5 }); svg.add("text", { x: W - R + 3, y: y + 3, fill: cSub, "font-size": 9 }, v >= 100 ? v.toFixed(0) : v.toFixed(1)); }
       let lm = "", lx = -99; idx.forEach((i, j) => { const mo = ch.t[i].slice(5, 7); if (mo !== lm) { lm = mo; if (X(j) - lx < 34) return; lx = X(j); svg.add("text", { x: X(j), y: H - 5, fill: cSub, "font-size": 9, "text-anchor": "middle" }, (+mo) + "월"); } });
       idx.forEach((i, j) => { const up = ch.c[i] >= ch.o[i], col = up ? cUp : cDn, x = X(j);

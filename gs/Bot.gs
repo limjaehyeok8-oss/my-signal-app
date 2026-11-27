@@ -373,12 +373,12 @@ function _botAttachCharts(bots, m) {
   if (!data) {
     var raw = _botFetch(syms, "2y"); data = {};
     Object.keys(raw).forEach(function (s) {
-      var d = raw[s], n = d.c.length, k0 = Math.max(0, n - 90), sma = {};
+      var d = raw[s], n = d.c.length, k0 = Math.max(0, n - 160), sma = {};
       [50, 100, 200].forEach(function (L) { sma[L] = d.c.map(function (_, i) { return i + 1 < L ? null : botSma(d.c.slice(0, i + 1).slice(-L), L); }).slice(k0); });
       data[s] = {t: d.dates.slice(k0), o: d.o.slice(k0).map(_r2), h: d.h.slice(k0).map(_r2), l: d.l.slice(k0).map(_r2), c: d.c.slice(k0).map(_r2),
                  s50: sma[50].map(_r2), s100: sma[100].map(_r2), s200: sma[200].map(_r2)};
     });
-    try { cache.put(key, JSON.stringify(data), 600); } catch (e) {}
+    try { var js = JSON.stringify(data); if (js.length < 95000) cache.put(key, js, 600); } catch (e) {}
   }
   bots.forEach(function (b) {
     if (!b.started && b.id !== "v") return;
