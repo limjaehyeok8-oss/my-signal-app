@@ -4534,7 +4534,7 @@
         const hb = mkEl("div"); hb.style.cssText = "margin-top:6px;padding:6px 10px;border-radius:10px;font-size:12px;line-height:1.5;background:" + (hot ? "rgba(255,90,106,.16)" : warm ? "rgba(255,176,32,.14)" : "var(--card2)");
         hb.appendChild(mkEl("b", null, (hot ? "🔥 과열 · " : warm ? "⚠️ 달아오르는 중 · " : "🌡 과열 아님 · ")));
         hb.appendChild(document.createTextNode((g != null ? "200일선 대비 " + (g >= 0 ? "+" : "") + g + "% (경고 +60%)" : "") + (g != null && wr != null ? " · " : "") + (wr != null ? "주봉 RSI " + wr + " (경고 80)" : "")));
-        if (hot) hb.appendChild(mkEl("div", "sub", "과거에 이 구간 뒤 60일 안에 고점 대비 −20% 이상 빠진 경우가 절반 이상이었어요. 일부 정리를 생각해 볼 만해요 (참고용)."));
+        if (hot) hb.appendChild(mkEl("div", "sub", "레버리지 ETF 12종 기준, 이 구간 뒤 60일 안에 −20% 이상 빠진 비율이 38~47%였어요 (평소 33%). 약한 경고라서 참고만 하세요."));
         const recent = (arr) => (arr || []).filter((e) => e.b >= ch.t[Math.max(0, n - 60)]);
         const dv = recent(ch.heat.div), lhh = recent(ch.heat.lh);
         if (dv.length || lhh.length) {
