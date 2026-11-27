@@ -45,6 +45,7 @@ function handleExtra(data) {
   if (data.action === "addWatch")      return addWatch(token, data.symbol, data.target);
   if (data.action === "removeWatch")   return removeWatch(token, data.symbol);
   if (data.action === "getMarket")     return getMarket(token);
+  if (data.action === "getMarketDD")   return getMarketDD(token);
   if (data.action === "getCoins")      return getCoins(token);
   if (data.action === "getCoinMarkets") return getCoinMarkets(token);
   if (data.action === "getCoinDetail") return getCoinDetail(token, data.sym);

@@ -292,3 +292,45 @@ function getCoinDetail(token, sym) {
   try { cache.put(ck, JSON.stringify(out), 30); } catch (e) {}
   return out;
 }
+// ---------- 📉 나스닥·SPY 고점 대비 하락 (과거 큰 하락과 비교) ----------
+var DD_LIST = [["^IXIC", "나스닥 종합"], ["SPY", "S&P500 (SPY)"]];
+function _ddEpisodes(c, t, minDd) {                          // 고점→저점 에피소드 중 minDd(예: -0.15) 이상 빠진 것
+  var peak = c[0], pi = 0, out = [], i, cur = null;
+  for (i = 0; i < c.length; i++) {
+    if (c[i] >= peak) {
+      if (cur && cur.d <= minDd) out.push(cur);
+      peak = c[i]; pi = i; cur = null;
+    } else {
+      var dd = c[i] / peak - 1;
+      if (!cur) cur = {a: t[pi], ti: i, d: dd, t: t[i], open: true};
+      else if (dd < cur.d) { cur.d = dd; cur.t = t[i]; }
+    }
+  }
+  if (cur && cur.d <= minDd) out.push(cur);
+  return out;
+}
+function getMarketDD(token) {
+  if (!isRegistered(token)) return {ok: false, msg: "먼저 '알림 받기'로 등록하세요"};
+  var cache = CacheService.getScriptCache(), hit = cache.get("mdd_v1");
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var reqs = DD_LIST.map(function (x) { return {url: "https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(x[0]) + "?range=15y&interval=1d", muteHttpExceptions: true}; });
+  var resps;
+  try { resps = UrlFetchApp.fetchAll(reqs); } catch (e) { return {ok: false, msg: "시세를 불러오지 못했어요"}; }
+  var ymd = function (ts) { return new Date(ts * 1000).toISOString().slice(0, 10); };
+  var items = [];
+  DD_LIST.forEach(function (x, k) {
+    var d = _mkParse(resps[k]); if (!d || d.c.length < 300) return;
+    var c = d.c.slice(), n = c.length;
+    if (d.price) c[n - 1] = d.price;
+    var hi = Math.max.apply(null, c), hiI = c.lastIndexOf(hi), low = Math.min.apply(null, c.slice(hiI)), lowI = c.indexOf(low, hiI);
+    var eps = _ddEpisodes(c, d.t, -0.15), now = c[n - 1] / hi - 1;
+    var past = eps.filter(function (e) { return e.a !== d.t[hiI]; }).map(function (e) { return {a: ymd(e.a), t: ymd(e.t), d: Number((e.d * 100).toFixed(1))}; });
+    items.push({sym: x[0], name: x[1], price: Number(c[n - 1].toFixed(2)), hi: Number(hi.toFixed(2)), hiDate: ymd(d.t[hiI]),
+                dd: Number((now * 100).toFixed(1)), low: Number(((low / hi - 1) * 100).toFixed(1)), lowDate: ymd(d.t[lowI]),
+                days: n - 1 - hiI, past: past});
+  });
+  if (!items.length) return {ok: false, msg: "시세를 불러오지 못했어요"};
+  var out = {ok: true, items: items, at: new Date().toISOString()};
+  try { cache.put("mdd_v1", JSON.stringify(out), 1800); } catch (e) {}
+  return out;
+}
