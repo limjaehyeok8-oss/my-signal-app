@@ -9,7 +9,9 @@ var BOT_FEE       = 0.0025;    // 수수료+환전+슬리피지 (살 때·팔 �
 var BOT_SHEET     = "bot";
 
 // 주봉봇이 훑어보는 종목 (지수·섹터 ETF + 업종별 대형주, 60여 개). 동시에는 최대 5종목 × 600만원만 보유
-var BOT_W_MAX = 5, BOT_M_MAX = 5;
+var BOT_W_MAX = 5, BOT_M_MAX = 5, BOT_V_MAX = 5;
+// VIDYA봇이 훑는 레버리지 ETF (변동성이 매우 큼 · 장기 보유하면 가치가 깎임)
+var BOT_V_LIST = ["TQQQ","SOXL","TECL","UPRO","SPXL","TNA","FAS","LABU","FNGU","WEBL","BULZ","NVDL"];
 var BOT_W_LIST = ["QQQ","SMH","IWM","XLF","XLE","XLV","XLK","GLD",
   "NVDA","MSFT","GOOGL","AMZN","META","AVGO","LLY","JPM","AAPL","TSLA","TSM","AMD","NFLX","COST","V","UNH","XOM","BRK-B",
   "ORCL","CRM","ADBE","NOW","UBER","PLTR","MU","QCOM","ASML","AMAT","ANET","PANW","CRWD","COIN",
@@ -28,7 +30,8 @@ var BOT_D_LIST = ["SPY","QQQ","IWM","DIA","SMH","XLF","XLE","XLV","XLK","XLI","G
 var BOT_DEFS = {
   w: {name: "주봉봇", desc: "주봉 하이킨아시 양봉이면 보유, 음봉이 되면 매도", max: BOT_W_MAX},
   d: {name: "일봉봇 (1234·W자)", desc: "W자 두 번째 바닥이 첫 바닥보다 높고 다시 양봉이 되면 매수", max: BOT_D_MAX},
-  m: {name: "모멘텀봇", desc: "200일·50일선 위에서 최근 6개월 상승률이 가장 강한 종목 5개를 들고, 50일선을 깨거나 순위가 15위 밖으로 밀리면 매도", max: BOT_M_MAX}
+  m: {name: "모멘텀봇", desc: "200일·50일선 위에서 최근 6개월 상승률이 가장 강한 종목 5개를 들고, 50일선을 깨거나 순위가 15위 밖으로 밀리면 매도", max: BOT_M_MAX},
+  v: {name: "VIDYA봇 (레버리지)", desc: "VIDYA(변동성 적응 이동평균) 위·아래 ATR 띠로 추세를 판단해, 위쪽 띠를 뚫고 올라간 레버리지 ETF를 사고 아래쪽 띠를 깨면 매도 (TQQQ·SOXL 등)", max: BOT_V_MAX}
 };
 
 // ---------- 공통 계산 (백테스트·전략에서도 같이 씀) ----------
@@ -94,7 +97,7 @@ function _botLoadAll() {
   return m;
 }
 function _botSaveAll(m) {
-  var sh = _botSheet(), keys = Object.keys(m).filter(function (k) { return /^(w|d|m)_(state|eq|log|closed)$/.test(k); }).sort();
+  var sh = _botSheet(), keys = Object.keys(m).filter(function (k) { return /^(w|d|m|v)_(state|eq|log|closed)$/.test(k); }).sort();
   if (keys.length) sh.getRange(2, 1, keys.length, 2).setValues(keys.map(function (k) { return [k, JSON.stringify(m[k])]; }));
 }
 
@@ -174,6 +177,41 @@ function _botDecideDaily(st, data, day) {
   return orders;
 }
 
+// VIDYA 추세 (LuxAlgo 'VIDYA Trend' 방식): VIDYA = 변동성(CMO)에 따라 반응 속도가 달라지는 이동평균.
+// 위쪽 띠(VIDYA+2×ATR200)를 종가가 넘으면 상승 추세, 아래쪽 띠를 깨면 하락 추세, 띠 안에서는 직전 추세 유지.
+function botVidya(c, h, l) {
+  var n = c.length, len = 10, mom = 20, alpha = 2 / (len + 1), vid = new Array(n), atr = new Array(n), tr = [], i, j;
+  for (i = 0; i < n; i++) { tr.push(i === 0 ? h[i] - l[i] : Math.max(h[i] - l[i], Math.abs(h[i] - c[i - 1]), Math.abs(l[i] - c[i - 1]))); }
+  var a = 0; for (i = 0; i < n; i++) { a = i < 200 ? (i === 0 ? tr[0] : (a * i + tr[i]) / (i + 1)) : (a * 199 + tr[i]) / 200; atr[i] = a; }   // ATR(200), 초반은 단순평균으로 대체
+  var v = c[0], trend = new Array(n), tcur = 0;
+  for (i = 0; i < n; i++) {
+    var up = 0, dn = 0;
+    for (j = Math.max(1, i - mom + 1); j <= i; j++) { var df = c[j] - c[j - 1]; if (df > 0) up += df; else dn -= df; }
+    var k = (up + dn) > 0 ? Math.abs(up - dn) / (up + dn) : 0;            // |CMO| (0~1)
+    v = alpha * k * c[i] + (1 - alpha * k) * v; vid[i] = v;
+    if (c[i] > v + 2 * atr[i]) tcur = 1; else if (c[i] < v - 2 * atr[i]) tcur = -1;
+    trend[i] = tcur;
+  }
+  return {vid: vid, atr: atr, trend: trend};
+}
+function _botDecideVidya(st, data, day) {
+  var info = {}, up = [], orders = [], selling = 0;
+  BOT_V_LIST.forEach(function (s) {
+    var d = data[s];
+    if (!d || d.c.length < 260 || d.dates[d.dates.length - 1] !== day) return;
+    var r = botVidya(d.c, d.h, d.l), n = d.c.length - 1;
+    info[s] = {t: r.trend[n], strength: (d.c[n] - r.vid[n]) / r.atr[n]};
+    if (info[s].t === 1) up.push(s);
+  });
+  st.pos.forEach(function (p) { var f = info[p.s]; if (f && f.t === -1) { orders.push({act: "sell", s: p.s, why: "VIDYA 아래쪽 띠 이탈 (하락 추세)"}); selling++; } });
+  up.sort(function (a, b) { return info[b].strength - info[a].strength; });
+  var slots = BOT_V_MAX - st.pos.length + selling;
+  up.filter(function (s) { return !st.pos.some(function (p) { return p.s === s; }); }).slice(0, Math.max(0, slots)).forEach(function (s) {
+    orders.push({act: "buy", s: s, why: "VIDYA 상승 추세 (위쪽 띠 위, 강도 " + info[s].strength.toFixed(1) + ")"});
+  });
+  return orders;
+}
+
 // 모멘텀 로테이션: 200일선·50일선 위 + 6개월 수익률 양수인 종목 중 상승률 순위. 상위 5개를 들고, 50일선 이탈이나 15위 밖이면 매도
 function botSma(c, n) { if (c.length < n) return null; var t = 0; for (var i = c.length - n; i < c.length; i++) t += c[i]; return t / n; }
 function _botDecideMomentum(st, data, day) {
@@ -209,8 +247,8 @@ function botRun() {
     var P = PropertiesService.getScriptProperties();
     if (P.getProperty("BOT_VER") !== BOT_VER) { resetBot(); P.setProperty("BOT_VER", BOT_VER); }      // 자금·규칙이 바뀌었으면 새로 시작
     var m = _botLoadAll(), set = {"SPY": 1, "KRW=X": 1};
-    BOT_W_LIST.concat(BOT_D_LIST).forEach(function (s) { set[s] = 1; });
-    ["w", "d", "m"].forEach(function (id) { ((m[id + "_state"] || {}).pos || []).forEach(function (p) { set[p.s] = 1; }); });
+    BOT_W_LIST.concat(BOT_D_LIST, BOT_V_LIST).forEach(function (s) { set[s] = 1; });
+    ["w", "d", "m", "v"].forEach(function (id) { ((m[id + "_state"] || {}).pos || []).forEach(function (p) { set[p.s] = 1; }); });
     var data = _botFetch(Object.keys(set), "2y");
     if (!data.SPY || !data["KRW=X"]) return "no data";
     var spy = data.SPY, day = spy.dates[spy.dates.length - 1], spyC = spy.c[spy.c.length - 1];
@@ -221,7 +259,7 @@ function botRun() {
     var weekDone = botWeekKey(day) < nowKey || dow >= 6 || (dow === 5 && hm >= 1610);
     var res = [], botMsgs = [];
 
-    ["w", "d", "m"].forEach(function (id) {
+    ["w", "d", "m", "v"].forEach(function (id) {
       var def = BOT_DEFS[id];
       var st = m[id + "_state"] || {start: "", cash: BOT_START_KRW, pos: [], pend: [], last: "", spy0: null, fx0: null};
       var eq = m[id + "_eq"] || [], log = m[id + "_log"] || [], closed = m[id + "_closed"] || [];
@@ -256,7 +294,7 @@ function botRun() {
       var total = st.cash;
       st.pos.forEach(function (p) { var b = bar(p.s); if (b) p.px = b.close; total += p.qty * p.px * fx; });
       eq.push({d: day, v: Math.round(total), b: Math.round(BOT_START_KRW * (spyC * fx) / (st.spy0 * st.fx0))});
-      st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : id === "m" ? _botDecideMomentum(st, data, day) : _botDecideDaily(st, data, day);
+      st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : id === "m" ? _botDecideMomentum(st, data, day) : id === "v" ? _botDecideVidya(st, data, day) : _botDecideDaily(st, data, day);
       st.last = day; st.fx = fx;
       if (id === "w") {                                              // 주봉봇이 오늘 체결한 매매를 알림용으로 모아둠
         var todayTrades = log.filter(function (x) { return x.d === day; });
@@ -301,7 +339,7 @@ function _botView(id, m) {
 function getBot(token) {
   if (!isRegistered(token)) return {ok: false, msg: "먼저 '알림 받기'로 등록하세요"};
   var m = _botLoadAll();
-  return {ok: true, bots: [_botView("w", m), _botView("d", m), _botView("m", m)]};
+  return {ok: true, bots: [_botView("w", m), _botView("d", m), _botView("m", m), _botView("v", m)]};
 }
 
 function setupBotTrigger() {
