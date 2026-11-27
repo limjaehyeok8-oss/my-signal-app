@@ -4516,6 +4516,8 @@
         const mark = (ds, label, col) => { const i = dayIdx(ds); if (i < k0 || i < 0) return; const x = X(i - k0), y = Y(ch.h[i]) - 6; svg.add("path", { d: "M" + x + " " + (y + 5) + " l-4 -7 h8 z", fill: col }); svg.add("text", { x: Math.min(Math.max(x, 24), W - R - 18), y: y - 4, fill: col, "font-size": 8.5, "font-weight": 700, "text-anchor": "middle" }, label); };
         (ch.heat.div || []).forEach((e) => { const i1 = dayIdx(e.a), i2 = dayIdx(e.b); if (i1 >= k0 && i2 >= 0 && ch.h[i1] != null) svg.add("line", { x1: X(i1 - k0), y1: Y(ch.h[i1]), x2: X(i2 - k0), y2: Y(ch.h[i2]), stroke: "#c77dff", "stroke-width": 1, "stroke-dasharray": "3 2" }); mark(e.b, "다이버전스", "#c77dff"); });
         (ch.heat.lh || []).forEach((e) => mark(e.b, "RSI↓", "#ff9f43"));
+        (ch.heat.lows || []).forEach((ds) => { const i = dayIdx(ds); if (i < k0 || i < 0) return; const x = X(i - k0), y = Y(ch.l[i]) + 6;         // 🍀 과거 주봉 초저점 (녹색 ▲)
+          svg.add("path", { d: "M" + x + " " + (y - 6) + " l-5 9 h10 z", fill: "#2ecc71" }); svg.add("text", { x: Math.min(Math.max(x, 24), W - R - 18), y: y + 13, fill: "#2ecc71", "font-size": 8.5, "font-weight": 700, "text-anchor": "middle" }, "🍀초저점"); });
       }
       if (ch.line) { const pts = idx.map((i, j) => ch.line[i] == null ? null : X(j).toFixed(1) + "," + Y(ch.line[i]).toFixed(1)).filter(Boolean); if (pts.length > 1) svg.add("polyline", { points: pts.join(" "), fill: "none", stroke: "#ffb020", "stroke-width": 1.6 }); }
       if (p) { const y = Y(p.avg); svg.add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#4da3ff", "stroke-width": 1.2, "stroke-dasharray": "4 3" }); svg.add("text", { x: L + 2, y: y - 3, fill: "#4da3ff", "font-size": 9 }, "평단 $" + p.avg.toFixed(2)); }
