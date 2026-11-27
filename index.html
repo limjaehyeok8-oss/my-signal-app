@@ -1025,6 +1025,12 @@
     #wList .wItem .sub { font-size: 12px; line-height: 1.4; margin-top: 2px; }
     #wList .wItem button { width: 26px; height: 26px; font-size: 11px; }
     #wList .wItem .buyPill, #wList .wItem .bbPill { padding: 3px 9px; font-size: 11px; }
+    /* 내 종목 카드 컴팩트 */
+    #list .frRow { padding: 10px 0 3px !important; row-gap: 2px !important; }
+    #list .frRow .sym { font-size: 16px; }
+    #list .frRow .pnl { font-size: 14px; padding: 3px 10px; }
+    #list .frRow .sub { font-size: 12px; line-height: 1.4 !important; margin-top: 0; }
+    #list .frCard .alertHint { margin: 0 0 6px !important; line-height: 1.4 !important; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -3882,7 +3888,7 @@
             let line = el.dataset.xin ? el.querySelector(".extLine") : (el.nextElementSibling && el.nextElementSibling.classList.contains("extLine") ? el.nextElementSibling : null);
             applyExtPnl(el, x || null);
             if (x && el.dataset.xin) { const bb = el.querySelector("b"); if (bb) { bb.textContent = el.dataset.xsym + "  $" + fmt(x.px); if (x.sess !== "정규장") { const tg = mkEl("span", "extTag", " 🌙" + x.sess + (x.chg != null ? " " + (x.chg >= 0 ? "+" : "") + x.chg.toFixed(1) + "%" : "")); tg.style.cssText = "font-size:11px;font-weight:500;color:var(--sub)"; bb.appendChild(tg); } } if (line) line.remove(); return; }
-            if (!x || x.sess === "정규장") { if (line) line.remove(); return; }
+            if (el.classList.contains("frRow") || !x || x.sess === "정규장") { if (line) line.remove(); return; }
             if (!line) { line = mkEl(el.dataset.xin ? "span" : "div", el.dataset.xin ? "sub extLine" : "alertHint extLine"); if (el.dataset.xin) el.appendChild(line); else el.insertAdjacentElement("afterend", line); }
             line.textContent = "🌙 " + x.sess + " $" + fmt(x.px) + (x.chg != null ? " (종가 대비 " + (x.chg >= 0 ? "+" : "") + x.chg.toFixed(1) + "%)" : "") + " · " + x.at;
           });
