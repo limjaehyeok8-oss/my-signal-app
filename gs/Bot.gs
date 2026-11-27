@@ -408,7 +408,7 @@ function _botAttachCharts(bots, m) {
   bots.forEach(function (b) { if (b.started) b.pos.forEach(function (p) { need[p.s] = 1; }); });
   BOT_V_LIST.forEach(function (s) { need[s] = 1; });                 // 레버리지봇은 보유와 상관없이 4종 모두 차트
   var syms = Object.keys(need); if (!syms.length) return;
-  var cache = CacheService.getScriptCache(), key = "botcand_" + syms.sort().join(",").slice(0, 200), data = null;
+  var cache = CacheService.getScriptCache(), key = "botcand3_" + syms.sort().join(",").slice(0, 200), data = null;
   try { var c = cache.get(key); if (c) data = JSON.parse(c); } catch (e) {}
   if (!data) {
     var raw = _botFetch(syms, "3y"); data = {};
