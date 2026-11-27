@@ -371,9 +371,9 @@ function _botAttachCharts(bots, m) {
   var cache = CacheService.getScriptCache(), key = "botcand_" + syms.sort().join(",").slice(0, 200), data = null;
   try { var c = cache.get(key); if (c) data = JSON.parse(c); } catch (e) {}
   if (!data) {
-    var raw = _botFetch(syms, "2y"); data = {};
+    var raw = _botFetch(syms, "3y"); data = {};
     Object.keys(raw).forEach(function (s) {
-      var d = raw[s], n = d.c.length, k0 = Math.max(0, n - 250), sma = {};
+      var d = raw[s], n = d.c.length, k0 = Math.max(0, n - 500), sma = {};
       [50, 100, 200].forEach(function (L) { sma[L] = d.c.map(function (_, i) { return i + 1 < L ? null : botSma(d.c.slice(0, i + 1).slice(-L), L); }).slice(k0); });
       var heat = _botHeat(d);
       data[s] = {heat: heat, t: d.dates.slice(k0), o: d.o.slice(k0).map(_r2), h: d.h.slice(k0).map(_r2), l: d.l.slice(k0).map(_r2), c: d.c.slice(k0).map(_r2),
