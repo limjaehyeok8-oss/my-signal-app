@@ -408,7 +408,7 @@ function _botAttachCharts(bots, m) {
   bots.forEach(function (b) { if (b.started) b.pos.forEach(function (p) { need[p.s] = 1; }); });
   BOT_V_LIST.forEach(function (s) { need[s] = 1; });                 // 레버리지봇은 보유와 상관없이 4종 모두 차트
   var syms = Object.keys(need); if (!syms.length) return;
-  var cache = CacheService.getScriptCache(), key = "botcand3_" + syms.sort().join(",").slice(0, 200), data = null;
+  var cache = CacheService.getScriptCache(), key = "botcand4_" + syms.sort().join(",").slice(0, 200), data = null;
   try { var c = cache.get(key); if (c) data = JSON.parse(c); } catch (e) {}
   if (!data) {
     var raw = _botFetch(syms, "3y"); data = {};
@@ -454,15 +454,15 @@ function _botHeat(d) {
   for (i = 16; i < m - 2; i++) { if (isMax(wk, i)) piv.push(i); if (rs[i] >= 70 && isMax(rs, i)) rp.push(i); }
   for (i = 1; i < piv.length; i++) { var p1 = piv[i - 1], p2 = piv[i]; if (p2 - p1 >= 3 && p2 - p1 <= 30 && wk[p2] > wk[p1] && rs[p2] < rs[p1] - 3 && rs[p1] >= 65) div.push({a: wd[p1], b: wd[p2]}); }
   for (i = 2; i < rp.length; i++) { var x = rp[i - 2], y = rp[i - 1], z = rp[i]; if (z - x <= 60 && rs[x] > rs[y] && rs[y] > rs[z]) lh.push({a: wd[x], b: wd[z]}); }
-  var lowsig = [];                                                    // 과거 주봉 초저점(RSI<=30 & 저가<=볼린저 하단) 주 (끝난 주만)
+  var lowsig = [], midsig = [];                                                    // 과거 주봉 초저점(RSI<=30 & 저가<=볼린저 하단) 주 (끝난 주만)
   for (i = 20; i < m - 1; i++) {
-    if (rs[i] == null || rs[i] > 30) continue;
+    if (rs[i] == null || rs[i] > 40) continue;
     var w2 = wk.slice(i - 19, i + 1), mu2 = 0, v2 = 0; w2.forEach(function (x) { mu2 += x; }); mu2 /= 20; w2.forEach(function (x) { v2 += (x - mu2) * (x - mu2); });
-    if (wlo[i] <= mu2 - 2 * Math.sqrt(v2 / 19)) lowsig.push(wd[i]);
+    if (wlo[i] <= mu2 - 2 * Math.sqrt(v2 / 19)) { if (rs[i] <= 30) lowsig.push(wd[i]); else midsig.push(wd[i]); }
   }
   var bbg = null;
   if (m >= 21) { var ww = wk.slice(m - 20), mu = 0, vv = 0; ww.forEach(function (x) { mu += x; }); mu /= 20; ww.forEach(function (x) { vv += (x - mu) * (x - mu); }); var lo = mu - 2 * Math.sqrt(vv / 19); bbg = Number(((wk[m - 1] / lo - 1) * 100).toFixed(1)); }
-  return {gap: sma ? Number(((c[n - 1] / sma - 1) * 100).toFixed(1)) : null, wrsi: rsi == null ? null : Number(rsi.toFixed(0)), bbg: bbg, lows: lowsig.slice(-12), div: div.slice(-3), lh: lh.slice(-2)};
+  return {gap: sma ? Number(((c[n - 1] / sma - 1) * 100).toFixed(1)) : null, wrsi: rsi == null ? null : Number(rsi.toFixed(0)), bbg: bbg, lows: lowsig.slice(-12), mids: midsig.slice(-20), div: div.slice(-3), lh: lh.slice(-2)};
 }
 function _r2(x) { return x == null ? null : Number(Number(x).toFixed(2)); }
 
