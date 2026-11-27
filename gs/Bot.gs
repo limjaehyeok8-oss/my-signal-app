@@ -366,7 +366,7 @@ var BOT_V_SHOW = ["TQQQ", "SOXL"];
 function _botAttachCharts(bots, m) {
   var need = {};
   bots.forEach(function (b) { if (b.started) b.pos.forEach(function (p) { need[p.s] = 1; }); });
-  var vb = bots[3]; if (vb && vb.started && !vb.pos.length) BOT_V_SHOW.forEach(function (s) { need[s] = 1; });
+  BOT_V_LIST.forEach(function (s) { need[s] = 1; });                 // 레버리지봇은 보유와 상관없이 4종 모두 차트
   var syms = Object.keys(need); if (!syms.length) return;
   var cache = CacheService.getScriptCache(), key = "botcand_" + syms.sort().join(",").slice(0, 200), data = null;
   try { var c = cache.get(key); if (c) data = JSON.parse(c); } catch (e) {}
@@ -381,12 +381,12 @@ function _botAttachCharts(bots, m) {
     try { cache.put(key, JSON.stringify(data), 600); } catch (e) {}
   }
   bots.forEach(function (b) {
-    if (!b.started) return;
-    var def = BOT_LINE[b.id], list = b.pos.map(function (p) { return p.s; });
-    if (!list.length && b.id === "v") list = BOT_V_SHOW;
+    if (!b.started && b.id !== "v") return;
+    var def = BOT_LINE[b.id], list = (b.pos || []).map(function (p) { return p.s; });
+    if (b.id === "v") BOT_V_LIST.forEach(function (s) { if (list.indexOf(s) < 0) list.push(s); });
     var closedSyms = (b.log || []).map(function (x) { return x.s; });
     b.charts = list.filter(function (s) { return data[s]; }).map(function (s) {
-      var d = data[s], pos = b.pos.filter(function (p) { return p.s === s; })[0] || null;
+      var d = data[s], pos = (b.pos || []).filter(function (p) { return p.s === s; })[0] || null;
       var marks = (b.log || []).filter(function (x) { return x.s === s && d.t.indexOf(x.d) >= 0; }).map(function (x) { return {d: x.d, t: x.t, px: x.px}; });
       var line = def.n ? d["s" + def.n] : null;
       var o = {s: s, t: d.t, o: d.o, h: d.h, l: d.l, c: d.c, line: line, lineLabel: def.label, marks: marks};

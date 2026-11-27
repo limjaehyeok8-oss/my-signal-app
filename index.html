@@ -4493,7 +4493,7 @@
       body.appendChild(chips);
       const b = r.bots.filter((x) => x.id === botSel)[0] || r.bots[0];
       const cls = (v) => (v >= 0 ? "up" : "down");
-      if (!b.started) { body.appendChild(mkEl("div", "alertHint", "봇이 아직 시작 전이에요. 서버가 자동으로 시작해요 (매일 아침 8시쯤 기록, 첫 실행은 10분 안에).")); if (b.bt) body.appendChild(botBtCard(b)); return; }
+      if (!b.started) { body.appendChild(mkEl("div", "alertHint", "봇이 아직 시작 전이에요. 서버가 자동으로 시작해요 (매일 아침 8시쯤 기록, 첫 실행은 10분 안에).")); if (b.charts) b.charts.forEach((ch) => body.appendChild(botPosChart(b, ch))); if (b.bt) body.appendChild(botBtCard(b)); return; }
 
       // 1) 한눈에: 총 자산 + 누적 수익률 + S&P 대비
       const hero = mkEl("div", "botHero");
@@ -4512,8 +4512,8 @@
       }
 
       // 3) 종목별 차트 (캔들 + 기준선 + 평단 + 매매 표시)
-      if (b.charts && b.charts.length) { b.charts.slice(0, 2).forEach((ch) => body.appendChild(botPosChart(b, ch)));
-        if (b.charts.length > 2) { const f = botFold("📊 나머지 종목 차트 " + (b.charts.length - 2) + "개"); b.charts.slice(2, 8).forEach((ch) => f.appendChild(botPosChart(b, ch))); body.appendChild(f); } }
+      if (b.charts && b.charts.length) { b.charts.slice(0, b.id === "v" ? 4 : 2).forEach((ch) => body.appendChild(botPosChart(b, ch)));
+        if (b.charts.length > (b.id === "v" ? 4 : 2)) { const f = botFold("📊 나머지 종목 차트"); b.charts.slice(b.id === "v" ? 4 : 2, 8).forEach((ch) => f.appendChild(botPosChart(b, ch))); body.appendChild(f); } }
 
       // 3) 그래프
       const c2 = botFold("📈 수익률 비교 그래프"); c2.appendChild(botChart(b.eq)); body.appendChild(c2);
