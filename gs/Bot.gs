@@ -213,10 +213,12 @@ function _botWeeklyLow(d, weekDone) {
   var w = wc.slice(m - 20), mean = 0, v = 0;
   w.forEach(function (x) { mean += x; }); mean /= 20; w.forEach(function (x) { v += (x - mean) * (x - mean); });
   var lower = mean - 2 * Math.sqrt(v / 19);
-  return {sig: weekDone && wl[m - 1] <= lower && rsi <= 30, rsi: rsi};
+  var touch = wl[m - 1] <= lower;
+  return {sig: weekDone && touch && rsi <= 30, mid: weekDone && touch && rsi > 30 && rsi <= 40, rsi: rsi};
 }
 function _botDecideVidya(st, data, day, weekDone) {   // 200일선 ±5% 밴드(횡보 거르기) + 3개월 모멘텀 순위 + 주봉 초저점 추가 매수
   var info = {}, up = [], lows = [], orders = [], selling = 0, BAND = 0.05;
+  st.weak = [];
   BOT_V_LIST.forEach(function (s) {
     var d = data[s];
     if (!d || d.c.length < 205 || d.dates[d.dates.length - 1] !== day) return;
@@ -224,6 +226,7 @@ function _botDecideVidya(st, data, day, weekDone) {   // 200일선 ±5% 밴드(�
     info[s] = {gap: gap, mom: d.c[n] / d.c[n - 63] - 1, low: wk};
     if (gap >= BAND) up.push(s);                      // 200일선 +5% 위일 때만 새로 매수 (선 근처 횡보는 건너뜀)
     else if (wk.sig) lows.push(s);                    // 선 아래라도 주봉 초저점이면 반등 노리고 매수
+    if (wk.mid) st.weak.push({s: s, rsi: wk.rsi});    // 약한 저점(RSI 30~40 + 볼린저 하단): 알림만, 매매는 안 함
   });
   st.pos.forEach(function (p) {
     var f = info[p.s]; if (!f) return;
@@ -292,7 +295,7 @@ function botRun() {
     var now = new Date(), dow = Number(Utilities.formatDate(now, "America/New_York", "u")), hm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
     var nowKey = botWeekKey(Utilities.formatDate(now, "America/New_York", "yyyy-MM-dd"));
     var weekDone = botWeekKey(day) < nowKey || dow >= 6 || (dow === 5 && hm >= 1610);
-    var res = [], botMsgs = [], vSignals = [];
+    var res = [], botMsgs = [], vSignals = [], vWeak = [];
 
     if (m.v_state && m.v_state.rule !== BOT_V_RULE) { ["state", "eq", "log", "closed"].forEach(function (k) { delete m["v_" + k]; }); }   // 규칙이 바뀐 레버리지봇만 새로 시작
     ["w", "d", "m", "v"].forEach(function (id) {
@@ -333,7 +336,8 @@ function botRun() {
       eq.push({d: day, v: Math.round(total), b: Math.round(BOT_START_KRW * (spyC * fx) / (st.spy0 * st.fx0))});
       st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : id === "m" ? _botDecideMomentum(st, data, day) : id === "v" ? _botDecideVidya(st, data, day, weekDone) : _botDecideDaily(st, data, day);
       st.last = day; st.fx = fx;
-      if (id === "v" && st.pend.length) vSignals = st.pend.slice();      // 레버리지봇은 신호가 뜬 순간(다음 장 시가에 체결 예정) 알림
+      if (id === "v" && st.pend.length) vSignals = st.pend.slice();
+      if (id === "v" && st.weak && st.weak.length) vWeak = st.weak.slice();      // 레버리지봇은 신호가 뜬 순간(다음 장 시가에 체결 예정) 알림
       if (id === "w") {                                              // 주봉봇이 오늘 체결한 매매를 알림용으로 모아둠
         var todayTrades = log.filter(function (x) { return x.d === day; });
         if (todayTrades.length) botMsgs.push(todayTrades);
@@ -351,6 +355,10 @@ function botRun() {
         sendPush("📈 레버리지봇: 매수 " + vb.length + " · 매도 " + vs.length, vl.join("\n") + "\n(다음 장 시가에 가상 체결 · 레버리지 ETF는 변동성이 커요)");
       }
     } catch (e) { try { runLog("err", "레버리지봇 알림 실패: " + e.message); } catch (e2) {} }
+    try {                                                            // 🍀 약한 저점 신호 (알림만)
+      if (vWeak.length) sendPush("🍀 약한 저점 신호: " + vWeak.map(function (x) { return x.s; }).join(", "),
+        vWeak.map(function (x) { return x.s + " 주봉 RSI " + x.rsi.toFixed(0) + " · 볼린저 하단 이하"; }).join("\n") + "\n매수 신호는 아니고 참고용이에요 (과거 13주 뒤 오른 비율 약 61%, 초저점은 78%).");
+    } catch (e) { try { runLog("err", "약한 저점 알림 실패: " + e.message); } catch (e2) {} }
     try {                                                            // 🤖 주봉봇이 무엇을 샀고 팔았는지 푸시
       if (botMsgs.length) {
         var tr = botMsgs[0], buys = tr.filter(function (x) { return x.t === "buy"; }), sells = tr.filter(function (x) { return x.t === "sell"; });
