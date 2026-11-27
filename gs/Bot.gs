@@ -31,7 +31,7 @@ var BOT_DEFS = {
   w: {name: "주봉봇", desc: "주봉 하이킨아시 양봉이면 보유, 음봉이 되면 매도", max: BOT_W_MAX},
   d: {name: "일봉봇 (1234·W자)", desc: "W자 두 번째 바닥이 첫 바닥보다 높고 다시 양봉이 되면 매수", max: BOT_D_MAX},
   m: {name: "모멘텀봇", desc: "200일·50일선 위에서 최근 6개월 상승률이 가장 강한 종목 5개를 들고, 50일선을 깨거나 순위가 15위 밖으로 밀리면 매도", max: BOT_M_MAX},
-  v: {name: "VIDYA봇 (레버리지)", desc: "VIDYA(변동성 적응 이동평균) 위·아래 ATR 띠로 추세를 판단해, 위쪽 띠를 뚫고 올라간 레버리지 ETF를 사고 아래쪽 띠를 깨면 매도 (TQQQ·SOXL 등)", max: BOT_V_MAX}
+  v: {name: "VIDYA봇 (레버리지)", desc: "VIDYA(120선, 변동성 적응 이동평균) 위로 올라선 레버리지 ETF를 사고, 아래로 내려가면 매도 (TQQQ·SOXL 등). 신호가 뜰 때마다 알림", max: BOT_V_MAX}
 };
 
 // ---------- 공통 계산 (백테스트·전략에서도 같이 씀) ----------
@@ -177,37 +177,35 @@ function _botDecideDaily(st, data, day) {
   return orders;
 }
 
-// VIDYA 추세 (LuxAlgo 'VIDYA Trend' 방식): VIDYA = 변동성(CMO)에 따라 반응 속도가 달라지는 이동평균.
-// 위쪽 띠(VIDYA+2×ATR200)를 종가가 넘으면 상승 추세, 아래쪽 띠를 깨면 하락 추세, 띠 안에서는 직전 추세 유지.
-function botVidya(c, h, l) {
-  var n = c.length, len = 10, mom = 20, alpha = 2 / (len + 1), vid = new Array(n), atr = new Array(n), tr = [], i, j;
-  for (i = 0; i < n; i++) { tr.push(i === 0 ? h[i] - l[i] : Math.max(h[i] - l[i], Math.abs(h[i] - c[i - 1]), Math.abs(l[i] - c[i - 1]))); }
-  var a = 0; for (i = 0; i < n; i++) { a = i < 200 ? (i === 0 ? tr[0] : (a * i + tr[i]) / (i + 1)) : (a * 199 + tr[i]) / 200; atr[i] = a; }   // ATR(200), 초반은 단순평균으로 대체
-  var v = c[0], trend = new Array(n), tcur = 0;
-  for (i = 0; i < n; i++) {
+// VIDYA(120): 변동성(CMO)에 따라 반응 속도가 달라지는 120일 이동평균 (120선). 종가가 VIDYA 위면 상승 추세, 아래면 하락 추세.
+var BOT_VIDYA_LEN = 120, BOT_VIDYA_CMO = 20;
+function botVidya(c) {
+  var n = c.length, alpha = 2 / (BOT_VIDYA_LEN + 1), vid = new Array(n), i, j, v = 0;
+  if (n < BOT_VIDYA_LEN) return {vid: vid};
+  for (i = 0; i < BOT_VIDYA_LEN; i++) v += c[i]; v /= BOT_VIDYA_LEN;                   // 처음 120일 평균으로 시작
+  for (i = BOT_VIDYA_LEN - 1; i < n; i++) {
     var up = 0, dn = 0;
-    for (j = Math.max(1, i - mom + 1); j <= i; j++) { var df = c[j] - c[j - 1]; if (df > 0) up += df; else dn -= df; }
-    var k = (up + dn) > 0 ? Math.abs(up - dn) / (up + dn) : 0;            // |CMO| (0~1)
-    v = alpha * k * c[i] + (1 - alpha * k) * v; vid[i] = v;
-    if (c[i] > v + 2 * atr[i]) tcur = 1; else if (c[i] < v - 2 * atr[i]) tcur = -1;
-    trend[i] = tcur;
+    for (j = Math.max(1, i - BOT_VIDYA_CMO + 1); j <= i; j++) { var df = c[j] - c[j - 1]; if (df > 0) up += df; else dn -= df; }
+    var k = (up + dn) > 0 ? Math.abs(up - dn) / (up + dn) : 0;                          // |CMO| (0~1)
+    if (i > BOT_VIDYA_LEN - 1) v = alpha * k * c[i] + (1 - alpha * k) * v;
+    vid[i] = v;
   }
-  return {vid: vid, atr: atr, trend: trend};
+  return {vid: vid};
 }
 function _botDecideVidya(st, data, day) {
   var info = {}, up = [], orders = [], selling = 0;
   BOT_V_LIST.forEach(function (s) {
     var d = data[s];
-    if (!d || d.c.length < 260 || d.dates[d.dates.length - 1] !== day) return;
-    var r = botVidya(d.c, d.h, d.l), n = d.c.length - 1;
-    info[s] = {t: r.trend[n], strength: (d.c[n] - r.vid[n]) / r.atr[n]};
-    if (info[s].t === 1) up.push(s);
+    if (!d || d.c.length < 200 || d.dates[d.dates.length - 1] !== day) return;
+    var r = botVidya(d.c), n = d.c.length - 1;
+    info[s] = {up: d.c[n] > r.vid[n], gap: d.c[n] / r.vid[n] - 1, px: d.c[n]};
+    if (info[s].up) up.push(s);
   });
-  st.pos.forEach(function (p) { var f = info[p.s]; if (f && f.t === -1) { orders.push({act: "sell", s: p.s, why: "VIDYA 아래쪽 띠 이탈 (하락 추세)"}); selling++; } });
-  up.sort(function (a, b) { return info[b].strength - info[a].strength; });
+  st.pos.forEach(function (p) { var f = info[p.s]; if (f && !f.up) { orders.push({act: "sell", s: p.s, why: "종가가 VIDYA(120) 아래로 (" + (f.gap * 100).toFixed(1) + "%)"}); selling++; } });
+  up.sort(function (a, b) { return info[b].gap - info[a].gap; });
   var slots = BOT_V_MAX - st.pos.length + selling;
   up.filter(function (s) { return !st.pos.some(function (p) { return p.s === s; }); }).slice(0, Math.max(0, slots)).forEach(function (s) {
-    orders.push({act: "buy", s: s, why: "VIDYA 상승 추세 (위쪽 띠 위, 강도 " + info[s].strength.toFixed(1) + ")"});
+    orders.push({act: "buy", s: s, why: "종가가 VIDYA(120) 위 (+" + (info[s].gap * 100).toFixed(1) + "%)"});
   });
   return orders;
 }
@@ -257,7 +255,7 @@ function botRun() {
     var now = new Date(), dow = Number(Utilities.formatDate(now, "America/New_York", "u")), hm = Number(Utilities.formatDate(now, "America/New_York", "HHmm"));
     var nowKey = botWeekKey(Utilities.formatDate(now, "America/New_York", "yyyy-MM-dd"));
     var weekDone = botWeekKey(day) < nowKey || dow >= 6 || (dow === 5 && hm >= 1610);
-    var res = [], botMsgs = [];
+    var res = [], botMsgs = [], vSignals = [];
 
     ["w", "d", "m", "v"].forEach(function (id) {
       var def = BOT_DEFS[id];
@@ -296,6 +294,7 @@ function botRun() {
       eq.push({d: day, v: Math.round(total), b: Math.round(BOT_START_KRW * (spyC * fx) / (st.spy0 * st.fx0))});
       st.pend = id === "w" ? _botDecideWeekly(st, data, day, weekDone) : id === "m" ? _botDecideMomentum(st, data, day) : id === "v" ? _botDecideVidya(st, data, day) : _botDecideDaily(st, data, day);
       st.last = day; st.fx = fx;
+      if (id === "v" && st.pend.length) vSignals = st.pend.slice();      // VIDYA봇은 신호가 뜬 순간(다음 장 시가에 체결 예정) 알림
       if (id === "w") {                                              // 주봉봇이 오늘 체결한 매매를 알림용으로 모아둠
         var todayTrades = log.filter(function (x) { return x.d === day; });
         if (todayTrades.length) botMsgs.push(todayTrades);
@@ -304,6 +303,15 @@ function botRun() {
       res.push(id + ":ok");
     });
     _botSaveAll(m);
+    try {                                                            // 🤖 VIDYA봇 매수·매도 신호 알림
+      if (vSignals.length) {
+        var vb = vSignals.filter(function (o) { return o.act === "buy"; }), vs = vSignals.filter(function (o) { return o.act === "sell"; });
+        var vl = [];
+        vb.forEach(function (o) { vl.push("🟢 매수 신호 " + o.s + " · " + o.why); });
+        vs.forEach(function (o) { vl.push("🔴 매도 신호 " + o.s + " · " + o.why); });
+        sendPush("📈 VIDYA봇: 매수 " + vb.length + " · 매도 " + vs.length, vl.join("\n") + "\n(다음 장 시가에 가상 체결 · 레버리지 ETF는 변동성이 커요)");
+      }
+    } catch (e) { try { runLog("err", "VIDYA봇 알림 실패: " + e.message); } catch (e2) {} }
     try {                                                            // 🤖 주봉봇이 무엇을 샀고 팔았는지 푸시
       if (botMsgs.length) {
         var tr = botMsgs[0], buys = tr.filter(function (x) { return x.t === "buy"; }), sells = tr.filter(function (x) { return x.t === "sell"; });
