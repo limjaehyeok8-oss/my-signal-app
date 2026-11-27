@@ -11,7 +11,7 @@ var BOT_SHEET     = "bot";
 // 주봉봇이 훑어보는 종목 (지수·섹터 ETF + 업종별 대형주, 60여 개). 동시에는 최대 5종목 × 600만원만 보유
 var BOT_W_MAX = 5, BOT_M_MAX = 5, BOT_V_MAX = 2;
 // 레버리지봇이 훑는 레버리지 ETF (변동성이 매우 큼 · 장기 보유하면 가치가 깎임)
-var BOT_V_LIST = ["TQQQ","SOXL","TECL","UPRO"];
+var BOT_V_LIST = ["TQQQ","SOXL"];
 var BOT_W_LIST = ["QQQ","SMH","IWM","XLF","XLE","XLV","XLK","GLD",
   "NVDA","MSFT","GOOGL","AMZN","META","AVGO","LLY","JPM","AAPL","TSLA","TSM","AMD","NFLX","COST","V","UNH","XOM","BRK-B",
   "ORCL","CRM","ADBE","NOW","UBER","PLTR","MU","QCOM","ASML","AMAT","ANET","PANW","CRWD","COIN",
@@ -31,7 +31,7 @@ var BOT_DEFS = {
   w: {name: "주봉봇", desc: "주봉 하이킨아시 양봉이면 보유, 음봉이 되면 매도", max: BOT_W_MAX},
   d: {name: "일봉봇 (1234·W자)", desc: "W자 두 번째 바닥이 첫 바닥보다 높고 다시 양봉이 되면 매수", max: BOT_D_MAX},
   m: {name: "모멘텀봇", desc: "200일·50일선 위에서 최근 6개월 상승률이 가장 강한 종목 5개를 들고, 50일선을 깨거나 순위가 15위 밖으로 밀리면 매도", max: BOT_M_MAX},
-  v: {name: "레버리지봇 (200일선)", desc: "TQQQ·SOXL·TECL·UPRO 중 종가가 200일선 위인 종목을 3개월 상승률 순으로 최대 2개 보유, 200일선 아래로 내려가면 매도. 신호가 뜰 때마다 알림 (2010~2026 백테스트에서 가장 성과가 좋았던 규칙)", max: BOT_V_MAX}
+  v: {name: "레버리지봇 (200일선)", desc: "TQQQ·SOXL 중 종가가 200일선 위인 종목을 3개월 상승률 순으로 최대 2개 보유, 200일선 아래로 내려가면 매도. 신호가 뜰 때마다 알림 (2010~2026 백테스트에서 가장 성과가 좋았던 규칙)", max: BOT_V_MAX}
 };
 
 // ---------- 공통 계산 (백테스트·전략에서도 같이 씀) ----------

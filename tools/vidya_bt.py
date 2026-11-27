@@ -2,7 +2,7 @@
 import yfinance as yf, pandas as pd, numpy as np, json, warnings, itertools
 warnings.filterwarnings("ignore")
 ALL = ["TQQQ","SOXL","TECL","UPRO","SPXL","TNA","FAS","LABU","FNGU","WEBL","BULZ","NVDL"]
-POOLS = {"전체 12종": ALL, "핵심 4종(TQQQ·SOXL·TECL·UPRO)": ["TQQQ","SOXL","TECL","UPRO"], "지수 3종(TQQQ·UPRO·TNA)": ["TQQQ","UPRO","TNA"], "TQQQ 하나": ["TQQQ"]}
+POOLS = {"전체 12종": ALL, "핵심 4종(TQQQ·SOXL·TECL·UPRO)": ["TQQQ","SOXL","TECL","UPRO"], "지수 3종(TQQQ·UPRO·TNA)": ["TQQQ","UPRO","TNA"], "TQQQ 하나": ["TQQQ"], "TQQQ+SOXL": ["TQQQ","SOXL"]}
 FEE = 0.0025
 
 def vidya(c, ln, cmo=20):
