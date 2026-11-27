@@ -41,3 +41,8 @@ print("== 반반(매일 균등 재조정)")
 for k, v in res.items():
     j = pd.concat([v["TQQQ"][0], v["SOXL"][0]], axis=1).dropna(); mix = (j.pct_change().mean(axis=1).fillna(0) + 1).cumprod(); st = stat(mix)
     print(f"  {k:46s} {st[0]:5.1f}% / {st[1]:6.1f}% / {st[2]:.2f} / {st[3]:5.1f} {st[4]:5.1f} / {v['TQQQ'][2] + v['SOXL'][2]}회")
+import json
+v = res["밴드 ±5%: 선+5% 위 매수 · 선−5% 아래 매도"]
+j = pd.concat([v["TQQQ"][0], v["SOXL"][0]], axis=1).dropna(); mix = (j.pct_change().mean(axis=1).fillna(0) + 1).cumprod()
+m = mix.resample("ME").last()
+print("CURVE=" + json.dumps([[str(i)[:7], round(float(x), 2)] for i, x in m.items()]))
