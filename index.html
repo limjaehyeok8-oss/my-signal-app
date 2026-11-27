@@ -4511,6 +4511,12 @@
       idx.forEach((i, j) => { const up = ch.c[i] >= ch.o[i], col = up ? cUp : cDn, x = X(j);
         svg.add("line", { x1: x, x2: x, y1: Y(ch.h[i]), y2: Y(ch.l[i]), stroke: col, "stroke-width": 1 });
         svg.add("rect", { x: x - cw / 2, y: Y(Math.max(ch.o[i], ch.c[i])), width: cw, height: Math.max(1, Math.abs(Y(ch.o[i]) - Y(ch.c[i]))), fill: col }); });
+      if (ch.heat) {                                                                 // 주봉 하락 다이버전스 · RSI 고점 하락 표시 (보라색)
+        const dayIdx = (ds) => { for (let i = 0; i < n; i++) if (ch.t[i] >= ds) return i; return -1; };
+        const mark = (ds, label, col) => { const i = dayIdx(ds); if (i < k0 || i < 0) return; const x = X(i - k0), y = Y(ch.h[i]) - 6; svg.add("path", { d: "M" + x + " " + (y + 5) + " l-4 -7 h8 z", fill: col }); svg.add("text", { x: Math.min(Math.max(x, 24), W - R - 18), y: y - 4, fill: col, "font-size": 8.5, "font-weight": 700, "text-anchor": "middle" }, label); };
+        (ch.heat.div || []).forEach((e) => { const i1 = dayIdx(e.a), i2 = dayIdx(e.b); if (i1 >= k0 && i2 >= 0 && ch.h[i1] != null) svg.add("line", { x1: X(i1 - k0), y1: Y(ch.h[i1]), x2: X(i2 - k0), y2: Y(ch.h[i2]), stroke: "#c77dff", "stroke-width": 1, "stroke-dasharray": "3 2" }); mark(e.b, "다이버전스", "#c77dff"); });
+        (ch.heat.lh || []).forEach((e) => mark(e.b, "RSI↓", "#ff9f43"));
+      }
       if (ch.line) { const pts = idx.map((i, j) => ch.line[i] == null ? null : X(j).toFixed(1) + "," + Y(ch.line[i]).toFixed(1)).filter(Boolean); if (pts.length > 1) svg.add("polyline", { points: pts.join(" "), fill: "none", stroke: "#ffb020", "stroke-width": 1.6 }); }
       if (p) { const y = Y(p.avg); svg.add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#4da3ff", "stroke-width": 1.2, "stroke-dasharray": "4 3" }); svg.add("text", { x: L + 2, y: y - 3, fill: "#4da3ff", "font-size": 9 }, "평단 $" + p.avg.toFixed(2)); }
       if (ch.flat) { const y = Y(ch.flat); svg.add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: "#ffb020", "stroke-width": 1.2, "stroke-dasharray": "2 3" }); svg.add("text", { x: L + 2, y: y + 10, fill: "#ffb020", "font-size": 9 }, "손절 $" + ch.flat.toFixed(2)); }
@@ -4529,6 +4535,12 @@
         hb.appendChild(mkEl("b", null, (hot ? "🔥 과열 · " : warm ? "⚠️ 달아오르는 중 · " : "🌡 과열 아님 · ")));
         hb.appendChild(document.createTextNode((g != null ? "200일선 대비 " + (g >= 0 ? "+" : "") + g + "% (경고 +60%)" : "") + (g != null && wr != null ? " · " : "") + (wr != null ? "주봉 RSI " + wr + " (경고 80)" : "")));
         if (hot) hb.appendChild(mkEl("div", "sub", "과거에 이 구간 뒤 60일 안에 고점 대비 −20% 이상 빠진 경우가 절반 이상이었어요. 일부 정리를 생각해 볼 만해요 (참고용)."));
+        const recent = (arr) => (arr || []).filter((e) => e.b >= ch.t[Math.max(0, n - 60)]);
+        const dv = recent(ch.heat.div), lhh = recent(ch.heat.lh);
+        if (dv.length || lhh.length) {
+          const tx = []; if (dv.length) tx.push("📉 주봉 하락 다이버전스 (가격은 높아졌는데 RSI는 낮아짐, " + dv[dv.length - 1].b.slice(5).replace("-", "/") + ")"); if (lhh.length) tx.push("📉 RSI 70 넘은 고점이 3번 연속 낮아지는 중 (" + lhh[lhh.length - 1].b.slice(5).replace("-", "/") + ")");
+          const dd = mkEl("div", "sub", tx.join("\n") + "\n※ 과거엔 TQQQ에서 이 신호 뒤에도 60일간 더 오른 적이 많았고(표본 3~5회), SOXL은 62%에서 −20% 이상 빠졌어요. 확정 신호가 아니라 참고용이에요."); dd.style.cssText = "white-space:pre-wrap;margin-top:4px;font-size:11.5px"; hb.appendChild(dd);
+        }
         box.appendChild(hb);
       }
       const sg = (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%", cc = (v) => (v >= 0 ? cUp : cDn);

@@ -397,19 +397,24 @@ function _botAttachCharts(bots, m) {
     });
   });
 }
-// 과열(고점) 지표: 200일선 대비 괴리율, 주봉 RSI(14). 레버리지 ETF 백테스트에서 +60% 이상 / 주봉 RSI 80 이상 뒤에는 60일 안에 -20% 이상 빠진 경우가 55~80%였어요.
+// 과열(고점) 지표: 200일선 대비 괴리율, 주봉 RSI(14), 주봉 하락 다이버전스, RSI 70+ 세 번·고점 하락
 function _botHeat(d) {
-  var c = d.c, n = c.length, sma = n >= 200 ? botSma(c, 200) : null, wk = [], last = "";
-  for (var i = 0; i < n; i++) { var k = botWeekKey(d.dates[i]); if (k === last) wk[wk.length - 1] = c[i]; else { wk.push(c[i]); last = k; } }
-  var rsi = null;
-  if (wk.length > 15) {
-    var g = 0, l = 0, j;
+  var c = d.c, n = c.length, sma = n >= 200 ? botSma(c, 200) : null, wk = [], wd = [], last = "", i, j;
+  for (i = 0; i < n; i++) { var k = botWeekKey(d.dates[i]); if (k === last) { wk[wk.length - 1] = c[i]; wd[wd.length - 1] = d.dates[i]; } else { wk.push(c[i]); wd.push(d.dates[i]); last = k; } }
+  var rs = [], m = wk.length;
+  if (m > 15) {
+    var g = 0, l = 0;
     for (j = 1; j <= 14; j++) { var df = wk[j] - wk[j - 1]; if (df > 0) g += df; else l -= df; }
-    g /= 14; l /= 14;
-    for (j = 15; j < wk.length; j++) { var df2 = wk[j] - wk[j - 1]; g = (g * 13 + Math.max(df2, 0)) / 14; l = (l * 13 + Math.max(-df2, 0)) / 14; }
-    rsi = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+    g /= 14; l /= 14; rs[14] = l === 0 ? 100 : 100 - 100 / (1 + g / l);
+    for (j = 15; j < m; j++) { var d2 = wk[j] - wk[j - 1]; g = (g * 13 + Math.max(d2, 0)) / 14; l = (l * 13 + Math.max(-d2, 0)) / 14; rs[j] = l === 0 ? 100 : 100 - 100 / (1 + g / l); }
   }
-  return {gap: sma ? Number(((c[n - 1] / sma - 1) * 100).toFixed(1)) : null, wrsi: rsi == null ? null : Number(rsi.toFixed(0))};
+  var rsi = m > 15 ? rs[m - 1] : null, div = [], lh = [];
+  var isMax = function (arr, p) { for (var q = p - 2; q <= p + 2; q++) if (arr[q] > arr[p]) return false; return true; };
+  var piv = [], rp = [];
+  for (i = 16; i < m - 2; i++) { if (isMax(wk, i)) piv.push(i); if (rs[i] >= 70 && isMax(rs, i)) rp.push(i); }
+  for (i = 1; i < piv.length; i++) { var p1 = piv[i - 1], p2 = piv[i]; if (p2 - p1 >= 3 && p2 - p1 <= 30 && wk[p2] > wk[p1] && rs[p2] < rs[p1] - 3 && rs[p1] >= 65) div.push({a: wd[p1], b: wd[p2]}); }
+  for (i = 2; i < rp.length; i++) { var x = rp[i - 2], y = rp[i - 1], z = rp[i]; if (z - x <= 60 && rs[x] > rs[y] && rs[y] > rs[z]) lh.push({a: wd[x], b: wd[z]}); }
+  return {gap: sma ? Number(((c[n - 1] / sma - 1) * 100).toFixed(1)) : null, wrsi: rsi == null ? null : Number(rsi.toFixed(0)), div: div.slice(-3), lh: lh.slice(-2)};
 }
 function _r2(x) { return x == null ? null : Number(Number(x).toFixed(2)); }
 
