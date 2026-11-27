@@ -16,21 +16,17 @@ def ha_weekly_bear(d):                                   # 주봉 하이킨아�
     w = d.resample("W-FRI").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last"}).dropna()
     o, c = ha(w); bear = pd.Series(c < o, index=w.index).shift(1)   # 직전에 끝난 주 기준
     return bear.reindex(d.index, method="ffill").fillna(False).values.astype(bool)
-res = {}
 for t in ("TQQQ", "SOXL"):
-    d = load_ohlc(t); cl = d.Close; cv = cl.values.astype(float); n = len(cv)
-    s200 = cl.rolling(200).mean().values; s50 = cl.rolling(50).mean().values
-    o, c = ha(d); bear = c < o; bear2 = bear & np.r_[False, bear[:-1]]; wb = ha_weekly_bear(d)
-    valid = ~np.isnan(s200); up = cv > s200
-    V = lambda x: np.where(valid, x.astype(float), np.nan)
-    cases = {
-      "현재: 종가>200일선 매수·매도": state(V(up), V(~up)),
-      "일봉 HA 음봉이면 매도 (매수는 200일선 위+양봉)": state(V(up & ~bear), V(bear)),
-      "200일선 아래 또는 HA 음봉 2일 연속이면 매도": state(V(up & ~bear), V(~up | bear2)),
-      "200일선 아래 또는 주봉 HA 음봉이면 매도": state(V(up & ~wb), V(~up | wb)),
-      "200일선 위에서만 보유 + 50일선 아래 HA 음봉 때 매도": state(V(up), V(~up | (bear & (cv < s50)))),
-      "그냥 보유": np.where(valid, 1.0, np.nan)}
+    d = load_ohlc(t); cv = d.Close.values.astype(float)
+    o, c = ha(d); bull_d = (c >= o).astype(float)
+    w = d.resample("W-FRI").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last"}).dropna()
+    ow, cw = ha(w); bw = pd.Series((cw >= ow).astype(float), index=w.index).reindex(d.index, method="ffill").values
+    bw = np.where(np.isnan(bw), np.nan, bw)
+    # 2주 연속 음봉이면 매도 (덜 민감)
+    b2 = pd.Series((cw >= ow).astype(float), index=w.index); b2 = ((b2 + b2.shift(1)) > 0).astype(float).reindex(d.index, method="ffill").values
+    cases = {"일봉 HA: 양봉이면 보유 · 음봉이면 매도": bull_d, "주봉 HA: 양봉이면 보유 · 음봉이면 매도": bw, "주봉 HA: 음봉 2주 연속이면 매도": b2, "그냥 보유": np.ones(len(d))}
     print("==", t, "연수익 / 최대낙폭 / 칼마 / 전반 후반 / 매매횟수")
     for k, h in cases.items():
-        s, tr = sim(d, h); st = stat(s)
+        h = h.copy(); h[:30] = np.nan
+        sr, tr = sim(d, h); st = stat(sr)
         print(f"  {k:36s} {st[0]:5.1f}% / {st[1]:6.1f}% / {st[2]:.2f} / {st[3]:5.1f} {st[4]:5.1f} / {tr}회")
