@@ -1048,6 +1048,9 @@
     #anFund .afG small { font-size: 11px !important; margin-bottom: 0 !important; }
     #anFund .afG b { font-size: 14px !important; }
     #anFund .afN { font-size: 11.5px !important; margin-top: 4px !important; }
+    .botSlider { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -2px; align-items: flex-start; }
+    .botSlider::-webkit-scrollbar { display: none; }
+    .botSlide { flex: 0 0 100%; min-width: 0; box-sizing: border-box; scroll-snap-align: start; scroll-snap-stop: always; padding: 0 2px; }
 </style>
 </head>
 <body>
@@ -4538,9 +4541,22 @@
       const body = $("botBody"); body.textContent = "";
       if (!r || !r.ok || !r.bots) { body.appendChild(mkEl("div", "alertHint", (r && r.msg) || "봇 정보를 불러오지 못했어요. 서버에 Bot 파일을 넣고 새 버전으로 배포했는지 확인하세요.")); return; }
       const chips = mkEl("div", "pkChips"); chips.style.margin = "0 0 12px";
-      r.bots.forEach((x) => { const ch = mkEl("button", "pkChip" + (x.id === botSel ? " on" : ""), x.name); ch.onclick = () => { botSel = x.id; paintBot(r); }; chips.appendChild(ch); });
-      body.appendChild(chips);
-      const b = r.bots.filter((x) => x.id === botSel)[0] || r.bots[0];
+      const slider = mkEl("div", "botSlider");
+      const idxOf = (id) => Math.max(0, r.bots.findIndex((x) => x.id === id));
+      const chipEls = r.bots.map((x, i) => { const ch = mkEl("button", "pkChip" + (x.id === botSel ? " on" : ""), x.name); ch.onclick = () => { slider.scrollTo({ left: slider.clientWidth * i, behavior: "smooth" }); }; chips.appendChild(ch); return ch; });
+      body.appendChild(chips); body.appendChild(slider);
+      r.bots.forEach((x) => { const slide = mkEl("div", "botSlide"); paintBotOne(slide, x); slider.appendChild(slide); });
+      let tmr = null;
+      slider.addEventListener("scroll", () => {                                   // 옆으로 밀면 위 칩도 같이 바뀜
+        clearTimeout(tmr); tmr = setTimeout(() => {
+          const i = Math.round(slider.scrollLeft / Math.max(1, slider.clientWidth)), x = r.bots[i]; if (!x) return;
+          botSel = x.id; chipEls.forEach((c, k) => c.classList.toggle("on", k === i));
+          const c = chipEls[i]; if (c && chips.scrollTo) chips.scrollTo({ left: c.offsetLeft - 12, behavior: "smooth" });
+        }, 80);
+      });
+      requestAnimationFrame(() => { slider.scrollLeft = slider.clientWidth * idxOf(botSel); });
+    }
+    function paintBotOne(body, b) {
       const cls = (v) => (v >= 0 ? "up" : "down");
       if (!b.started) { body.appendChild(mkEl("div", "alertHint", "봇이 아직 시작 전이에요. 서버가 자동으로 시작해요 (매일 아침 8시쯤 기록, 첫 실행은 10분 안에).")); if (b.charts) b.charts.forEach((ch) => body.appendChild(botPosChart(b, ch))); if (b.bt) body.appendChild(botBtCard(b)); return; }
 
