@@ -4441,7 +4441,7 @@
       return cb;
     }
     function botPosChart(b, ch) {
-      const box = mkEl("div", "botCard"), p = ch.pos, fx = b.fx || 1, n = ch.t.length, k0 = Math.max(0, n - 75);
+      const box = mkEl("div", "botCard"), p = ch.pos, fx = b.fx || 1, n = ch.t.length, k0 = Math.max(0, n - 60);
       const W = 360, H = 210, L = 6, R = 44, T = 10, B = 18, svg = svgBox(W, H), cSub = cvar("--sub"), cLine = cvar("--line"), cUp = cvar("--up"), cDn = cvar("--down");
       const idx = []; for (let i = k0; i < n; i++) idx.push(i);
       const lineArr = ch.line ? idx.map((i) => ch.line[i]) : [];
@@ -4452,7 +4452,7 @@
       const pd = (hi - lo) * 0.07 || 1; lo -= pd; hi += pd;
       const m = idx.length, X = (j) => L + (W - L - R) * (j + 0.5) / m, Y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo)), cw = Math.max(2, (W - L - R) / m * 0.62);
       for (let g = 0; g <= 3; g++) { const v = lo + (hi - lo) * g / 3, y = Y(v); svg.add("line", { x1: L, x2: W - R, y1: y, y2: y, stroke: cLine, "stroke-width": 0.5 }); svg.add("text", { x: W - R + 3, y: y + 3, fill: cSub, "font-size": 9 }, v >= 100 ? v.toFixed(0) : v.toFixed(1)); }
-      let lm = ""; idx.forEach((i, j) => { const mo = ch.t[i].slice(5, 7); if (mo !== lm) { lm = mo; svg.add("text", { x: X(j), y: H - 5, fill: cSub, "font-size": 9, "text-anchor": "middle" }, (+mo) + "월"); } });
+      let lm = "", lx = -99; idx.forEach((i, j) => { const mo = ch.t[i].slice(5, 7); if (mo !== lm) { lm = mo; if (X(j) - lx < 34) return; lx = X(j); svg.add("text", { x: X(j), y: H - 5, fill: cSub, "font-size": 9, "text-anchor": "middle" }, (+mo) + "월"); } });
       idx.forEach((i, j) => { const up = ch.c[i] >= ch.o[i], col = up ? cUp : cDn, x = X(j);
         svg.add("line", { x1: x, x2: x, y1: Y(ch.h[i]), y2: Y(ch.l[i]), stroke: col, "stroke-width": 1 });
         svg.add("rect", { x: x - cw / 2, y: Y(Math.max(ch.o[i], ch.c[i])), width: cw, height: Math.max(1, Math.abs(Y(ch.o[i]) - Y(ch.c[i]))), fill: col }); });
@@ -4462,25 +4462,26 @@
       ch.marks.forEach((mk) => { const i = ch.t.indexOf(mk.d); if (i < k0) return; const x = X(i - k0), buy = mk.t === "buy", col = buy ? "#2ecc71" : "#ff5d73";
         const y = buy ? Y(ch.l[i]) + 5 : Y(ch.h[i]) - 5;
         svg.add("path", { d: buy ? "M" + x + " " + (y - 1) + " l-4 7 h8 z" : "M" + x + " " + (y + 1) + " l-4 -7 h8 z", fill: col });
-        svg.add("text", { x: x, y: buy ? y + 16 : y - 9, fill: col, "font-size": 8.5, "font-weight": 700, "text-anchor": "middle" }, buy ? "BUY" : "SELL"); });
+      });
       const last = ch.c[n - 1], lv = ch.line ? ch.line[n - 1] : null;
-      const head = mkEl("div", null); head.style.cssText = "display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px";
-      head.appendChild(mkEl("b", null, ch.s)); head.appendChild(mkEl("span", "sub", "일봉 · 주황 " + (ch.line ? ch.lineLabel : "") + (p ? " · 파랑점선 평단" : "")));
+      const head = mkEl("div", null); head.style.cssText = "display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px;gap:8px";
+      const hb = mkEl("b", null, ch.s); hb.style.whiteSpace = "nowrap"; head.appendChild(hb);
+      const hs = mkEl("span", "sub", (p ? shr(p.q) + " 보유" : "미보유") + (ch.line ? " · 주황 " + ch.lineLabel.replace(/\(.*\)/, "") : "")); hs.style.cssText = "font-size:11px;text-align:right"; head.appendChild(hs);
       box.appendChild(head); box.appendChild(svg);
-      const rows = [];
+      const sg = (v) => (v >= 0 ? "+" : "") + v.toFixed(1) + "%", cc = (v) => (v >= 0 ? cUp : cDn);
+      const cells = [];
       if (p) {
-        const gp = lv ? (last / lv - 1) * 100 : null, ev = p.q * p.px * fx, pl = p.q * (p.px - p.avg) * fx;
-        rows.push(["상태", shr(p.q) + " 보유"], ["평단가", "$" + p.avg.toFixed(2)], ["현재가", "$" + last.toFixed(2)]);
-        if (lv) rows.push([ch.lineLabel + " 값", "$" + lv.toFixed(2)], ["선 대비", (gp >= 0 ? "+" : "") + gp.toFixed(1) + "%"]);
-        else if (ch.flat) rows.push(["손절선", "$" + ch.flat.toFixed(2)], ["손절선 대비", ((last / ch.flat - 1) * 100 >= 0 ? "+" : "") + ((last / ch.flat - 1) * 100).toFixed(1) + "%"]);
-        rows.push(["평가금액", won(ev)], ["누적손익", (pl >= 0 ? "+" : "") + won(pl)], ["손익률", (p.pnl >= 0 ? "+" : "") + p.pnl.toFixed(1) + "%"]);
+        const ev = p.q * p.px * fx, pl = p.q * (p.px - p.avg) * fx;
+        cells.push(["평단 → 현재", "$" + p.avg.toFixed(2) + " → $" + last.toFixed(2)]);
+        if (lv) cells.push([ch.lineLabel.replace(/\(.*\)/, "") + " 대비", "$" + lv.toFixed(2) + " (" + sg((last / lv - 1) * 100) + ")", cc(last - lv)]);
+        else if (ch.flat) cells.push(["손절선 대비", "$" + ch.flat.toFixed(2) + " (" + sg((last / ch.flat - 1) * 100) + ")", cc(last - ch.flat)]);
+        cells.push(["평가금액", won(ev)], ["손익", (pl >= 0 ? "+" : "") + won(pl) + " (" + sg(p.pnl) + ")", cc(pl)]);
       } else {
-        rows.push(["상태", "미보유"], ["현재가", "$" + last.toFixed(2)]);
-        if (lv) rows.push([ch.lineLabel + " 값", "$" + lv.toFixed(2)], ["선 대비", ((last / lv - 1) * 100 >= 0 ? "+" : "") + ((last / lv - 1) * 100).toFixed(1) + "%"]);
+        cells.push(["현재가", "$" + last.toFixed(2)]);
+        if (lv) cells.push([ch.lineLabel.replace(/\(.*\)/, "") + " 대비", "$" + lv.toFixed(2) + " (" + sg((last / lv - 1) * 100) + ")", cc(last - lv)]);
       }
-      const tb = document.createElement("table"); tb.style.cssText = "width:100%;font-size:12px;border-collapse:collapse;margin-top:6px";
-      rows.forEach((r) => { const tr = document.createElement("tr"), a = document.createElement("td"), v = document.createElement("td"); a.textContent = r[0]; v.textContent = r[1]; a.style.cssText = "padding:4px 0;color:var(--sub);border-top:1px solid var(--line)"; v.style.cssText = "padding:4px 0;text-align:right;font-weight:600;border-top:1px solid var(--line)";
-        if (/^[+-]/.test(r[1]) && /대비|손익/.test(r[0])) v.style.color = r[1][0] === "+" ? cUp : cDn; tr.appendChild(a); tr.appendChild(v); tb.appendChild(tr); });
+      const tb = mkEl("div"); tb.style.cssText = "display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-top:8px;font-size:12px";
+      cells.forEach((r) => { const c = mkEl("div"); c.appendChild(mkEl("div", "sub", r[0])).style.fontSize = "10.5px"; const v = mkEl("b", null, r[1]); if (r[2]) v.style.color = r[2]; c.appendChild(v); tb.appendChild(c); });
       box.appendChild(tb); return box;
     }
     function botFold(title) { const d = mkEl("details", "botCard botFold"); d.appendChild(mkEl("summary", null, title)); return d; }
@@ -4511,7 +4512,8 @@
       }
 
       // 3) 종목별 차트 (캔들 + 기준선 + 평단 + 매매 표시)
-      if (b.charts && b.charts.length) b.charts.slice(0, 6).forEach((ch) => body.appendChild(botPosChart(b, ch)));
+      if (b.charts && b.charts.length) { b.charts.slice(0, 2).forEach((ch) => body.appendChild(botPosChart(b, ch)));
+        if (b.charts.length > 2) { const f = botFold("📊 나머지 종목 차트 " + (b.charts.length - 2) + "개"); b.charts.slice(2, 8).forEach((ch) => f.appendChild(botPosChart(b, ch))); body.appendChild(f); } }
 
       // 3) 그래프
       const c2 = botFold("📈 수익률 비교 그래프"); c2.appendChild(botChart(b.eq)); body.appendChild(c2);
