@@ -22,21 +22,42 @@ function logAlert(token, title, body) {
   var now = Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm");
   sh.appendRow([now, token, String(title || ""), String(body || "")]);
   // 너무 쌓이면 오래된 것부터 정리 (600줄 넘으면 앞 200줄 삭제)
-  if (sh.getLastRow() > 600) sh.deleteRows(2, 200);
+  if (sh.getLastRow() > 1500) sh.deleteRows(2, 500);
+}
+
+// 같은 알림을 여러 기기에 한 번에 기록 (전체 발송용)
+function logAlertMany(tokens, title, body) {
+  if (!tokens || !tokens.length) return;
+  var sh = getAlertsSheet();
+  var now = Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm");
+  var rows = tokens.map(function (t) { return [now, t, String(title || ""), String(body || "")]; });
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, 4).setValues(rows);
+  if (sh.getLastRow() > 1500) sh.deleteRows(2, 500);
+}
+
+// 제목으로 태그 나누기
+function _alertTag(title) {
+  var t = String(title || "");
+  if (/고점 주의|저점|초저점/.test(t)) return "고저점";
+  if (/봇|🤖/.test(t)) return "봇";
+  if (/볼린저/.test(t)) return "볼린저";
+  if (/목표가|손절가|🎯|🛑/.test(t)) return "목표손절";
+  if (/개장 전|장 마감|최근 \d+일|신호/.test(t)) return "신호";
+  return "기타";
 }
 
 // 내 알림만 최근 순으로
 function getAlertLog(token, limit) {
   if (!isRegistered(token)) return {ok: false, msg: "먼저 '알림 받기'로 등록하세요"};
-  limit = Math.max(1, Math.min(50, Number(limit) || 20));
+  limit = Math.max(1, Math.min(200, Number(limit) || 20));
   var sh = getAlertsSheet();
   var last = sh.getLastRow();
   if (last < 2) return {ok: true, alerts: []};
-  var from = Math.max(2, last - 299);
+  var from = Math.max(2, last - 1199);
   var rows = sh.getRange(from, 1, last - from + 1, 4).getValues();
   var out = [];
   for (var i = rows.length - 1; i >= 0 && out.length < limit; i--) {
-    if (rows[i][1] === token) out.push({t: String(rows[i][0]), title: String(rows[i][2]), body: String(rows[i][3])});
+    if (rows[i][1] === token) out.push({t: String(rows[i][0]), title: String(rows[i][2]), body: String(rows[i][3]), tag: _alertTag(rows[i][2])});
   }
   return {ok: true, alerts: out};
 }

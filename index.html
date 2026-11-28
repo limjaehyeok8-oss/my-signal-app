@@ -208,6 +208,10 @@
     .btApplyMsg { font-size: 12px; margin-top: 4px; color: var(--sub); }
     .alertBox { margin: 10px 0 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
     .alertBox summary { cursor: pointer; font-weight: 700; }
+    .alTags { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 8px; padding-bottom: 2px; }
+    .alTags button { flex: none; font-size: 12.5px; padding: 6px 11px; border-radius: 99px; border: 1px solid var(--line); background: transparent; color: var(--sub); }
+    .alTags button.on { background: #3182f6; border-color: #3182f6; color: #fff; font-weight: 700; }
+    .alItem .alTag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--line); color: var(--sub); margin-left: 6px; }
     .alertHint { font-size: 12px; color: var(--sub); margin: 6px 0; }
     .alItem { padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; line-height: 1.55; }
     .alItem .alT { color: var(--sub); font-size: 12px; }
@@ -1214,7 +1218,8 @@
 
   <div id="alertView" class="botView">
     <div class="botTop"><button id="alertBack">← 뒤로</button><b>🔔 받은 알림</b><span style="width:60px"></span></div>
-    <div class="alertHint" style="margin:0 0 10px">알림을 실수로 지워도 여기서 다시 볼 수 있어요. 최근 20개까지 보여줘요.</div>
+    <div class="alertHint" style="margin:0 0 10px">알림을 실수로 지워도 여기서 다시 볼 수 있어요. 최근 100개까지 보여줘요. 봇·고저점 알림도 여기 모여요.</div>
+    <div id="alertTags" class="alTags"></div>
     <div id="alertList"><div class="alertHint">현재는 알림이 없어요</div></div>
     <button id="alertRefresh" style="font-size:13px;padding:10px 14px;margin-top:12px">새로고침</button>
     <button id="alertRecent" style="font-size:13px;padding:10px 14px;margin-top:12px;margin-left:6px">📋 최근 3일 신호 다시 받기</button>
@@ -1659,29 +1664,42 @@
     };
 
     // ===== 최근 받은 알림 (서버에 저장된 기록) =====
-    let alLatest = "", alViewOpen = false;
+    let alLatest = "", alViewOpen = false, alAll = [], alTag = "전체";
+    const AL_TAGS = [["전체", "전체"], ["고저점", "🌡 고·저점"], ["봇", "🤖 봇"], ["볼린저", "📉 볼린저"], ["목표손절", "🎯 목표·손절"], ["신호", "🔔 신호"], ["기타", "기타"]];
+    const AL_NM = Object.fromEntries(AL_TAGS);
     function setBadge(n) { const b = $("alertCnt"); b.textContent = n > 9 ? "9+" : String(n); b.style.display = n > 0 ? "flex" : "none"; }
     async function loadAlerts() {
       const list = $("alertList");
       if (!myToken) return;
       const none = () => { list.textContent = ""; setBadge(0); list.appendChild(mkEl("div", "alertHint", "현재는 알림이 없어요")); };
       try {
-        const r = await api({ action: "getAlerts", token: myToken, limit: 20 });
+        const r = await api({ action: "getAlerts", token: myToken, limit: 100 });
         // 서버가 아직 이 기능을 모르거나(알 수 없는 action) 실패해도, 오류 대신 '알림 없음'으로 보여줌
         if (!r || !r.ok || !r.alerts || !r.alerts.length) { none(); return; }
-        list.textContent = "";
+        alAll = r.alerts;
         alLatest = r.alerts.map((a) => String(a.t)).sort().pop() || "";
         const seen = lsGet("sigAlSeen") || "";
         setBadge(alViewOpen ? 0 : r.alerts.filter((a) => String(a.t) > seen).length);
         if (alViewOpen) lsSet("sigAlSeen", alLatest);
-        r.alerts.forEach((a) => {
-          const d = mkEl("div", "alItem");
-          d.appendChild(mkEl("div", "alT", a.t));
-          d.appendChild(mkEl("div", "alH", a.title));
-          d.appendChild(mkEl("div", "alB", a.body));
-          list.appendChild(d);
-        });
+        paintAlerts();
       } catch (e) { none(); }
+    }
+    function paintAlerts() {
+      const list = $("alertList"), tg = $("alertTags"); tg.textContent = list.textContent = "";
+      const cnt = {}; alAll.forEach((a) => { cnt[a.tag || "기타"] = (cnt[a.tag || "기타"] || 0) + 1; });
+      AL_TAGS.forEach(([k, nm]) => {
+        if (k !== "전체" && !cnt[k]) return;
+        const b = mkEl("button", k === alTag ? "on" : "", nm + " " + (k === "전체" ? alAll.length : cnt[k]));
+        b.onclick = () => { alTag = k; paintAlerts(); }; tg.appendChild(b);
+      });
+      const rows = alAll.filter((a) => alTag === "전체" || (a.tag || "기타") === alTag);
+      if (!rows.length) { list.appendChild(mkEl("div", "alertHint", "이 태그의 알림은 아직 없어요")); return; }
+      rows.forEach((a) => {
+        const d = mkEl("div", "alItem"), t = mkEl("div", "alT", a.t);
+        t.appendChild(mkEl("span", "alTag", AL_NM[a.tag] || "기타"));
+        d.appendChild(t); d.appendChild(mkEl("div", "alH", a.title)); d.appendChild(mkEl("div", "alB", a.body));
+        list.appendChild(d);
+      });
     }
     $("alertRefresh").onclick = loadAlerts;
     $("alertRecent").onclick = async () => {

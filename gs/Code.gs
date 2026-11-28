@@ -202,6 +202,7 @@ function sendPush(title, body) {
     .filter(String);
   if (!tokens.length) return {ok: false, msg: "알림을 켠 구독자가 없어요"};
 
+  try { logAlertMany(tokens, title, body); } catch (e) {}   // 전체 발송도 '받은 알림'에 기록
   var projectId = PropertiesService.getScriptProperties().getProperty("PROJECT_ID");
   var accessToken = getAccessToken();
   var url = "https://fcm.googleapis.com/v1/projects/" + projectId + "/messages:send";
